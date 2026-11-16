@@ -411,18 +411,19 @@ async function main() {
   console.log(`  Hardware ID: ${state.hwid}`);
   console.log(`======================================================\n`);
 
-  // Step 1: Internet Handshake
-  log('Cloud connectivity check...');
-  const isOnline = await checkCloudConnectivity();
-  if (!isOnline) {
-    log('WARNING: Cloud backend se connect nahi ho paya. Offline mode lock active.');
-  }
+  // Step 1: Start local UI server immediately so Electron loads in milliseconds
+  startControlPanel();
 
-  // Step 2: Version Gate
-  await verifyVersionGate();
-
-  // Step 3: Login Handshake with HWID Binding
+  // Step 2: Cloud Handshake in background
   try {
+    log('Cloud connectivity check...');
+    const isOnline = await checkCloudConnectivity();
+    if (!isOnline) {
+      log('WARNING: Cloud backend se connect nahi ho paya.');
+    }
+
+    await verifyVersionGate();
+
     const operatorPhone = process.env.OPERATOR_PHONE || '9999999999';
     const loginRes = await axios.post(`${CLOUD_URL}/api/auth/login`, {
       phone: operatorPhone,
@@ -437,11 +438,8 @@ async function main() {
       log(`Welcome ${state.user.name}! Plan: ${state.subscription ? '₹699 Pass' : 'Wallet (₹' + state.walletBalance + ')'}`);
     }
   } catch (err) {
-    log(`Login error: ${err.response ? err.response.data.message : err.message}`);
+    log(`Startup check: ${err.response ? err.response.data.message : err.message}`);
   }
-
-  // Step 4: Start local UI
-  startControlPanel();
 }
 
 main().catch(err => {
