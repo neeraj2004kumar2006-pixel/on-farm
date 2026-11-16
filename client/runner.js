@@ -301,10 +301,151 @@ async function executeAutomation() {
 // -------------------------------------------------------------------------
 // 4. LOCAL WEB CONTROL PANEL (EXPRESS)
 // -------------------------------------------------------------------------
+// Khasra 18-digit Code Generator
+function makeKhasra(muraMain, muraSub = 0, kilaMain = 0, kilaSub = 0) {
+  const leading = '0'.repeat(11 - String(muraMain).length);
+  const sub2 = String(muraSub || 0).padStart(2, '0');
+  const k2 = String(kilaMain || 0).padStart(2, '0');
+  const ks2 = String(kilaSub || 0).padStart(2, '0');
+  return leading + muraMain + '0' + sub2 + k2 + ks2;
+}
+
+function parseKilasInput(kilasStr) {
+  const items = String(kilasStr).split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+  const result = [];
+  for (const item of items) {
+    const rangeMatch = item.match(/^(\d+)\s*(?:-|to)\s*(\d+)$/i);
+    if (rangeMatch) {
+      const from = parseInt(rangeMatch[1], 10);
+      const to = parseInt(rangeMatch[2], 10);
+      for (let k = from; k <= to; k++) {
+        result.push({ main: k, sub: 0 });
+      }
+    } else {
+      const subMatch = item.match(/^(\d+)(?:[\/\.](\d+))?$/);
+      if (subMatch) {
+        result.push({ main: parseInt(subMatch[1], 10), sub: parseInt(subMatch[2] || 0, 10) });
+      }
+    }
+  }
+  return result;
+}
+
 function startControlPanel() {
   const app = express();
   app.use(express.json());
   app.use(express.static(path.join(__dirname, 'public')));
+
+  // Excel Generator API (App se direct Kila aur Farmer add karna)
+  app.post('/generate-excel', async (req, res) => {
+    try {
+      const { name, crop, sowingDate, ownership, khataNo, muraMain, muraSub, kilasInput, append = false } = req.body;
+      if (!name || !crop || !sowingDate || !khataNo || !muraMain || !kilasInput) {
+        return res.status(400).json({ ok: false, message: 'All required fields (Name, Crop, Sowing Date, Khata, Murabba, Kilas) must be filled.' });
+      }
+
+      const parsedKilas = parseKilasInput(kilasInput);
+      if (!parsedKilas.length) {
+        return res.status(400).json({ ok: false, message: 'Koi valid kila number nahi mila. Jaise 1-25 ya 1, 2, 3/1 likhein.' });
+      }
+
+      const ExcelJS = require('exceljs');
+      const excelPath = path.join(__dirname, '..', 'form automation', 'farmers.xlsx');
+      const wb = new ExcelJS.Workbook();
+      let ws;
+
+      if (append && fs.existsSync(excelPath)) {
+        await wb.xlsx.readFile(excelPath);
+        ws = wb.worksheets[0];
+      } else {
+        ws = wb.addWorksheet('Farmers');
+        ws.addRow(['Name', 'Crop', 'SowingDate', 'Ownership', 'KhasraNo', 'KhataNo', 'FarmerName', 'Status', 'Error']);
+        ws.getColumn(1).width = 18;
+        ws.getColumn(2).width = 24;
+        ws.getColumn(3).width = 14;
+        ws.getColumn(4).width = 12;
+        ws.getColumn(5).width = 22; // 18-digit KhasraNo
+        ws.getColumn(6).width = 12; // KhataNo
+        ws.getColumn(7).width = 18; // FarmerName
+        ws.getColumn(8).width = 10; // Status
+        ws.getColumn(9).width = 25; // Error
+        ws.getColumn(5).numFmt = '@';
+        ws.getColumn(6).numFmt = '@';
+      }
+
+      const generatedRows = [];
+      for (const k of parsedKilas) {
+        const khasra18 = makeKhasra(muraMain, muraSub, k.main, k.sub);
+        const rowData = [
+          name.trim(),
+          crop.trim(),
+          sowingDate.trim(),
+          ownership ? ownership.trim() : 'Owner',
+          khasra18,
+          String(khataNo).trim(),
+          name.trim(),
+          '',
+          '',
+        ];
+        const addedRow = ws.addRow(rowData);
+        addedRow.getCell(5).value = khasra18;
+        addedRow.getCell(5).numFmt = '@';
+        addedRow.getCell(6).value = String(khataNo).trim();
+        addedRow.getCell(6).numFmt = '@';
+
+        generatedRows.push({
+          kila: k.sub ? `${k.main}/${k.sub}` : `${k.main}`,
+          khasra: khasra18,
+          farmer: name.trim(),
+          khata: khataNo,
+        });
+      }
+
+      await wb.xlsx.writeFile(excelPath);
+      state.totalRows = ws.rowCount - 1;
+      state.processedCount = 0;
+      log(`Excel Generated: ${generatedRows.length} kilas added for ${name} (Murabba: ${muraMain}/${muraSub})`);
+
+      res.json({
+        ok: true,
+        count: generatedRows.length,
+        rows: generatedRows,
+        message: `${generatedRows.length} kilas successfully generate hokar farmers.xlsx me save ho gaye!`,
+      });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  // Get current Excel rows for in-app table preview
+  app.get('/get-excel-rows', async (req, res) => {
+    try {
+      const ExcelJS = require('exceljs');
+      const excelPath = path.join(__dirname, '..', 'form automation', 'farmers.xlsx');
+      if (!fs.existsSync(excelPath)) return res.json({ ok: true, rows: [] });
+
+      const wb = new ExcelJS.Workbook();
+      await wb.xlsx.readFile(excelPath);
+      const ws = wb.worksheets[0];
+      const rows = [];
+      ws.eachRow((r, i) => {
+        if (i === 1) return;
+        rows.push({
+          index: i - 1,
+          name: String(r.getCell(1).value || '').trim(),
+          crop: String(r.getCell(2).value || '').trim(),
+          date: String(r.getCell(3).value || '').trim(),
+          khasra: String(r.getCell(5).value || '').trim(),
+          khata: String(r.getCell(6).value || '').trim(),
+          status: String(r.getCell(8).value || '').trim().toUpperCase() || 'PENDING',
+          error: String(r.getCell(9).value || '').trim(),
+        });
+      });
+      res.json({ ok: true, rows });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
 
   app.get('/status', (req, res) => {
     res.json({
