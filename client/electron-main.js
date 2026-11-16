@@ -30,13 +30,17 @@ function waitForServer(url, timeoutMs = 15000) {
   });
 }
 
+app.disableHardwareAcceleration();
+
 async function createWindow() {
+  const iconPath = path.join(__dirname, 'public', process.platform === 'win32' ? 'icon.ico' : 'icon.png');
   mainWindow = new BrowserWindow({
-    width: 980,
-    height: 760,
-    minWidth: 800,
+    width: 1040,
+    height: 780,
+    minWidth: 850,
     minHeight: 600,
     title: 'On-Farm',
+    icon: iconPath,
     backgroundColor: '#f8fafc',
     autoHideMenuBar: true,
     webPreferences: {
