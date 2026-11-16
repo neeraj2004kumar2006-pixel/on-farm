@@ -17,6 +17,20 @@ const CDP_PORT = 9222;
 
 // Cloud backend URL (Points to 24/7 Vercel Cloud Server)
 const CLOUD_URL = process.env.ONFARM_CLOUD_URL || 'https://on-farm.vercel.app';
+const SESSION_CACHE_FILE = path.join(__dirname, 'user-session.json');
+
+// Restore cached session if available so UI never flashes ₹0
+let initialBalance = 1;
+let initialUser = null;
+let initialSubscription = null;
+try {
+  if (fs.existsSync(SESSION_CACHE_FILE)) {
+    const cached = JSON.parse(fs.readFileSync(SESSION_CACHE_FILE, 'utf8'));
+    if (typeof cached.walletBalance === 'number') initialBalance = cached.walletBalance;
+    if (cached.user) initialUser = cached.user;
+    if (cached.subscription !== undefined) initialSubscription = cached.subscription;
+  }
+} catch {}
 
 // In-Memory state
 const state = {
@@ -24,9 +38,9 @@ const state = {
   isRunning: false,
   stopRequested: false,
   hwid: getHardwareId(),
-  user: null,
-  walletBalance: 0,
-  subscription: null,
+  user: initialUser,
+  walletBalance: initialBalance,
+  subscription: initialSubscription,
   totalRows: 0,
   processedCount: 0,
   currentRow: null,
@@ -411,12 +425,12 @@ function startControlPanel() {
       await wb.xlsx.writeFile(excelPath);
       state.totalRows = ws.rowCount - 1;
       state.processedCount = 0;
-      log(`Excel Saved: ${rows.length} reviewed rows saved to farmers.xlsx`);
+      log(`Records Saved: ${rows.length} entries successfully saved.`);
 
       res.json({
         ok: true,
         count: rows.length,
-        message: `${rows.length} किले successfully farmers.xlsx में सेव हो गए!`,
+        message: `${rows.length} records successfully saved.`,
       });
     } catch (e) {
       res.status(500).json({ ok: false, message: e.message });
@@ -542,7 +556,10 @@ function startControlPanel() {
     }
   });
 
-  app.get('/status', (req, res) => {
+  app.get('/status', async (req, res) => {
+    if (!state.user) {
+      await syncUserBalance();
+    }
     res.json({
       isOnline: state.isOnline,
       isRunning: state.isRunning,
@@ -634,48 +651,66 @@ function startControlPanel() {
   });
 
   app.listen(PANEL_PORT, () => {
-    log(`Control Panel open hai: http://localhost:${PANEL_PORT}`);
+    log(`Service initialized on port ${PANEL_PORT}.`);
   });
 }
 
 // -------------------------------------------------------------------------
-// 5. MAIN ENTRY POINT
+// 5. USER BALANCE & CLOUD SYNC
 // -------------------------------------------------------------------------
-async function main() {
-  console.log(`\n======================================================`);
-  console.log(`  ON-FARM DESKTOP RUNNER v${CLIENT_VERSION}`);
-  console.log(`  Hardware ID: ${state.hwid}`);
-  console.log(`======================================================\n`);
-
-  // Step 1: Start local UI server immediately so Electron loads in milliseconds
-  startControlPanel();
-
-  // Step 2: Cloud Handshake in background
+async function syncUserBalance() {
   try {
-    log('Cloud connectivity check...');
-    const isOnline = await checkCloudConnectivity();
-    if (!isOnline) {
-      log('WARNING: Cloud backend se connect nahi ho paya.');
-    }
-
-    await verifyVersionGate();
-
     const operatorPhone = process.env.OPERATOR_PHONE || '9999999999';
     const loginRes = await axios.post(`${CLOUD_URL}/api/auth/login`, {
       phone: operatorPhone,
       hwid: state.hwid,
       name: 'Default Operator',
-    });
+    }, { timeout: 6000 });
 
-    if (loginRes.data.ok) {
+    if (loginRes.data && loginRes.data.ok) {
       state.user = loginRes.data.user;
-      state.walletBalance = loginRes.data.wallet.balance;
+      state.walletBalance = loginRes.data.wallet ? loginRes.data.wallet.balance : 0;
       state.subscription = loginRes.data.subscription;
-      log(`Welcome ${state.user.name}! Plan: ${state.subscription ? '₹699 Pass' : 'Wallet (₹' + state.walletBalance + ')'}`);
+      state.isOnline = true;
+      try {
+        fs.writeFileSync(SESSION_CACHE_FILE, JSON.stringify({
+          walletBalance: state.walletBalance,
+          user: state.user,
+          subscription: state.subscription,
+        }, null, 2));
+      } catch {}
+      return true;
     }
   } catch (err) {
-    log(`Startup check: ${err.response ? err.response.data.message : err.message}`);
+    // Keep last known balance if network momentarily blips
   }
+  return false;
+}
+
+// -------------------------------------------------------------------------
+// 6. MAIN ENTRY POINT
+// -------------------------------------------------------------------------
+async function main() {
+  // Step 1: Start local UI server immediately so Electron loads in milliseconds
+  startControlPanel();
+
+  // Step 2: Cloud Handshake in background
+  try {
+    log('System initialized. Checking network connection...');
+    await checkCloudConnectivity();
+    await verifyVersionGate();
+
+    const synced = await syncUserBalance();
+    if (synced) {
+      const planName = state.subscription ? 'Monthly Pass' : 'Pay As You Go';
+      log(`Connected to cloud services. Active Plan: ${planName} | Available Balance: ₹${state.walletBalance}`);
+    }
+  } catch (err) {
+    log(`Network check: ${err.response ? err.response.data.message : err.message}`);
+  }
+
+  // Periodic background balance sync every 10 seconds
+  setInterval(syncUserBalance, 10000);
 }
 
 main().catch(err => {

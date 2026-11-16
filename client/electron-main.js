@@ -36,7 +36,7 @@ async function createWindow() {
     height: 760,
     minWidth: 800,
     minHeight: 600,
-    title: 'On-Farm — Intelligent Crop Insurance Automation',
+    title: 'On-Farm',
     backgroundColor: '#f8fafc',
     autoHideMenuBar: true,
     webPreferences: {
