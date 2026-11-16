@@ -127,11 +127,11 @@
   <div id="offlineBlock">
     <div>
       <div style="font-size: 3rem; margin-bottom: 12px;">📡</div>
-      <h2 style="margin-bottom: 8px;">Internet Connection Required</h2>
-      <p style="color: #94a3b8; max-width: 440px; margin-bottom: 20px;">
-        On-Farm bina internet ke execute nahi ho sakta. Kripya apna internet check karein.
+      <h2 data-i18n="offlineTitle" style="margin-bottom: 8px;">Internet Connection Required</h2>
+      <p data-i18n="offlineDesc" style="color: #94a3b8; max-width: 440px; margin-bottom: 20px;">
+        On-Farm cannot execute without internet. Please check your connection.
       </p>
-      <button class="btn btn-primary" onclick="checkStatus()">Retry Connection</button>
+      <button data-i18n="btnRetry" class="btn btn-primary" onclick="checkStatus()">Retry Connection</button>
     </div>
   </div>
 
@@ -139,9 +139,20 @@
     <!-- Header -->
     <div class="card">
       <div class="header-row">
-        <div class="brand">
-          <span class="badge">PRO</span>
-          <span>On-Farm Automation</span>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div class="brand">
+            <span class="badge">PRO</span>
+            <span data-i18n="brandTitle">On-Farm Automation</span>
+          </div>
+
+          <!-- Language Selector (Left Side) -->
+          <div style="display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; background: #f8fafc; border: 1px solid var(--border); padding: 4px 10px; border-radius: 8px;">
+            <span style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase;">language:</span>
+            <select id="langSelect" onchange="setLanguage(this.value)" style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 2px 8px; font-size: 0.82rem; font-weight: 800; background: white; color: var(--text); cursor: pointer; outline: none;">
+              <option value="en" selected>EN</option>
+              <option value="hi">HI</option>
+            </select>
+          </div>
         </div>
         <div style="font-size: 0.85rem; color: var(--text-muted);">
           HWID: <code id="hwidDisplay">Detecting...</code>
@@ -153,28 +164,28 @@
     <div class="license-card">
       <div class="license-row">
         <div>
-          <div style="font-size: 0.85rem; color: #94a3b8;">Current Active Plan</div>
+          <div data-i18n="planHeading" style="font-size: 0.85rem; color: #94a3b8;">Current Active Plan</div>
           <div id="planName" style="font-size: 1.25rem; font-weight: 800; margin-top: 4px;">Checking...</div>
         </div>
         <div id="planBadge" class="plan-badge">VALIDATING</div>
       </div>
       <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
         <div>
-          <div style="font-size: 0.8rem; color: #94a3b8;">Wallet Balance (₹1 / kila)</div>
+          <div data-i18n="walletHeading" style="font-size: 0.8rem; color: #94a3b8;">Wallet Balance (₹1 / kila)</div>
           <div class="wallet-val" id="walletBal">₹0.00</div>
         </div>
         <div style="display: flex; gap: 10px;">
-          <button class="btn btn-light" style="color:white; background:rgba(255,255,255,0.15);" onclick="openRechargeModal()">+ Recharge Wallet</button>
-          <button class="btn btn-primary" style="background:#22c55e; color:#052e16;" onclick="buySubscription()">Buy ₹699 Pass</button>
+          <button data-i18n="btnRecharge" class="btn btn-light" style="color:white; background:rgba(255,255,255,0.15);" onclick="openRechargeModal()">+ Recharge Wallet</button>
+          <button data-i18n="btnBuyPass" class="btn btn-primary" style="background:#22c55e; color:#052e16;" onclick="buySubscription()">Buy ₹699 Pass</button>
         </div>
       </div>
     </div>
 
     <!-- Navigation Tabs -->
     <div class="tabs-nav">
-      <button class="tab-btn active" onclick="switchView('runner', this)">⚡ Automation Runner</button>
-      <button class="tab-btn" onclick="switchView('generator', this)">📝 Kila Entry & Excel Generator</button>
-      <button class="tab-btn" onclick="switchView('preview', this)">📊 Excel Data Preview</button>
+      <button data-i18n="tabRunner" class="tab-btn active" onclick="switchView('runner', this)">⚡ Automation Runner</button>
+      <button data-i18n="tabGenerator" class="tab-btn" onclick="switchView('generator', this)">📝 Kila Entry & Excel Generator</button>
+      <button data-i18n="tabPreview" class="tab-btn" onclick="switchView('preview', this)">📊 Excel Data Preview</button>
     </div>
 
     <!-- TAB 1: AUTOMATION RUNNER -->
@@ -188,90 +199,90 @@
       </div>
 
       <div class="action-group">
-        <button id="startBtn" class="btn btn-primary" onclick="startAutomation()">▶ START AUTOMATION</button>
-        <button id="stopBtn" class="btn btn-danger" onclick="stopAutomation()" disabled>⏹ STOP</button>
-        <button class="btn btn-light" onclick="resetExcelStatus()">🔄 Reset Done/Error</button>
+        <button data-i18n="btnStart" id="startBtn" class="btn btn-primary" onclick="startAutomation()">▶ START AUTOMATION</button>
+        <button data-i18n="btnStop" id="stopBtn" class="btn btn-danger" onclick="stopAutomation()" disabled>⏹ STOP</button>
+        <button data-i18n="btnResetExcel" class="btn btn-light" onclick="resetExcelStatus()">🔄 Reset Done/Error</button>
       </div>
 
       <div id="errorAlert" style="display:none; background:#fee2e2; color:#dc2626; padding:12px; border-radius:8px; font-size:0.85rem; margin-top:12px;"></div>
 
-      <div id="logsConsole">Waiting to start...</div>
+      <div id="logsConsole" data-i18n="consoleWaiting">Waiting to start...</div>
     </div>
 
     <!-- TAB 2: KILA ENTRY & EXCEL GENERATOR (User's Exact Feature!) -->
     <div id="viewGenerator" class="card" style="display: none;">
-      <h3 style="margin-bottom: 4px; font-size: 1.15rem;">Kila & Farmer Data Entry Form</h3>
-      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">
-        Yahan farmer aur kilas fill karein — 18-digit khasra codes automatically ban kar Excel sheet me add ho jayenge.
+      <h3 data-i18n="genTitle" style="margin-bottom: 4px; font-size: 1.15rem;">Kila & Farmer Data Entry Form</h3>
+      <p data-i18n="genSubtitle" style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">
+        Enter farmer and kila details — 18-digit khasra codes will be automatically generated into Excel.
       </p>
 
       <div class="form-grid">
         <div class="form-group">
-          <label>Farmer Name (किसान का नाम)</label>
-          <input type="text" id="genName" class="form-control" placeholder="उदा. किसान का नाम (जैसे हलीमा)" value="">
+          <label data-i18n="lblFarmerName">Farmer Name</label>
+          <input type="text" id="genName" class="form-control" data-i18n-ph="phFarmerName" placeholder="e.g. Halima" value="">
         </div>
         <div class="form-group">
-          <label>Khata No (खाता संख्या नया)</label>
-          <input type="text" id="genKhata" class="form-control" placeholder="उदा. 61" value="">
+          <label data-i18n="lblKhataNo">Khata No (New)</label>
+          <input type="text" id="genKhata" class="form-control" data-i18n-ph="phKhataNo" placeholder="e.g. 61" value="">
         </div>
       </div>
 
       <div class="form-grid">
         <div class="form-group">
-          <label>Crop (फसल का नाम)</label>
+          <label data-i18n="lblCrop">Crop Name</label>
           <select id="genCrop" class="form-control">
-            <option value="Groundnut (Pea Nut)" selected>Groundnut (Pea Nut) / मूंगफली</option>
-            <option value="Cotton">Cotton / कपास</option>
-            <option value="Guar">Guar / ग्वार</option>
-            <option value="Bajra">Bajra / बाजरा</option>
-            <option value="Moong">Moong / मूंग</option>
-            <option value="Moth">Moth / मोठ</option>
-            <option value="Mustard">Mustard / सरसों</option>
-            <option value="Wheat">Wheat / गेहूं</option>
-            <option value="Gram">Gram / चना</option>
+            <option value="Groundnut (Pea Nut)" selected>Groundnut (Pea Nut)</option>
+            <option value="Cotton">Cotton</option>
+            <option value="Guar">Guar</option>
+            <option value="Bajra">Bajra</option>
+            <option value="Moong">Moong</option>
+            <option value="Moth">Moth</option>
+            <option value="Mustard">Mustard</option>
+            <option value="Wheat">Wheat</option>
+            <option value="Gram">Gram</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Sowing Date (बुवाई की तारीख - DD/MM/YYYY)</label>
-          <input type="text" id="genDate" class="form-control" placeholder="उदा. 20/06/2026" value="">
+          <label data-i18n="lblSowingDate">Sowing Date (DD/MM/YYYY)</label>
+          <input type="text" id="genDate" class="form-control" data-i18n-ph="phSowingDate" placeholder="e.g. 20/06/2026" value="">
         </div>
       </div>
 
       <div class="form-grid">
         <div class="form-group">
-          <label>Ownership (स्वामित्व)</label>
+          <label data-i18n="lblOwnership">Ownership</label>
           <select id="genOwnership" class="form-control">
-            <option value="Owner" selected>Owner (खुद की जमीन)</option>
-            <option value="Tenant">Tenant (काश्तकार)</option>
+            <option value="Owner" selected data-i18n="optOwner">Owner (Self-owned)</option>
+            <option value="Tenant" data-i18n="optTenant">Tenant</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Murabba No (मुरब्बा संख्या - जैसे 67/58)</label>
-          <input type="text" id="genMurabba" class="form-control" placeholder="उदा: 67/58 या 207/6" value="">
-          <div class="help-hint">💡 मुरब्बा एक साथ लिखें (जैसे: <strong>67/58</strong> या <strong>207/6</strong>)</div>
+          <label data-i18n="lblMurabba">Murabba No (e.g. 67/58)</label>
+          <input type="text" id="genMurabba" class="form-control" data-i18n-ph="phMurabba" placeholder="e.g. 67/58 or 207/6" value="">
+          <div class="help-hint" data-i18n="hintMurabba">💡 Enter Murabba in one box (e.g. 67/58 or 207/6)</div>
         </div>
       </div>
 
       <div class="form-grid">
         <div class="form-group">
-          <label>Kila Numbers (किले संख्या - Range या Comma-separated)</label>
-          <input type="text" id="genKilas" class="form-control" placeholder="उदा: 1-25 या 1, 2, 4, 7-12" value="">
-          <div class="help-hint">
-            💡 पूरा मुरब्बा भरने के लिए <strong>1-25</strong> लिखें।
+          <label data-i18n="lblKilas">Kila Numbers (Range or Comma-separated)</label>
+          <input type="text" id="genKilas" class="form-control" data-i18n-ph="phKilas" placeholder="e.g. 1-25 or 1, 2, 4, 7-12" value="">
+          <div class="help-hint" data-i18n="hintKilas">
+            💡 Enter 1-25 to fill the complete murabba.
           </div>
         </div>
         <div class="form-group">
-          <label>Sub-Kilas / Minjhla (किले जिनमें /1 या /2 है)</label>
-          <input type="text" id="genSubKilas" class="form-control" placeholder="उदा: 1/1, 10/1, 11/1 (अगर कोई हो)" value="">
-          <div class="help-hint">
-            💡 1-25 के बीच जिन किलों में /1 या /2 है, वो यहाँ लिखें (उदा: <strong>1/1, 10/1, 11/1, 20/1, 21/1</strong>)
+          <label data-i18n="lblSubKilas">Sub-Kilas / Partitioned (Kilas with /1 or /2)</label>
+          <input type="text" id="genSubKilas" class="form-control" data-i18n-ph="phSubKilas" placeholder="e.g. 1/1, 10/1, 11/1 (if any)" value="">
+          <div class="help-hint" data-i18n="hintSubKilas">
+            💡 Kilas within 1-25 that have /1 or /2 (e.g. 1/1, 10/1, 11/1)
           </div>
         </div>
       </div>
 
       <div style="display: flex; gap: 12px; margin-top: 14px; margin-bottom: 20px;">
-        <button class="btn btn-primary" style="padding: 11px 24px; font-size: 1rem;" onclick="addKilasToReview()">
-          ➕ Add to Review List (नीचे लिस्ट में जोड़ें)
+        <button data-i18n="btnAddReview" class="btn btn-primary" style="padding: 11px 24px; font-size: 1rem;" onclick="addKilasToReview()">
+          ➕ Add to Review List
         </button>
       </div>
 
@@ -279,13 +290,16 @@
       <div id="stagedReviewSection" style="border-top: 2px dashed var(--border); padding-top: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
           <div>
-            <h4 style="font-size: 1.1rem; color: #1e293b;">📋 Review & Edit Kilas (<span id="stagedCount" style="color:var(--primary); font-weight:800;">0</span> किले)</h4>
-            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">
-              ऊपर से जितने चाहें उतने मुरब्बे और किले जोड़ते रहें। यहाँ आप किसी भी नंबर/नाम को बदल सकते हैं या ❌ से हटा सकते हैं:
+            <h4 style="font-size: 1.1rem; color: #1e293b;">
+              <span data-i18n="reviewHeading">Review & Edit Kilas</span> 
+              (<span id="stagedCount" style="color:var(--primary); font-weight:800;">0</span> <span data-i18n="kilaUnit">Kilas</span>)
+            </h4>
+            <p data-i18n="reviewSubtitle" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">
+              Keep adding murabbas and kilas from above. Edit any number/name or click ❌ to delete:
             </p>
           </div>
           <div>
-            <button class="btn btn-light" style="padding: 6px 14px; font-size: 0.85rem; color: var(--danger); border-color: #fca5a5;" onclick="clearStagedRows()">🗑️ Clear List (खाली करें)</button>
+            <button data-i18n="btnClearList" class="btn btn-light" style="padding: 6px 14px; font-size: 0.85rem; color: var(--danger); border-color: #fca5a5;" onclick="clearStagedRows()">🗑️ Clear List</button>
           </div>
         </div>
 
@@ -294,26 +308,26 @@
             <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 2;">
               <tr>
                 <th style="width: 40px;">#</th>
-                <th style="width: 90px;">किला (Kila)</th>
-                <th style="width: 210px;">18-Digit खसरा (Auto)</th>
-                <th>किसान का नाम</th>
-                <th style="width: 80px;">खाता सं.</th>
-                <th style="width: 50px; text-align: center;">हटाएं</th>
+                <th style="width: 90px;" data-i18n="thKila">Kila</th>
+                <th style="width: 210px;" data-i18n="thKhasra">18-Digit Khasra (Auto)</th>
+                <th data-i18n="thFarmer">Farmer Name</th>
+                <th style="width: 80px;" data-i18n="thKhata">Khata No</th>
+                <th style="width: 50px; text-align: center;" data-i18n="thDelete">Delete</th>
               </tr>
             </thead>
             <tbody id="stagedTableBody">
-              <tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">ऊपर डिटेल्स भरकर "➕ Add to Review List" पर क्लिक करें।</td></tr>
+              <tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;" data-i18n="emptyReviewMsg">Fill details above and click "➕ Add to Review List".</td></tr>
             </tbody>
           </table>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 14px 18px; border-radius: 8px;">
           <div style="font-size: 0.95rem; font-weight: 700; color: #334155;">
-            Total Kilas: <span id="stagedFooterCount" style="color:var(--primary); font-size: 1.15rem;">0</span>
+            <span data-i18n="totalKilasLabel">Total Kilas:</span> <span id="stagedFooterCount" style="color:var(--primary); font-size: 1.15rem;">0</span>
           </div>
           <div>
-            <button class="btn btn-primary" style="padding: 11px 26px; font-size: 1rem;" onclick="saveStagedToExcel(false)">
-              💾 Create Excel (farmers.xlsx बनाएं)
+            <button data-i18n="btnCreateExcel" class="btn btn-primary" style="padding: 11px 26px; font-size: 1rem;" onclick="saveStagedToExcel(false)">
+              💾 Create Excel (Save to farmers.xlsx)
             </button>
           </div>
         </div>
@@ -325,23 +339,23 @@
     <!-- TAB 3: EXCEL DATA PREVIEW -->
     <div id="viewPreview" class="card" style="display: none;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h3 style="font-size: 1.15rem;">Farmers & Kilas List in Excel</h3>
-        <button class="btn btn-light" style="padding: 6px 12px; font-size: 0.8rem;" onclick="loadExcelRows()">🔄 Refresh</button>
+        <h3 data-i18n="previewHeading" style="font-size: 1.15rem;">Farmers & Kilas List in Excel</h3>
+        <button data-i18n="btnRefresh" class="btn btn-light" style="padding: 6px 12px; font-size: 0.8rem;" onclick="loadExcelRows()">🔄 Refresh</button>
       </div>
       <div style="max-height: 380px; overflow-y: auto;">
         <table>
           <thead>
             <tr>
               <th>#</th>
-              <th>Farmer Name</th>
-              <th>Crop</th>
-              <th>Khata</th>
-              <th>18-Digit Khasra</th>
-              <th>Status</th>
+              <th data-i18n="thPrevFarmer">Farmer Name</th>
+              <th data-i18n="thPrevCrop">Crop</th>
+              <th data-i18n="thPrevKhata">Khata</th>
+              <th data-i18n="thPrevKhasra">18-Digit Khasra</th>
+              <th data-i18n="thPrevStatus">Status</th>
             </tr>
           </thead>
           <tbody id="previewTableBody">
-            <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading data...</td></tr>
+            <tr><td colspan="6" style="text-align: center; color: var(--text-muted);" data-i18n="emptyPrevMsg">Loading data...</td></tr>
           </tbody>
         </table>
       </div>
@@ -351,8 +365,8 @@
   <!-- Recharge Modal -->
   <div id="rechargeModal" class="modal-overlay">
     <div class="modal-card">
-      <h3 style="margin-bottom: 8px;">Wallet Recharge</h3>
-      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">
+      <h3 data-i18n="rechargeTitle" style="margin-bottom: 8px;">Wallet Recharge</h3>
+      <p data-i18n="rechargeDesc" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">
         ₹1 per kila deduct hoga. Test karne ke liye ₹1 bhi pay kar sakte hain!
       </p>
       <div style="display: flex; gap: 10px; margin-bottom: 18px;">
@@ -363,13 +377,194 @@
       </div>
       <input type="number" id="customAmount" class="form-control" placeholder="Custom Amount (₹)" value="1" style="margin-bottom: 18px;">
       <div style="display: flex; gap: 10px; justify-content: flex-end;">
-        <button class="btn btn-light" onclick="closeModal('rechargeModal')">Cancel</button>
-        <button class="btn btn-primary" onclick="payWallet()">Pay with Cashfree / UPI</button>
+        <button data-i18n="btnCancel" class="btn btn-light" onclick="closeModal('rechargeModal')">Cancel</button>
+        <button data-i18n="btnPay" class="btn btn-primary" onclick="payWallet()">Pay with Cashfree / UPI</button>
       </div>
     </div>
   </div>
 
   <script>
+    // -------------------------------------------------------------------------
+    // BILINGUAL LANGUAGE ENGINE (ENGLISH / HINDI)
+    // -------------------------------------------------------------------------
+    const I18N = {
+      en: {
+        brandTitle: 'On-Farm Automation',
+        planHeading: 'Current Active Plan',
+        walletHeading: 'Wallet Balance (₹1 / kila)',
+        btnRecharge: '+ Recharge Wallet',
+        btnBuyPass: 'Buy ₹699 Pass',
+        planWallet: 'Pay-Per-Kila Wallet (₹1/kila)',
+        planSub: '₹699 Monthly Pass (Unlimited)',
+        planBadgePayAsYouGo: 'PAY-AS-YOU-GO',
+        planBadgeActive: 'ACTIVE',
+        tabRunner: '⚡ Automation Runner',
+        tabGenerator: '📝 Kila Entry & Excel Generator',
+        tabPreview: '📊 Excel Data Preview',
+        statusIdle: 'Idle',
+        statusRunning: 'Running',
+        statusError: 'Error / Stopped',
+        processedSuffix: 'Processed',
+        btnStart: '▶ START AUTOMATION',
+        btnStop: '⏹ STOP',
+        btnResetExcel: '🔄 Reset Done/Error',
+        consoleWaiting: 'Waiting to start...',
+        genTitle: 'Kila & Farmer Data Entry Form',
+        genSubtitle: 'Enter farmer and kila details — 18-digit khasra codes will be automatically generated into Excel.',
+        lblFarmerName: 'Farmer Name',
+        phFarmerName: 'e.g. Halima',
+        lblKhataNo: 'Khata No (New)',
+        phKhataNo: 'e.g. 61',
+        lblCrop: 'Crop Name',
+        lblSowingDate: 'Sowing Date (DD/MM/YYYY)',
+        phSowingDate: 'e.g. 20/06/2026',
+        lblOwnership: 'Ownership',
+        optOwner: 'Owner (Self-owned)',
+        optTenant: 'Tenant',
+        lblMurabba: 'Murabba No (e.g. 67/58)',
+        phMurabba: 'e.g. 67/58 or 207/6',
+        hintMurabba: '💡 Enter Murabba in one box (e.g. 67/58 or 207/6)',
+        lblKilas: 'Kila Numbers (Range or Comma-separated)',
+        phKilas: 'e.g. 1-25 or 1, 2, 4, 7-12',
+        hintKilas: '💡 Enter 1-25 to fill the complete murabba.',
+        lblSubKilas: 'Sub-Kilas / Partitioned (Kilas with /1 or /2)',
+        phSubKilas: 'e.g. 1/1, 10/1, 11/1 (if any)',
+        hintSubKilas: '💡 Kilas within 1-25 that have /1 or /2 (e.g. 1/1, 10/1, 11/1)',
+        btnAddReview: '➕ Add to Review List',
+        reviewHeading: 'Review & Edit Kilas',
+        kilaUnit: 'Kilas',
+        reviewSubtitle: 'Keep adding murabbas and kilas from above. Edit any number/name or click ❌ to delete:',
+        btnClearList: '🗑️ Clear List',
+        thKila: 'Kila',
+        thKhasra: '18-Digit Khasra (Auto)',
+        thFarmer: 'Farmer Name',
+        thKhata: 'Khata No',
+        thDelete: 'Delete',
+        emptyReviewMsg: 'Fill details above and click "➕ Add to Review List".',
+        totalKilasLabel: 'Total Kilas:',
+        btnCreateExcel: '💾 Create Excel (Save to farmers.xlsx)',
+        previewHeading: 'Farmers & Kilas List in Excel',
+        btnRefresh: '🔄 Refresh',
+        thPrevFarmer: 'Farmer Name',
+        thPrevCrop: 'Crop',
+        thPrevKhata: 'Khata',
+        thPrevKhasra: '18-Digit Khasra',
+        thPrevStatus: 'Status',
+        emptyPrevMsg: 'No kilas found. Generate kilas in Kila Entry tab!',
+        offlineTitle: 'Internet Connection Required',
+        offlineDesc: 'On-Farm cannot execute without internet. Please check your connection.',
+        btnRetry: 'Retry Connection',
+        rechargeTitle: 'Wallet Recharge',
+        rechargeDesc: '₹1 deducted per kila. You can even recharge ₹1 to test!',
+        btnPay: 'Pay with Cashfree / UPI',
+        btnCancel: 'Cancel',
+      },
+      hi: {
+        brandTitle: 'ऑन-फार्म ऑटोमेशन',
+        planHeading: 'वर्तमान एक्टिव प्लान',
+        walletHeading: 'वॉलेट बैलेंस (₹1 / किला)',
+        btnRecharge: '+ वॉलेट रिचार्ज',
+        btnBuyPass: '₹699 पास खरीदें',
+        planWallet: 'Pay-Per-Kila वॉलेट (₹1/किला)',
+        planSub: '₹699 मासिक पास (अनलिमिटेड)',
+        planBadgePayAsYouGo: 'PAY-AS-YOU-GO',
+        planBadgeActive: 'सक्रिय (ACTIVE)',
+        tabRunner: '⚡ ऑटोमेशन रनर',
+        tabGenerator: '📝 किला एंट्री और एक्सेल बनाएं',
+        tabPreview: '📊 एक्सेल डेटा प्रीव्यू',
+        statusIdle: 'तैयार (Idle)',
+        statusRunning: 'चालू है (Running)',
+        statusError: 'त्रुटि / रुका हुआ',
+        processedSuffix: 'पूर्ण',
+        btnStart: '▶ ऑटोमेशन शुरू करें',
+        btnStop: '⏹ बंद करें (STOP)',
+        btnResetExcel: '🔄 स्टेटस रीसेट करें',
+        consoleWaiting: 'शुरू होने की प्रतीक्षा कर रहा है...',
+        genTitle: 'किसान एवं किला डेटा एंट्री फॉर्म',
+        genSubtitle: 'यहाँ किसान और किले भरें — 18-डिजिट खसरा कोड अपने आप बनकर एक्सेल में जुड़ जाएँगे।',
+        lblFarmerName: 'किसान का नाम',
+        phFarmerName: 'उदा. हलीमा',
+        lblKhataNo: 'खाता संख्या (नया)',
+        phKhataNo: 'उदा. 61',
+        lblCrop: 'फसल का नाम',
+        lblSowingDate: 'बुवाई की तारीख (DD/MM/YYYY)',
+        phSowingDate: 'उदा. 20/06/2026',
+        lblOwnership: 'स्वामित्व',
+        optOwner: 'Owner (खुद की जमीन)',
+        optTenant: 'Tenant (काश्तकार)',
+        lblMurabba: 'मुरब्बा संख्या (जैसे 67/58)',
+        phMurabba: 'उदा: 67/58 या 207/6',
+        hintMurabba: '💡 मुरब्बा एक साथ लिखें (जैसे: 67/58 या 207/6)',
+        lblKilas: 'किले संख्या (रेंज या कॉमा-सेपरेटेड)',
+        phKilas: 'उदा: 1-25 या 1, 2, 4, 7-12',
+        hintKilas: '💡 पूरा मुरब्बा भरने के लिए 1-25 लिखें।',
+        lblSubKilas: 'सब-किले / मिंझला (किले जिनमें /1 या /2 है)',
+        phSubKilas: 'उदा: 1/1, 10/1, 11/1 (अगर कोई हो)',
+        hintSubKilas: '💡 1-25 के बीच जिन किलों में /1 या /2 है, वो यहाँ लिखें (उदा: 1/1, 10/1, 11/1)',
+        btnAddReview: '➕ नीचे लिस्ट में जोड़ें',
+        reviewHeading: 'रिव्यू एवं एडिट टेबल',
+        kilaUnit: 'किले',
+        reviewSubtitle: 'ऊपर से जितने चाहें उतने मुरब्बे और किले जोड़ते रहें। यहाँ आप किसी भी नंबर/नाम को बदल सकते हैं या ❌ से हटा सकते हैं:',
+        btnClearList: '🗑️ लिस्ट खाली करें',
+        thKila: 'किला',
+        thKhasra: '18-डिजिट खसरा (Auto)',
+        thFarmer: 'किसान का नाम',
+        thKhata: 'खाता सं.',
+        thDelete: 'हटाएं',
+        emptyReviewMsg: 'ऊपर डिटेल्स भरकर "➕ नीचे लिस्ट में जोड़ें" पर क्लिक करें।',
+        totalKilasLabel: 'कुल किले:',
+        btnCreateExcel: '💾 एक्सेल बनाएं (farmers.xlsx में Save करें)',
+        previewHeading: 'एक्सेल शीट में मौजूद किसान और किले',
+        btnRefresh: '🔄 रीफ्रेश करें',
+        thIndex: '#',
+        thPrevFarmer: 'किसान का नाम',
+        thPrevCrop: 'फसल',
+        thPrevKhata: 'खाता',
+        thPrevKhasra: '18-डिजिट खसरा',
+        thPrevStatus: 'स्थिति',
+        emptyPrevMsg: 'कोई किला लिस्ट नहीं मिली। किला एंट्री टैब में जाकर जनरेट करें!',
+        offlineTitle: 'इंटरनेट कनेक्शन अनिवार्य है',
+        offlineDesc: 'On-Farm बिना इंटरनेट के काम नहीं कर सकता। कृपया अपना इंटरनेट चेक करें।',
+        btnRetry: 'पुनः प्रयास करें',
+        rechargeTitle: 'वॉलेट रिचार्ज',
+        rechargeDesc: '₹1 प्रति किला काटा जाएगा। टेस्ट करने के लिए ₹1 भी रिचार्ज कर सकते हैं!',
+        btnPay: 'कैशफ्री / UPI से भुगतान करें',
+        btnCancel: 'रद्द करें',
+      }
+    };
+
+    let currentLang = localStorage.getItem('onfarm_lang') || 'en';
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem('onfarm_lang', lang);
+      const sel = document.getElementById('langSelect');
+      if (sel) sel.value = lang;
+      applyLanguage(lang);
+    }
+
+    function applyLanguage(lang) {
+      const t = I18N[lang] || I18N.en;
+
+      // Text contents
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (t[key]) el.textContent = t[key];
+      });
+
+      // Placeholders
+      document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+        const key = el.getAttribute('data-i18n-ph');
+        if (t[key]) el.placeholder = t[key];
+      });
+
+      // Table placeholder if empty
+      if (stagedRows.length === 0) {
+        const tbody = document.getElementById('stagedTableBody');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">${t.emptyReviewMsg}</td></tr>`;
+      }
+    }
+
     function switchView(view, btn) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.getElementById('viewRunner').style.display = view === 'runner' ? 'block' : 'none';
@@ -387,24 +582,26 @@
       try {
         const res = await fetch('/status');
         const s = await res.json();
+        const t = I18N[currentLang] || I18N.en;
+
         document.getElementById('offlineBlock').style.display = s.isOnline ? 'none' : 'flex';
         document.getElementById('hwidDisplay').textContent = s.hwid || 'N/A';
         document.getElementById('walletBal').textContent = '₹' + (s.walletBalance || 0);
 
         if (s.subscription && s.subscription.is_active) {
-          document.getElementById('planName').textContent = '₹699 Monthly Pass (Unlimited)';
-          document.getElementById('planBadge').textContent = 'ACTIVE';
+          document.getElementById('planName').textContent = t.planSub;
+          document.getElementById('planBadge').textContent = t.planBadgeActive;
           document.getElementById('planBadge').style.background = '#22c55e';
         } else {
-          document.getElementById('planName').textContent = 'Pay-Per-Kila Wallet (₹1/kila)';
-          document.getElementById('planBadge').textContent = 'PAY-AS-YOU-GO';
+          document.getElementById('planName').textContent = t.planWallet;
+          document.getElementById('planBadge').textContent = t.planBadgePayAsYouGo;
           document.getElementById('planBadge').style.background = '#eab308';
         }
 
         const dot = document.getElementById('statusDot');
         dot.className = 'status-dot ' + (s.isRunning ? 'dot-running' : (s.lastError ? 'dot-error' : 'dot-stopped'));
-        document.getElementById('statusText').textContent = s.isRunning ? 'Running' : (s.lastError ? 'Error / Stopped' : 'Idle');
-        document.getElementById('progressText').textContent = `${s.processedCount || 0} / ${s.totalRows || 0} Processed`;
+        document.getElementById('statusText').textContent = s.isRunning ? t.statusRunning : (s.lastError ? t.statusError : t.statusIdle);
+        document.getElementById('progressText').textContent = `${s.processedCount || 0} / ${s.totalRows || 0} ${t.processedSuffix}`;
 
         document.getElementById('startBtn').disabled = s.isRunning;
         document.getElementById('stopBtn').disabled = !s.isRunning;
@@ -542,11 +739,12 @@
 
     function renderStagedTable() {
       const tbody = document.getElementById('stagedTableBody');
+      const t = I18N[currentLang] || I18N.en;
       document.getElementById('stagedCount').textContent = stagedRows.length;
       document.getElementById('stagedFooterCount').textContent = stagedRows.length;
 
       if (stagedRows.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">ऊपर डिटेल्स भरकर "➕ Add to Review List" पर क्लिक करें।</td></tr>';
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">${t.emptyReviewMsg}</td></tr>`;
         return;
       }
 
@@ -571,7 +769,7 @@
               value="${r.khataNo}" oninput="stagedRows[${i}].khataNo = this.value">
           </td>
           <td style="text-align:center;">
-            <button class="btn btn-light" style="padding:3px 8px; color:#dc2626; font-size:0.85rem;" title="इस किले को हटाएं" onclick="deleteStagedRow(${i})">❌</button>
+            <button class="btn btn-light" style="padding:3px 8px; color:#dc2626; font-size:0.85rem;" title="${t.thDelete}" onclick="deleteStagedRow(${i})">❌</button>
           </td>
         </tr>
       `).join('');
@@ -674,7 +872,8 @@
         const data = await res.json();
         const tbody = document.getElementById('previewTableBody');
         if (!data.rows || !data.rows.length) {
-          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#9ca3af;">Koi kila list nahi mili. Kila Entry tab me jakar generate karein!</td></tr>';
+          const t = I18N[currentLang] || I18N.en;
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#9ca3af;">${t.emptyPrevMsg}</td></tr>`;
           return;
         }
         tbody.innerHTML = data.rows.map(r => `
@@ -777,6 +976,7 @@
       }
     }
 
+    setLanguage(currentLang);
     checkStatus();
     setInterval(checkStatus, 1500);
   </script>
