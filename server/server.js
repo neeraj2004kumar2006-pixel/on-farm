@@ -15,6 +15,20 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
+// Handle Vercel Express rewrites
+app.use((req, res, next) => {
+  const forwardedPath = req.headers['x-matched-path'] || req.headers['x-invoke-path'];
+  if (forwardedPath && req.url === '/server.js') {
+    req.url = forwardedPath;
+  }
+  next();
+});
+app.all('/server.js', (req, res, next) => {
+  const forwardedPath = req.headers['x-matched-path'] || req.headers['x-invoke-path'] || '/api/health';
+  req.url = forwardedPath;
+  app.handle(req, res, next);
+});
+
 // Serve Admin Dashboard
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 app.get('/admin', (req, res) => {
