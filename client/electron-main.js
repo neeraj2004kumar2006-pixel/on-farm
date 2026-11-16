@@ -30,7 +30,9 @@ function waitForServer(url, timeoutMs = 15000) {
   });
 }
 
-app.disableHardwareAcceleration();
+if (app && typeof app.disableHardwareAcceleration === 'function') {
+  app.disableHardwareAcceleration();
+}
 
 async function createWindow() {
   const iconPath = path.join(__dirname, 'public', process.platform === 'win32' ? 'icon.ico' : 'icon.png');
