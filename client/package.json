@@ -1,0 +1,19 @@
+{
+  "name": "on-farm-client",
+  "version": "1.0.0",
+  "description": "On-Farm Secure Desktop Runner with HWID Protection and Cashfree Payments",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "node runner.js",
+    "app": "electron electron-main.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "exceljs": "^4.4.0",
+    "express": "^4.21.0",
+    "playwright": "^1.47.0"
+  },
+  "devDependencies": {
+    "electron": "^45.3.3"
+  }
+}

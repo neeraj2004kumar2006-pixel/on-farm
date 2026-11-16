@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<title>Farmer Form Automation — Control Panel</title>
+<style>
+  body { font-family: "Segoe UI", Arial, sans-serif; background:#f4f6f8; margin:0; padding:2rem; }
+  .card { background:#fff; border-radius:10px; padding:1.5rem 2rem; max-width:640px; margin:0 auto; box-shadow:0 2px 10px rgba(0,0,0,0.08); }
+  h1 { font-size:1.3rem; margin-top:0; }
+  .status-row { display:flex; gap:0.75rem; align-items:center; margin:1rem 0; }
+  .dot { width:12px; height:12px; border-radius:50%; background:#bbb; }
+  .dot.running { background:#2e7d32; }
+  .dot.stopped { background:#9e9e9e; }
+  .dot.error { background:#c62828; }
+  button { padding:0.6rem 1.4rem; font-size:1rem; border:none; border-radius:6px; cursor:pointer; margin-right:0.75rem; }
+  #startBtn { background:#2e7d32; color:#fff; }
+  #stopBtn { background:#c62828; color:#fff; }
+  button:disabled { opacity:0.5; cursor:not-allowed; }
+  .info { color:#444; font-size:0.95rem; margin:0.4rem 0; }
+  .error-box { background:#fdecea; color:#c62828; padding:0.75rem 1rem; border-radius:6px; margin-top:0.75rem; white-space:pre-wrap; }
+  #logs { background:#0d1117; color:#c9d1d9; font-family:Consolas,monospace; font-size:0.82rem; padding:0.75rem 1rem; border-radius:6px; height:220px; overflow-y:auto; margin-top:1rem; white-space:pre-wrap; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Farmer Form Automation</h1>
+    <div class="status-row">
+      <div id="dot" class="dot"></div>
+      <span id="statusText">Loading...</span>
+    </div>
+    <p class="info" id="progressText"></p>
+    <p class="info" id="rowText"></p>
+    <div>
+      <button id="startBtn">START</button>
+      <button id="stopBtn">STOP</button>
+    </div>
+    <div id="errorBox" class="error-box" style="display:none;"></div>
+    <div id="logs"></div>
+  </div>
+
+<script>
+  const dot = document.getElementById('dot');
+  const statusText = document.getElementById('statusText');
+  const progressText = document.getElementById('progressText');
+  const rowText = document.getElementById('rowText');
+  const errorBox = document.getElementById('errorBox');
+  const logsEl = document.getElementById('logs');
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+
+  async function refresh() {
+    try {
+      const res = await fetch('/status');
+      const s = await res.json();
+      dot.className = 'dot ' + (s.isRunning ? 'running' : (s.lastError ? 'error' : 'stopped'));
+      statusText.textContent = s.isRunning ? 'Running' : (s.lastError ? 'Stopped (error)' : 'Idle');
+      progressText.textContent = 'Processed: ' + s.processedCount + ' / ' + s.totalRows;
+      rowText.textContent = s.currentRow ? ('Current row: ' + s.currentRow.name + ' (row ' + s.currentRow.index + ')') : '';
+      startBtn.disabled = s.isRunning;
+      stopBtn.disabled = !s.isRunning;
+      if (s.lastError) {
+        errorBox.style.display = 'block';
+        errorBox.textContent = 'Error: ' + s.lastError;
+      } else {
+        errorBox.style.display = 'none';
+      }
+      logsEl.textContent = (s.logs || []).join('\n');
+      logsEl.scrollTop = logsEl.scrollHeight;
+    } catch (e) { /* panel will retry on next tick */ }
+  }
+
+  startBtn.onclick = () => fetch('/start', { method: 'POST' }).then(refresh);
+  stopBtn.onclick = () => fetch('/stop', { method: 'POST' }).then(refresh);
+
+  refresh();
+  setInterval(refresh, 1500);
+</script>
+</body>
+</html>

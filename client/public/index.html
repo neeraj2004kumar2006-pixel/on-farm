@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>On-Farm Automation — Control Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Cashfree Checkout SDK v3 -->
+  <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
+  <style>
+    :root {
+      --primary: #15803d;
+      --primary-dark: #166534;
+      --primary-light: #dcfce7;
+      --accent: #22c55e;
+      --danger: #dc2626;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg); color: var(--text); padding: 24px;
+    }
+    .container { max-width: 760px; margin: 0 auto; }
+
+    /* Header Card */
+    .card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 24px; margin-bottom: 20px;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    .header-row { display: flex; justify-content: space-between; align-items: center; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.3rem; color: var(--primary); }
+    .badge { background: var(--primary); color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; }
+
+    /* Account / License Box */
+    .license-card {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: white; border-radius: var(--radius); padding: 22px; margin-bottom: 20px;
+    }
+    .license-row { display: flex; justify-content: space-between; align-items: center; }
+    .plan-badge {
+      display: inline-block; padding: 4px 12px; border-radius: 999px;
+      font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+      background: #22c55e; color: #052e16;
+    }
+    .wallet-val { font-size: 1.8rem; font-weight: 800; margin-top: 6px; }
+
+    /* Buttons */
+    .btn {
+      padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 0.95rem;
+      border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-danger:hover { background: #b91c1c; }
+    .btn-light { background: rgba(255,255,255,0.15); color: white; border: 1px solid rgba(255,255,255,0.2); }
+    .btn-light:hover { background: rgba(255,255,255,0.25); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Progress & Actions */
+    .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+    .dot-running { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+    .dot-stopped { background: #94a3b8; }
+    .dot-error { background: #ef4444; }
+
+    .action-group { display: flex; gap: 12px; margin: 18px 0; }
+
+    /* Logs Console */
+    #logsConsole {
+      background: #090d16; color: #38bdf8; font-family: 'Consolas', monospace;
+      font-size: 0.82rem; padding: 14px 18px; border-radius: 8px; height: 220px;
+      overflow-y: auto; white-space: pre-wrap; margin-top: 16px;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+      display: none; align-items: center; justify-content: center; z-index: 100;
+    }
+    .modal-card {
+      background: white; border-radius: var(--radius); padding: 28px; width: 440px; max-width: 90%;
+    }
+
+    /* Lock Screen for Offline */
+    #offlineBlock {
+      position: fixed; inset: 0; background: #0f172a; z-index: 999;
+      display: none; align-items: center; justify-content: center; text-align: center; color: white; padding: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Offline Block Overlay -->
+  <div id="offlineBlock">
+    <div>
+      <div style="font-size: 3rem; margin-bottom: 12px;">📡</div>
+      <h2 style="margin-bottom: 8px;">Internet Connection Required</h2>
+      <p style="color: #94a3b8; max-width: 440px; margin-bottom: 20px;">
+        On-Farm bina internet ke execute nahi ho sakta. Kripya apna internet check karein.
+      </p>
+      <button class="btn btn-primary" onclick="checkStatus()">Retry Connection</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Header -->
+    <div class="card">
+      <div class="header-row">
+        <div class="brand">
+          <span class="badge">PRO</span>
+          <span>On-Farm Automation</span>
+        </div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">
+          HWID: <code id="hwidDisplay">Detecting...</code>
+        </div>
+      </div>
+    </div>
+
+    <!-- License & Wallet Card -->
+    <div class="license-card">
+      <div class="license-row">
+        <div>
+          <div style="font-size: 0.85rem; color: #94a3b8;">Current Active Plan</div>
+          <div id="planName" style="font-size: 1.25rem; font-weight: 800; margin-top: 4px;">Checking...</div>
+        </div>
+        <div id="planBadge" class="plan-badge">VALIDATING</div>
+      </div>
+      <div style="margin-top: 18px; display: flex; justify-content: space-between; align-items: flex-end;">
+        <div>
+          <div style="font-size: 0.8rem; color: #94a3b8;">Wallet Balance (₹1 / kila)</div>
+          <div class="wallet-val" id="walletBal">₹0.00</div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-light" onclick="openRechargeModal()">+ Recharge Wallet</button>
+          <button class="btn btn-primary" style="background:#22c55e; color:#052e16;" onclick="buySubscription()">Buy ₹699 Pass</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Execution Card -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="statusDot" class="status-dot dot-stopped"></span>
+          <strong id="statusText">Idle</strong>
+        </div>
+        <div id="progressText" style="font-size: 0.9rem; color: var(--text-muted);">0 / 0 Processed</div>
+      </div>
+
+      <div class="action-group">
+        <button id="startBtn" class="btn btn-primary" onclick="startAutomation()">▶ START AUTOMATION</button>
+        <button id="stopBtn" class="btn btn-danger" onclick="stopAutomation()" disabled>⏹ STOP</button>
+        <button class="btn btn-light" style="color:var(--text); border:1px solid var(--border);" onclick="resetExcelStatus()">🔄 Reset Excel</button>
+      </div>
+
+      <div id="errorAlert" style="display:none; background:#fee2e2; color:#dc2626; padding:12px; border-radius:8px; font-size:0.85rem; margin-top:12px;"></div>
+
+      <div id="logsConsole">Waiting to start...</div>
+    </div>
+  </div>
+
+  <!-- Recharge Modal -->
+  <div id="rechargeModal" class="modal-overlay">
+    <div class="modal-card">
+      <h3 style="margin-bottom: 8px;">Wallet Recharge</h3>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">
+        ₹1 per kila deduct hoga. Minimum recharge ₹100 hai.
+      </p>
+      <div style="display: flex; gap: 10px; margin-bottom: 18px;">
+        <button class="btn btn-light" style="color:var(--text); border:1px solid var(--border);" onclick="selectAmount(100)">₹100</button>
+        <button class="btn btn-light" style="color:var(--text); border:1px solid var(--border);" onclick="selectAmount(200)">₹200</button>
+        <button class="btn btn-light" style="color:var(--text); border:1px solid var(--border);" onclick="selectAmount(500)">₹500</button>
+      </div>
+      <input type="number" id="customAmount" style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 18px;" placeholder="Custom Amount (₹)" value="100">
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button class="btn btn-light" style="color:var(--text); border:1px solid var(--border);" onclick="closeModal('rechargeModal')">Cancel</button>
+        <button class="btn btn-primary" onclick="payWallet()">Pay with Cashfree / UPI</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function checkStatus() {
+      try {
+        const res = await fetch('/status');
+        const s = await res.json();
+        document.getElementById('offlineBlock').style.display = s.isOnline ? 'none' : 'flex';
+        document.getElementById('hwidDisplay').textContent = s.hwid || 'N/A';
+        document.getElementById('walletBal').textContent = '₹' + (s.walletBalance || 0);
+
+        if (s.subscription && s.subscription.is_active) {
+          document.getElementById('planName').textContent = '₹699 Monthly Pass (Unlimited)';
+          document.getElementById('planBadge').textContent = 'ACTIVE';
+          document.getElementById('planBadge').style.background = '#22c55e';
+        } else {
+          document.getElementById('planName').textContent = 'Pay-Per-Kila Wallet (₹1/kila)';
+          document.getElementById('planBadge').textContent = 'PAY-AS-YOU-GO';
+          document.getElementById('planBadge').style.background = '#eab308';
+        }
+
+        const dot = document.getElementById('statusDot');
+        dot.className = 'status-dot ' + (s.isRunning ? 'dot-running' : (s.lastError ? 'dot-error' : 'dot-stopped'));
+        document.getElementById('statusText').textContent = s.isRunning ? 'Running' : (s.lastError ? 'Error / Stopped' : 'Idle');
+        document.getElementById('progressText').textContent = `${s.processedCount || 0} / ${s.totalRows || 0} Processed`;
+
+        document.getElementById('startBtn').disabled = s.isRunning;
+        document.getElementById('stopBtn').disabled = !s.isRunning;
+
+        const errBox = document.getElementById('errorAlert');
+        if (s.lastError) {
+          errBox.style.display = 'block';
+          errBox.textContent = s.lastError;
+        } else {
+          errBox.style.display = 'none';
+        }
+
+        const logs = document.getElementById('logsConsole');
+        logs.textContent = (s.logs || []).join('\n');
+        logs.scrollTop = logs.scrollHeight;
+      } catch (err) {
+        document.getElementById('offlineBlock').style.display = 'flex';
+      }
+    }
+
+    function startAutomation() {
+      fetch('/start', { method: 'POST' }).then(checkStatus);
+    }
+    function stopAutomation() {
+      fetch('/stop', { method: 'POST' }).then(checkStatus);
+    }
+    function resetExcelStatus() {
+      if (confirm('Kya aap Excel rows ka Status/Error reset karna chahte hain?')) {
+        fetch('/reset-excel', { method: 'POST' }).then(checkStatus);
+      }
+    }
+
+    function openRechargeModal() {
+      document.getElementById('rechargeModal').style.display = 'flex';
+    }
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+    function selectAmount(val) {
+      document.getElementById('customAmount').value = val;
+    }
+
+    // Initialize Cashfree Production SDK
+    let cashfreeInstance = null;
+    try {
+      if (typeof Cashfree !== 'undefined') {
+        cashfreeInstance = Cashfree({ mode: "production" });
+      }
+    } catch (e) { console.error('Cashfree SDK Init Error:', e); }
+
+    async function triggerCheckout(orderData) {
+      // Open approved HTTPS payment page (bypasses localhost origin restriction)
+      const payUrl = `https://neeraj2004kumar2006-pixel.github.io/on-farm/pay.html?session_id=${orderData.payment_session_id}`;
+      const payWindow = window.open(payUrl, '_blank');
+
+      // Start polling for payment confirmation
+      const pollInterval = setInterval(async () => {
+        try {
+          if (orderData.orderData && orderData.orderData.order_id) {
+            const vRes = await fetch('/verify-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ orderId: orderData.orderData.order_id })
+            });
+            const vData = await vRes.json();
+            if (vData.ok && vData.status === 'PAID') {
+              clearInterval(pollInterval);
+              checkStatus();
+              alert('Payment Successful! Wallet / Subscription balance update ho gaya.');
+            }
+          }
+        } catch {}
+      }, 3000);
+
+      // Stop polling after 5 minutes
+      setTimeout(() => clearInterval(pollInterval), 300000);
+    }
+
+    async function payWallet() {
+      const amount = document.getElementById('customAmount').value;
+      const res = await fetch('/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'WALLET_RECHARGE', amount })
+      });
+      const data = await res.json();
+      if (data.ok && data.payment_session_id) {
+        closeModal('rechargeModal');
+        triggerCheckout(data);
+      } else {
+        alert(data.message || 'Payment initiation failed.');
+      }
+    }
+
+    async function buySubscription() {
+      if (!confirm('₹699 me 30-Day Unlimited Crop Insurance Pass lena chahte hain?')) return;
+      const res = await fetch('/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'SUBSCRIPTION_699', amount: 699 })
+      });
+      const data = await res.json();
+      if (data.ok && data.payment_session_id) {
+        triggerCheckout(data);
+      } else {
+        alert(data.message || 'Payment initiation failed.');
+      }
+    }
+
+    checkStatus();
+    setInterval(checkStatus, 1500);
+  </script>
+</body>
+</html>

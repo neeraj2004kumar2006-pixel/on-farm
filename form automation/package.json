@@ -1,0 +1,17 @@
+{
+  "name": "farmer-form-automation",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright automation to fill the farmer crop-insurance form from farmers.xlsx, with a local START/STOP control panel.",
+  "main": "automation.js",
+  "scripts": {
+    "start": "node automation.js",
+    "sample": "node generate-sample.js",
+    "postinstall": "playwright install chromium"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "express": "^4.19.2",
+    "playwright": "^1.47.0"
+  }
+}
