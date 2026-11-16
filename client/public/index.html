@@ -577,15 +577,64 @@
     .action-group {
       display: flex;
       gap: 10px;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
     }
 
-    /* ── ACTIVITY LOG ── */
-    .log-panel {
-      border: 1px solid var(--border);
+    .btn-browser {
+      background: #1e40af;
+      color: #ffffff;
+      border: 1px solid #1d4ed8;
+      box-shadow: 0 2px 8px rgba(30, 64, 175, 0.25);
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-browser:hover {
+      background: #1d4ed8;
+      color: #ffffff;
+    }
+
+    .browser-guidance-box {
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
       border-radius: var(--radius-md);
-      overflow: hidden;
-      background: #0f172a;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      color: #166534;
+      line-height: 1.5;
+    }
+
+    .guidance-title {
+      font-weight: 700;
+      color: #14532d;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+    }
+
+    .error-banner-new {
+      background: #fef2f2;
+      color: #991b1b;
+      padding: 13px 16px;
+      border-radius: var(--radius-md);
+      font-size: 13.5px;
+      font-weight: 600;
+      border: 1.5px solid #fecaca;
+      margin-top: 6px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      line-height: 1.5;
+    }
+
+    /* ── ACTIVITY LOG (Hidden as requested) ── */
+    .log-panel {
+      display: none !important;
     }
 
     .log-header {
@@ -1228,26 +1277,40 @@
             <span id="progressText" class="progress-chip">0 / 0 Completed</span>
           </div>
 
+          <div class="browser-guidance-box">
+            <div class="guidance-title">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+              </svg>
+              PMFBY Automation Browser Guidance
+            </div>
+            <div class="guidance-desc">
+              Please click <strong>"Launch PMFBY Browser"</strong> below to open the dedicated browser window. Open and log in to the official <strong>PMFBY portal</strong> in this browser only. Do not open or browse other websites in this session.
+            </div>
+          </div>
+
           <div class="action-group">
-            <button data-i18n="btnStart" id="startBtn" class="btn btn-primary" onclick="startAutomation()">Start
-              Processing</button>
-            <button data-i18n="btnStop" id="stopBtn" class="btn btn-danger" onclick="stopAutomation()"
-              disabled>Pause</button>
+            <button type="button" id="launchBrowserBtn" class="btn btn-browser" onclick="launchBrowser()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
+              Launch PMFBY Browser
+            </button>
+            <button data-i18n="btnStart" id="startBtn" class="btn btn-primary" onclick="startAutomation()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              Start Processing
+            </button>
+            <button data-i18n="btnStop" id="stopBtn" class="btn btn-danger" onclick="stopAutomation()" disabled>Pause</button>
             <button data-i18n="btnResetExcel" class="btn btn-light" onclick="resetExcelStatus()">Reset Status</button>
           </div>
 
-          <div id="errorAlert"
-            style="display:none; background:#fef2f2; color:#dc2626; padding:11px 16px; border-radius:8px; font-size:13px; border:1px solid #fecaca; margin-bottom:16px;">
-          </div>
-
-          <div class="log-panel">
-            <div class="log-header">
-              <div class="log-header-left">
-                <span class="log-dot"></span>
-                <span class="log-label" data-i18n="activityLogTitle">Activity Log</span>
-              </div>
-            </div>
-            <div id="logsConsole" data-i18n="consoleWaiting">Ready to process applications.</div>
+          <div id="errorAlert" class="error-banner-new" style="display:none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:2px;">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span id="errorAlertMsg"></span>
           </div>
         </div>
 
@@ -1452,12 +1515,12 @@
     <div class="modal-card" style="max-width: 440px; text-align: left;">
       <div style="text-align: center; margin-bottom: 14px;">
         <div id="profileLockBadge" style="display: none; align-items: center; gap: 6px; background: #f0fdf4; border: 1px solid #86efac; color: #15803d; padding: 4px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 700; margin-bottom: 10px;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-          Hardware Device Locked
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+          Active Operator Account
         </div>
-        <div class="modal-title" id="profileModalTitle">Operator Account Setup</div>
+        <div class="modal-title" id="profileModalTitle">Operator Profile</div>
         <div class="modal-desc" id="profileModalDesc" style="margin-bottom: 0;">
-          Enter your mobile number to link your license, wallet balance and monthly pass to this computer.
+          Operator details and registered mobile number.
         </div>
       </div>
 
@@ -1472,17 +1535,11 @@
         <input type="text" id="profileNameInput" class="form-control" placeholder="e.g. CSC Center / Operator Name">
       </div>
 
-      <div id="profileLockNotice" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; font-size: 12px; color: #64748b; line-height: 1.5; margin-bottom: 18px;">
-        <div style="font-weight: 700; color: #334155; margin-bottom: 3px; display: flex; align-items: center; gap: 5px;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-          Device Locked & Secured
-        </div>
-        This computer is permanently linked to this mobile number. License, wallet and submissions are tied to this PC's Hardware ID. To transfer to another PC, contact Administrator.
-      </div>
+      <div id="profileLockNotice" style="display: none;"></div>
 
       <div class="modal-footer">
         <button class="btn btn-light" id="profileCancelBtn" onclick="closeModal('profileModal')">Cancel</button>
-        <button class="btn btn-primary" id="saveProfileBtn" onclick="saveOperatorProfile()">Register & Lock to this PC</button>
+        <button class="btn btn-primary" id="saveProfileBtn" onclick="saveOperatorProfile()">Save Operator Profile</button>
       </div>
     </div>
   </div>
@@ -2111,11 +2168,17 @@
         if (stopBtn.disabled !== !Boolean(s.isRunning)) stopBtn.disabled = !Boolean(s.isRunning);
 
         const errBox = document.getElementById('errorAlert');
+        const errMsgSpan = document.getElementById('errorAlertMsg');
         const errText = s.lastError || '';
         if (prevCheck['errText'] !== errText) {
           prevCheck['errText'] = errText;
-          if (errText) { errBox.style.display = 'block'; errBox.textContent = errText; }
-          else { errBox.style.display = 'none'; }
+          if (errText) {
+            errBox.style.display = 'flex';
+            if (errMsgSpan) errMsgSpan.textContent = errText;
+            else errBox.textContent = errText;
+          } else {
+            errBox.style.display = 'none';
+          }
         }
 
         const logsStr = (s.logs || []).join('\n');
@@ -2473,10 +2536,10 @@
       if (warn) warn.style.display = 'none';
 
       if (isLocked) {
-        if (title) title.textContent = 'Registered Operator Account';
-        if (desc) desc.textContent = 'This computer is permanently locked to this operator profile.';
+        if (title) title.textContent = 'Operator Profile';
+        if (desc) desc.textContent = 'Registered operator details for this application.';
         if (badge) badge.style.display = 'inline-flex';
-        if (lockNotice) lockNotice.style.display = 'block';
+        if (lockNotice) lockNotice.style.display = 'none';
         if (saveBtn) saveBtn.style.display = 'none';
         if (cancelBtn) cancelBtn.textContent = 'Close';
 
@@ -2493,13 +2556,13 @@
           nIn.style.cursor = 'not-allowed';
         }
       } else {
-        if (title) title.textContent = 'Operator Account Registration';
-        if (desc) desc.textContent = 'Enter your 10-digit mobile number to permanently link this computer with your On-Farm license & wallet.';
+        if (title) title.textContent = 'Operator Account Setup';
+        if (desc) desc.textContent = 'Enter your 10-digit mobile number to set up your operator profile.';
         if (badge) badge.style.display = 'none';
         if (lockNotice) lockNotice.style.display = 'none';
         if (saveBtn) {
           saveBtn.style.display = 'inline-flex';
-          saveBtn.textContent = 'Register & Lock to this PC';
+          saveBtn.textContent = 'Save Operator Profile';
         }
         if (cancelBtn) cancelBtn.textContent = 'Cancel';
 
@@ -2537,10 +2600,10 @@
       }
 
       const ok = await showAppDialog({
-        title: 'Confirm Hardware Device Lock',
-        message: `Are you sure you want to permanently lock this computer to mobile +91 ${phone}? Once registered, this computer cannot be used with any other number without Administrator approval.`,
-        type: 'warning',
-        confirmText: 'Confirm & Lock to this PC',
+        title: 'Confirm Operator Setup',
+        message: `Are you sure you want to register mobile number +91 ${phone} for this operator profile?`,
+        type: 'primary',
+        confirmText: 'Confirm & Link',
         cancelText: 'Cancel'
       });
       if (!ok) return;
@@ -2548,7 +2611,7 @@
       const btn = document.getElementById('saveProfileBtn');
       if (btn) {
         btn.disabled = true;
-        btn.textContent = 'Registering...';
+        btn.textContent = 'Saving...';
       }
 
       try {
@@ -2563,7 +2626,7 @@
           localStorage.setItem('onfarm_operator_name', name);
           closeModal('profileModal');
           checkStatus();
-          appAlert(`Device successfully registered and locked to +91 ${phone}!`, 'Device Locked', 'success');
+          appAlert(`Operator account successfully linked to +91 ${phone}!`, 'Account Linked', 'success');
         } else {
           appAlert(data.message || 'Failed to link account.', 'Account Error', 'danger');
         }
@@ -2572,7 +2635,32 @@
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.textContent = 'Register & Lock to this PC';
+          btn.textContent = 'Save Operator Profile';
+        }
+      }
+    }
+
+    async function launchBrowser() {
+      const btn = document.getElementById('launchBrowserBtn');
+      const originalHtml = btn ? btn.innerHTML : '';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="spinner-sm"></span> Launching...`;
+      }
+      try {
+        const res = await fetch('/launch-browser', { method: 'POST' });
+        const d = await res.json();
+        if (d.ok) {
+          appAlert('PMFBY Automation browser launched! Please log in to PMFBY and navigate to the application form in that browser.', 'Browser Ready', 'success');
+        } else {
+          appAlert(d.message || 'Could not launch browser.', 'Browser Notice', 'warning');
+        }
+      } catch (err) {
+        appAlert('Runner connection error: ' + err.message, 'Error', 'danger');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = originalHtml;
         }
       }
     }

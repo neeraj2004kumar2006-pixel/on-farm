@@ -184,7 +184,7 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(403).json({
         ok: false,
         code: 'HWID_ALREADY_BOUND',
-        message: `This computer is permanently locked to mobile +91 ${otherUserOnThisDevice.phone}. Ek PC par doosra operator account register nahi ho sakta. Device badalne ke liye Admin se Device Reset karwayein.`,
+        message: `This application profile is registered to +91 ${otherUserOnThisDevice.phone}. Please contact Administrator for profile transfer.`,
       });
     }
 
@@ -231,7 +231,7 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(403).json({
           ok: false,
           code: 'HWID_MISMATCH',
-          message: 'Yeh account doosre computer par register hai. Ek license sirf 1 PC par chal sakta hai. Device badalne ke liye Admin se Device Reset karwayein.',
+          message: 'This account is already active on another installation. Please contact Administrator for assistance.',
         });
       } else {
         await supabase.from('users').update({ last_active_at: new Date() }).eq('id', user.id);

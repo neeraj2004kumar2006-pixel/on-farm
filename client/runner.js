@@ -125,15 +125,16 @@ async function connectBrowser() {
   if (!alreadyRunning) {
     const chromePath = findChromeExecutable();
     if (!chromePath) {
-      throw new Error('Google Chrome computer me nahi mila. Kripya Google Chrome install karein.');
+      throw new Error('Google Chrome was not found on this computer. Please install Google Chrome to continue.');
     }
 
-    log(`Chrome launch ho raha hai: ${chromePath}`);
+    log(`Launching Chrome: ${chromePath}`);
     const child = spawn(chromePath, [
       `--remote-debugging-port=${CDP_PORT}`,
       `--user-data-dir=${profileDir}`,
       '--no-first-run',
       '--start-maximized',
+      'https://pmfby.gov.in',
     ], { detached: true, stdio: 'ignore' });
     child.unref();
 
@@ -141,7 +142,7 @@ async function connectBrowser() {
       await new Promise(r => setTimeout(r, 1000));
       try {
         const r = await axios.get(`http://localhost:${CDP_PORT}/json/version`, { timeout: 1000 });
-        if (r.status === 200) { log('Chrome ready hai!'); break; }
+        if (r.status === 200) { log('Chrome browser ready!'); break; }
       } catch { /* wait */ }
     }
   }
@@ -162,7 +163,7 @@ async function getActivePage() {
   });
 
   if (!formPages.length) {
-    throw new Error('Government form wala tab nahi mila. Chrome me portal login karke form open karein.');
+    throw new Error('PMFBY form tab not found in browser. Please click "Launch PMFBY Browser", log in, and open the farmer application form.');
   }
 
   const activePage = formPages[formPages.length - 1];
@@ -182,7 +183,7 @@ async function executeAutomation() {
   try {
     // 1. Internet Check
     const online = await checkCloudConnectivity();
-    if (!online) throw new Error('Internet connection toot gaya hai. Kripya internet jodein.');
+    if (!online) throw new Error('Active internet connection required. Please connect your computer to the internet.');
 
     if (!state.user || !state.user.id) {
       await syncUserBalance();
@@ -209,13 +210,13 @@ async function executeAutomation() {
     // 4. Load Excel Sheet
     const ExcelJS = require('exceljs');
     const excelPath = path.join(CLIENT_BASE_DIR, '..', 'form automation', 'farmers.xlsx');
-    if (!fs.existsSync(excelPath)) throw new Error(`farmers.xlsx file nahi mili: ${excelPath}`);
+    if (!fs.existsSync(excelPath)) throw new Error('Application records file (farmers.xlsx) not found. Please save farmer entries first.');
 
     const wb = new ExcelJS.Workbook();
     try {
       await wb.xlsx.readFile(excelPath);
     } catch (e) {
-      if (e.code === 'EBUSY') throw new Error('farmers.xlsx Excel me khuli hui hai! Kripya Excel file band karke START karein.');
+      if (e.code === 'EBUSY') throw new Error('farmers.xlsx is open in Microsoft Excel. Please close Excel before starting.');
       throw e;
     }
     const ws = wb.worksheets[0];
@@ -583,6 +584,31 @@ function startControlPanel() {
     });
   });
 
+  app.post('/launch-browser', async (req, res) => {
+    try {
+      await connectBrowser();
+      if (browserContext) {
+        const pages = browserContext.pages();
+        const pmfbyPage = pages.find(p => p.url().includes('pmfby.gov.in'));
+        if (pmfbyPage) {
+          await pmfbyPage.bringToFront();
+        } else if (pages.length > 0) {
+          await pages[0].goto('https://pmfby.gov.in');
+          await pages[0].bringToFront();
+        } else {
+          const newP = await browserContext.newPage();
+          await newP.goto('https://pmfby.gov.in');
+          await newP.bringToFront();
+        }
+      }
+      state.lastError = null;
+      res.json({ ok: true, message: 'Browser launched successfully.' });
+    } catch (err) {
+      state.lastError = err.message;
+      res.status(500).json({ ok: false, message: err.message });
+    }
+  });
+
   app.post('/start', (req, res) => {
     executeAutomation();
     res.json({ ok: true });
@@ -629,7 +655,7 @@ function startControlPanel() {
       if (state.user && state.user.phone && state.user.phone !== cleanPhone) {
         return res.status(403).json({
           ok: false,
-          message: `This computer is permanently locked to +91 ${state.user.phone}. Operator mobile number cannot be changed from this PC. Please contact Admin for device transfer.`
+          message: `This application profile is registered to +91 ${state.user.phone}. To update operator details, please contact Administrator.`
         });
       }
 
