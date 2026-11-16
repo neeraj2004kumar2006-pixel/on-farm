@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>On-Farm</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
   <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
   <style>
     :root {
@@ -16,27 +19,27 @@
       --primary-subtle: #f0fdf4;
       --primary-border: #bbf7d0;
       --primary-text: #166534;
-      
+
       --danger: #dc2626;
       --danger-hover: #b91c1c;
       --danger-subtle: #fef2f2;
       --danger-border: #fecaca;
-      
+
       --bg: #f8fafc;
       --card-bg: #ffffff;
       --border: #e2e8f0;
       --border-focus: #cbd5e1;
-      
+
       --text: #0f172a;
       --text-secondary: #475569;
       --text-muted: #64748b;
       --text-faint: #94a3b8;
-      
+
       --radius-sm: 6px;
       --radius-md: 10px;
       --radius-lg: 14px;
       --radius-full: 9999px;
-      
+
       --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.03);
       --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
       --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
@@ -94,6 +97,7 @@
       .dashboard-grid {
         flex-direction: column;
       }
+
       .sidebar-col {
         width: 100%;
       }
@@ -169,194 +173,160 @@
       text-transform: uppercase;
     }
 
-    /* ── LANGUAGE SWITCHER ── */
-    .lang-switcher {
+    /* ── HEADER STATUS INDICATOR ── */
+    .header-status {
       display: flex;
       align-items: center;
-      gap: 8px;
-    }
-
-    .lang-label {
-      font-size: 11px;
+      gap: 7px;
+      font-size: 12px;
       font-weight: 600;
-      color: var(--text-faint);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    .lang-pills {
-      display: flex;
-      background: #f1f5f9;
-      border-radius: 8px;
-      padding: 3px;
+      color: var(--text-muted);
+      background: #f8fafc;
+      padding: 5px 12px;
+      border-radius: var(--radius-full);
       border: 1px solid var(--border);
     }
 
-    .lang-pill {
-      padding: 5px 14px;
-      border-radius: 6px;
-      border: none;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      background: transparent;
-      color: var(--text-muted);
-      transition: all 0.15s ease;
-      font-family: inherit;
-      line-height: 1.4;
-    }
-
-    .lang-pill:hover {
-      color: var(--text);
-    }
-
-    .lang-pill.active {
-      background: white;
-      color: var(--text);
-      font-weight: 700;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-    }
-
-    /* ── LICENSE & WALLET HERO CARD ── */
-    .license-card {
-      background: linear-gradient(135deg, #090d16 0%, #111827 50%, #1e293b 100%);
-      color: white;
-      border-radius: var(--radius-lg);
-      padding: 22px 26px;
-      margin-bottom: 18px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.16);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .license-card::before {
-      content: '';
-      position: absolute;
-      top: -40px;
-      right: -40px;
-      width: 140px;
-      height: 140px;
-      background: radial-gradient(circle, rgba(34, 197, 94, 0.15) 0%, transparent 70%);
+    .header-status-dot {
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      pointer-events: none;
+      background: #22c55e;
+      box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
     }
 
-    .license-top {
+    /* ── ACCOUNT SIDEBAR CARD ── */
+    .account-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .account-section {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .section-micro-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+    }
+
+    .bal-value-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-    }
-
-    .plan-meta {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .plan-label {
-      font-size: 11px;
-      color: #94a3b8;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-    }
-
-    .plan-name {
-      font-size: 18px;
-      font-weight: 700;
       margin-top: 4px;
-      letter-spacing: -0.01em;
-      color: #ffffff;
-    }
-
-    .plan-badge {
-      padding: 4px 12px;
-      border-radius: var(--radius-full);
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      background: rgba(34, 197, 94, 0.15);
-      color: #4ade80;
-      border: 1px solid rgba(34, 197, 94, 0.3);
-    }
-
-    .license-divider {
-      height: 1px;
-      background: rgba(255, 255, 255, 0.08);
-      margin: 18px 0 16px;
-    }
-
-    .license-bottom {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-    }
-
-    .bal-group {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .bal-label {
-      font-size: 11px;
-      color: #94a3b8;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
     }
 
     .bal-value {
-      font-size: 30px;
+      font-size: 28px;
       font-weight: 800;
-      margin-top: 2px;
+      color: var(--text);
       letter-spacing: -0.03em;
-      color: #ffffff;
       line-height: 1.1;
     }
 
-    .license-actions {
+    .card-inner-divider {
+      height: 1px;
+      background: #f1f5f9;
+      margin: 16px 0;
+    }
+
+    .plan-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 4px;
+      letter-spacing: -0.01em;
+    }
+
+    .plan-badge {
+      padding: 3px 9px;
+      border-radius: var(--radius-full);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      display: inline-block;
+    }
+
+    .badge-active {
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    }
+
+    .badge-inactive {
+      background: #f1f5f9;
+      color: #64748b;
+      border: 1px solid #cbd5e1;
+    }
+
+    /* ── MONTHLY PROMO BOX ── */
+    .monthly-promo-card {
+      background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+      border: 1px solid #bbf7d0;
+      border-radius: var(--radius-md);
+      padding: 16px;
+      margin-top: 18px;
+    }
+
+    .promo-header {
       display: flex;
-      gap: 10px;
+      justify-content: space-between;
       align-items: center;
     }
 
-    .btn-topup {
-      color: #f8fafc;
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 600;
+    .promo-badge {
+      font-size: 10px;
+      font-weight: 800;
+      color: #166534;
+      background: #dcfce7;
+      border: 1px solid #bbf7d0;
+      padding: 2px 7px;
       border-radius: var(--radius-sm);
-      cursor: pointer;
-      transition: all 0.15s ease;
-      font-family: inherit;
+      letter-spacing: 0.05em;
     }
 
-    .btn-topup:hover {
-      background: rgba(255, 255, 255, 0.15);
-      border-color: rgba(255, 255, 255, 0.25);
+    .promo-price {
+      font-size: 18px;
+      font-weight: 800;
+      color: #15803d;
     }
 
-    .btn-monthly-pass {
-      background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
-      color: #ffffff;
-      border: none;
-      padding: 8px 18px;
-      font-size: 13px;
+    .promo-desc {
+      font-size: 12px;
+      color: #166534;
+      line-height: 1.45;
+      margin: 8px 0 12px;
+    }
+
+    .btn-upgrade {
+      width: 100%;
+      padding: 10px 14px;
       font-weight: 700;
+      font-size: 13px;
+      justify-content: center;
+      background: var(--primary);
+      color: white;
+      border: none;
       border-radius: var(--radius-sm);
       cursor: pointer;
       transition: all 0.15s ease;
+      box-shadow: 0 2px 6px rgba(22, 163, 74, 0.2);
       font-family: inherit;
-      box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);
     }
 
-    .btn-monthly-pass:hover {
-      background: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+    .btn-upgrade:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 10px rgba(22, 163, 74, 0.3);
     }
 
     /* ── TABS NAVIGATION ── */
@@ -959,18 +929,22 @@
       width: 6px;
       height: 6px;
     }
+
     ::-webkit-scrollbar-track {
       background: transparent;
     }
+
     ::-webkit-scrollbar-thumb {
       background: #cbd5e1;
       border-radius: 4px;
     }
+
     ::-webkit-scrollbar-thumb:hover {
       background: #94a3b8;
     }
   </style>
 </head>
+
 <body>
 
   <div class="top-accent"></div>
@@ -991,20 +965,18 @@
       <div class="header-row">
         <div class="brand-group">
           <div class="brand-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
             </svg>
           </div>
           <span class="brand-title" data-i18n="brandTitle">On-Farm</span>
           <span class="badge-pro">PRO</span>
         </div>
 
-        <div class="lang-switcher">
-          <span class="lang-label" data-i18n="langLabel">Language:</span>
-          <div class="lang-pills">
-            <button type="button" class="lang-pill" id="btnLangEn" onclick="setLanguage('en')">English</button>
-            <button type="button" class="lang-pill" id="btnLangHi" onclick="setLanguage('hi')">हिन्दी</button>
-          </div>
+        <div class="header-status">
+          <span class="header-status-dot"></span>
+          <span>System Online</span>
         </div>
       </div>
       <code id="hwidDisplay" style="display: none;"></code>
@@ -1013,27 +985,37 @@
     <!-- ═══════════ MAIN 2-COLUMN DASHBOARD ═══════════ -->
     <div class="dashboard-grid">
 
-      <!-- LEFT COLUMN: Plan, Monthly Pass, Balance -->
+      <!-- LEFT COLUMN: Account & Subscription Sidebar -->
       <div class="sidebar-col">
-        <div class="license-card">
-          <div class="license-top">
-            <div class="plan-meta">
-              <span class="plan-label" data-i18n="planHeading">Current Plan</span>
-              <span class="plan-name" id="planName">Pay As You Go</span>
+        <div class="account-card">
+          <!-- Balance Section -->
+          <div class="account-section">
+            <span class="section-micro-label" data-i18n="walletHeading">Available Balance</span>
+            <div class="bal-value-row">
+              <span class="bal-value" id="walletBal">₹1.00</span>
+              <button data-i18n="btnRecharge" class="btn btn-sm btn-light" onclick="openRechargeModal()">+ Add Balance</button>
             </div>
-            <div id="planBadge" class="plan-badge">ACTIVE</div>
           </div>
 
-          <div class="license-divider"></div>
+          <div class="card-inner-divider"></div>
 
-          <div class="bal-group">
-            <span class="bal-label" data-i18n="walletHeading">Available Balance</span>
-            <span class="bal-value" id="walletBal">₹1.00</span>
+          <!-- Current Plan Section -->
+          <div class="account-section">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span class="section-micro-label" data-i18n="planHeading">Current Plan</span>
+              <span id="planBadge" class="plan-badge badge-inactive">INACTIVE</span>
+            </div>
+            <div class="plan-name" id="planName">Pay As You Go</div>
           </div>
 
-          <div class="sidebar-actions">
-            <button data-i18n="btnBuyPass" class="btn-monthly-pass" style="width:100%; justify-content:center; padding:10px 14px;" onclick="buySubscription()">Monthly Pass (₹699)</button>
-            <button data-i18n="btnRecharge" class="btn-topup" style="width:100%; justify-content:center; padding:9px 14px;" onclick="openRechargeModal()">+ Add Balance</button>
+          <!-- 30-Day Monthly Pass Promo Card -->
+          <div class="monthly-promo-card">
+            <div class="promo-header">
+              <span class="promo-badge">30-DAY PASS</span>
+              <span class="promo-price">₹699</span>
+            </div>
+            <div class="promo-desc">Unlimited form applications with zero per-entry deductions.</div>
+            <button data-i18n="btnBuyPass" class="btn-upgrade" onclick="buySubscription()">Monthly Pass (₹699)</button>
           </div>
         </div>
       </div>
@@ -1042,180 +1024,206 @@
       <div class="main-col">
         <!-- ═══════════ TABS ═══════════ -->
         <div class="tabs-nav">
-          <button data-i18n="tabRunner" class="tab-btn active" onclick="switchView('runner', this)">Application Processing</button>
-          <button data-i18n="tabGenerator" class="tab-btn" onclick="switchView('generator', this)">Land & Farmer Entry</button>
+          <button data-i18n="tabRunner" class="tab-btn active" onclick="switchView('runner', this)">Application
+            Processing</button>
+          <button data-i18n="tabGenerator" class="tab-btn" onclick="switchView('generator', this)">Land & Farmer
+            Entry</button>
           <button data-i18n="tabPreview" class="tab-btn" onclick="switchView('preview', this)">Saved Records</button>
         </div>
 
-    <!-- ═══════════ TAB 1: APPLICATION PROCESSING ═══════════ -->
-    <div id="viewRunner" class="card">
-      <div class="status-bar">
-        <div class="status-indicator">
-          <span id="statusDot" class="status-dot dot-stopped"></span>
-          <span id="statusText" class="status-label">Ready</span>
-        </div>
-        <span id="progressText" class="progress-chip">0 / 0 Completed</span>
-      </div>
-
-      <div class="action-group">
-        <button data-i18n="btnStart" id="startBtn" class="btn btn-primary" onclick="startAutomation()">Start Processing</button>
-        <button data-i18n="btnStop" id="stopBtn" class="btn btn-danger" onclick="stopAutomation()" disabled>Pause</button>
-        <button data-i18n="btnResetExcel" class="btn btn-light" onclick="resetExcelStatus()">Reset Status</button>
-      </div>
-
-      <div id="errorAlert" style="display:none; background:#fef2f2; color:#dc2626; padding:11px 16px; border-radius:8px; font-size:13px; border:1px solid #fecaca; margin-bottom:16px;"></div>
-
-      <div class="log-panel">
-        <div class="log-header">
-          <div class="log-header-left">
-            <span class="log-dot"></span>
-            <span class="log-label" data-i18n="activityLogTitle">Activity Log</span>
-          </div>
-        </div>
-        <div id="logsConsole" data-i18n="consoleWaiting">Ready to process applications.</div>
-      </div>
-    </div>
-
-    <!-- ═══════════ TAB 2: LAND & FARMER ENTRY ═══════════ -->
-    <div id="viewGenerator" class="card" style="display: none;">
-      <div class="form-section-title" data-i18n="genTitle">Land & Farmer Entry Form</div>
-      <div class="form-section-desc" data-i18n="genSubtitle">Enter farmer and land details to prepare application records.</div>
-
-      <div class="form-grid">
-        <div class="form-group">
-          <label data-i18n="lblFarmerName">Farmer Name</label>
-          <input type="text" id="genName" class="form-control" data-i18n-ph="phFarmerName" placeholder="Enter farmer name" value="">
-        </div>
-        <div class="form-group">
-          <label data-i18n="lblKhataNo">Khata Number</label>
-          <input type="text" id="genKhata" class="form-control" data-i18n-ph="phKhataNo" placeholder="e.g. 61" value="">
-        </div>
-      </div>
-
-      <div class="form-grid">
-        <div class="form-group">
-          <label data-i18n="lblCrop">Crop Name</label>
-          <select id="genCrop" class="form-control">
-            <option value="Groundnut (Pea Nut)" selected>Groundnut (Pea Nut)</option>
-            <option value="Cotton">Cotton</option>
-            <option value="Guar">Guar</option>
-            <option value="Bajra">Bajra</option>
-            <option value="Moong">Moong</option>
-            <option value="Moth">Moth</option>
-            <option value="Mustard">Mustard</option>
-            <option value="Wheat">Wheat</option>
-            <option value="Gram">Gram</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label data-i18n="lblSowingDate">Sowing Date (DD/MM/YYYY)</label>
-          <input type="text" id="genDate" class="form-control" data-i18n-ph="phSowingDate" placeholder="DD/MM/YYYY" maxlength="10" oninput="formatSowingDate(this)" value="">
-        </div>
-      </div>
-
-      <div class="form-grid">
-        <div class="form-group">
-          <label data-i18n="lblOwnership">Ownership Type</label>
-          <select id="genOwnership" class="form-control">
-            <option value="Owner" selected data-i18n="optOwner">Owner (Self-owned)</option>
-            <option value="Tenant" data-i18n="optTenant">Tenant</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label data-i18n="lblMurabba">Murabba Number (e.g. 67/58)</label>
-          <input type="text" id="genMurabba" class="form-control" data-i18n-ph="phMurabba" placeholder="e.g. 67/58 or 207/6" value="">
-          <div class="help-hint" data-i18n="hintMurabba">Enter in single box (e.g. 67/58 or 207/6)</div>
-        </div>
-      </div>
-
-      <div class="form-grid">
-        <div class="form-group">
-          <label data-i18n="lblKilas">Kila Numbers</label>
-          <input type="text" id="genKilas" class="form-control" data-i18n-ph="phKilas" placeholder="e.g. 1-25 or 1, 2, 4, 7-12" value="">
-          <div class="help-hint" data-i18n="hintKilas">Enter 1-25 to include all kilas in the murabba</div>
-        </div>
-        <div class="form-group">
-          <label data-i18n="lblSubKilas">Divided Kilas (with /1, /2)</label>
-          <input type="text" id="genSubKilas" class="form-control" data-i18n-ph="phSubKilas" placeholder="e.g. 1/1, 10/1, 11/1 (if any)" value="">
-          <div class="help-hint" data-i18n="hintSubKilas">Enter kilas having /1 or /2 to partition them automatically</div>
-        </div>
-      </div>
-
-      <div class="form-actions">
-        <button data-i18n="btnAddReview" class="btn btn-primary btn-lg" onclick="addKilasToReview()">Add to List</button>
-        <button data-i18n="btnClearForm" class="btn btn-light" onclick="clearFormInputs()">Clear Form</button>
-      </div>
-
-      <!-- Review Section -->
-      <div id="stagedReviewSection" class="review-section">
-        <div class="review-header">
-          <div>
-            <div class="review-title-group">
-              <span class="review-title" data-i18n="reviewHeading">Application Records</span>
-              <span class="review-count-badge"><span id="stagedCount">0</span> <span data-i18n="kilaUnit">Records</span></span>
+        <!-- ═══════════ TAB 1: APPLICATION PROCESSING ═══════════ -->
+        <div id="viewRunner" class="card">
+          <div class="status-bar">
+            <div class="status-indicator">
+              <span id="statusDot" class="status-dot dot-stopped"></span>
+              <span id="statusText" class="status-label">Ready</span>
             </div>
-            <div class="review-desc" data-i18n="reviewSubtitle">Verify entries before saving. You can edit numbers/names or remove rows:</div>
+            <span id="progressText" class="progress-chip">0 / 0 Completed</span>
           </div>
-          <button data-i18n="btnClearList" class="btn btn-sm btn-danger" onclick="clearStagedRows()">Clear List</button>
-        </div>
 
-        <div class="review-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 44px; text-align: center;">#</th>
-                <th style="width: 95px;" data-i18n="thKila">Kila No.</th>
-                <th style="width: 200px;" data-i18n="thKhasra">Khasra Number</th>
-                <th data-i18n="thFarmer">Farmer Name</th>
-                <th style="width: 85px;" data-i18n="thKhata">Khata No.</th>
-                <th style="width: 50px; text-align: center;" data-i18n="thDelete">Remove</th>
-              </tr>
-            </thead>
-            <tbody id="stagedTableBody">
-              <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px; font-size:13px;" data-i18n="emptyReviewMsg">Enter details above and click "Add to List".</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="review-footer">
-          <div class="review-footer-left">
-            <span class="review-footer-label" data-i18n="totalKilasLabel">Total Records:</span>
-            <span id="stagedFooterCount" class="review-footer-count">0</span>
+          <div class="action-group">
+            <button data-i18n="btnStart" id="startBtn" class="btn btn-primary" onclick="startAutomation()">Start
+              Processing</button>
+            <button data-i18n="btnStop" id="stopBtn" class="btn btn-danger" onclick="stopAutomation()"
+              disabled>Pause</button>
+            <button data-i18n="btnResetExcel" class="btn btn-light" onclick="resetExcelStatus()">Reset Status</button>
           </div>
-          <button data-i18n="btnCreateExcel" class="btn btn-primary btn-lg" onclick="saveStagedToExcel(false)">Save Records</button>
+
+          <div id="errorAlert"
+            style="display:none; background:#fef2f2; color:#dc2626; padding:11px 16px; border-radius:8px; font-size:13px; border:1px solid #fecaca; margin-bottom:16px;">
+          </div>
+
+          <div class="log-panel">
+            <div class="log-header">
+              <div class="log-header-left">
+                <span class="log-dot"></span>
+                <span class="log-label" data-i18n="activityLogTitle">Activity Log</span>
+              </div>
+            </div>
+            <div id="logsConsole" data-i18n="consoleWaiting">Ready to process applications.</div>
+          </div>
         </div>
 
-        <div id="saveAlert" class="alert-strip"></div>
-      </div>
-    </div>
+        <!-- ═══════════ TAB 2: LAND & FARMER ENTRY ═══════════ -->
+        <div id="viewGenerator" class="card" style="display: none;">
+          <div class="form-section-title" data-i18n="genTitle">Land & Farmer Entry Form</div>
+          <div class="form-section-desc" data-i18n="genSubtitle">Enter farmer and land details to prepare application
+            records.</div>
 
-    <!-- ═══════════ TAB 3: SAVED RECORDS ═══════════ -->
-    <div id="viewPreview" class="card" style="display: none;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-        <div>
-          <div class="form-section-title" data-i18n="previewHeading" style="margin-bottom:0;">Saved Records Summary</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label data-i18n="lblFarmerName">Farmer Name</label>
+              <input type="text" id="genName" class="form-control" data-i18n-ph="phFarmerName"
+                placeholder="Enter farmer name" value="">
+            </div>
+            <div class="form-group">
+              <label data-i18n="lblKhataNo">Khata Number</label>
+              <input type="text" id="genKhata" class="form-control" data-i18n-ph="phKhataNo" placeholder="e.g. 61"
+                value="">
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label data-i18n="lblCrop">Crop Name</label>
+              <select id="genCrop" class="form-control">
+                <option value="Groundnut (Pea Nut)" selected>Groundnut (Pea Nut)</option>
+                <option value="Cotton">Cotton</option>
+                <option value="Guar">Guar</option>
+                <option value="Bajra">Bajra</option>
+                <option value="Moong">Moong</option>
+                <option value="Moth">Moth</option>
+                <option value="Mustard">Mustard</option>
+                <option value="Wheat">Wheat</option>
+                <option value="Gram">Gram</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label data-i18n="lblSowingDate">Sowing Date (DD/MM/YYYY)</label>
+              <input type="text" id="genDate" class="form-control" data-i18n-ph="phSowingDate" placeholder="DD/MM/YYYY"
+                maxlength="10" oninput="formatSowingDate(this)" value="">
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label data-i18n="lblOwnership">Ownership Type</label>
+              <select id="genOwnership" class="form-control">
+                <option value="Owner" selected data-i18n="optOwner">Owner (Self-owned)</option>
+                <option value="Tenant" data-i18n="optTenant">Tenant</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label data-i18n="lblMurabba">Murabba Number (e.g. 67/58)</label>
+              <input type="text" id="genMurabba" class="form-control" data-i18n-ph="phMurabba"
+                placeholder="e.g. 67/58 or 207/6" value="">
+              <div class="help-hint" data-i18n="hintMurabba">Enter in single box (e.g. 67/58 or 207/6)</div>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label data-i18n="lblKilas">Kila Numbers</label>
+              <input type="text" id="genKilas" class="form-control" data-i18n-ph="phKilas"
+                placeholder="e.g. 1-25 or 1, 2, 4, 7-12" value="">
+              <div class="help-hint" data-i18n="hintKilas">Enter 1-25 to include all kilas in the murabba</div>
+            </div>
+            <div class="form-group">
+              <label data-i18n="lblSubKilas">Divided Kilas (with /1, /2)</label>
+              <input type="text" id="genSubKilas" class="form-control" data-i18n-ph="phSubKilas"
+                placeholder="e.g. 1/1, 10/1, 11/1 (if any)" value="">
+              <div class="help-hint" data-i18n="hintSubKilas">Enter kilas having /1 or /2 to partition them
+                automatically</div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button data-i18n="btnAddReview" class="btn btn-primary btn-lg" onclick="addKilasToReview()">Add to
+              List</button>
+            <button data-i18n="btnClearForm" class="btn btn-light" onclick="clearFormInputs()">Clear Form</button>
+          </div>
+
+          <!-- Review Section -->
+          <div id="stagedReviewSection" class="review-section">
+            <div class="review-header">
+              <div>
+                <div class="review-title-group">
+                  <span class="review-title" data-i18n="reviewHeading">Application Records</span>
+                  <span class="review-count-badge"><span id="stagedCount">0</span> <span
+                      data-i18n="kilaUnit">Records</span></span>
+                </div>
+                <div class="review-desc" data-i18n="reviewSubtitle">Verify entries before saving. You can edit
+                  numbers/names or remove rows:</div>
+              </div>
+              <button data-i18n="btnClearList" class="btn btn-sm btn-danger" onclick="clearStagedRows()">Clear
+                List</button>
+            </div>
+
+            <div class="review-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 44px; text-align: center;">#</th>
+                    <th style="width: 95px;" data-i18n="thKila">Kila No.</th>
+                    <th style="width: 200px;" data-i18n="thKhasra">Khasra Number</th>
+                    <th data-i18n="thFarmer">Farmer Name</th>
+                    <th style="width: 85px;" data-i18n="thKhata">Khata No.</th>
+                    <th style="width: 50px; text-align: center;" data-i18n="thDelete">Remove</th>
+                  </tr>
+                </thead>
+                <tbody id="stagedTableBody">
+                  <tr>
+                    <td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px; font-size:13px;"
+                      data-i18n="emptyReviewMsg">Enter details above and click "Add to List".</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="review-footer">
+              <div class="review-footer-left">
+                <span class="review-footer-label" data-i18n="totalKilasLabel">Total Records:</span>
+                <span id="stagedFooterCount" class="review-footer-count">0</span>
+              </div>
+              <button data-i18n="btnCreateExcel" class="btn btn-primary btn-lg" onclick="saveStagedToExcel(false)">Save
+                Records</button>
+            </div>
+
+            <div id="saveAlert" class="alert-strip"></div>
+          </div>
         </div>
-        <button data-i18n="btnRefresh" class="btn btn-light btn-sm" onclick="loadExcelRows()">Refresh</button>
-      </div>
 
-      <div class="review-table-wrap" style="max-height: 420px; margin-bottom: 0;">
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 44px; text-align: center;">#</th>
-              <th data-i18n="thPrevFarmer">Farmer Name</th>
-              <th data-i18n="thPrevCrop">Crop</th>
-              <th data-i18n="thPrevKhata">Khata No.</th>
-              <th data-i18n="thPrevKhasra">Khasra Number</th>
-              <th style="width: 100px; text-align: center;" data-i18n="thPrevStatus">Status</th>
-            </tr>
-          </thead>
-          <tbody id="previewTableBody">
-            <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding:28px; font-size:13px;" data-i18n="emptyPrevMsg">No saved records found.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+        <!-- ═══════════ TAB 3: SAVED RECORDS ═══════════ -->
+        <div id="viewPreview" class="card" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+            <div>
+              <div class="form-section-title" data-i18n="previewHeading" style="margin-bottom:0;">Saved Records Summary
+              </div>
+            </div>
+            <button data-i18n="btnRefresh" class="btn btn-light btn-sm" onclick="loadExcelRows()">Refresh</button>
+          </div>
+
+          <div class="review-table-wrap" style="max-height: 420px; margin-bottom: 0;">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 44px; text-align: center;">#</th>
+                  <th data-i18n="thPrevFarmer">Farmer Name</th>
+                  <th data-i18n="thPrevCrop">Crop</th>
+                  <th data-i18n="thPrevKhata">Khata No.</th>
+                  <th data-i18n="thPrevKhasra">Khasra Number</th>
+                  <th style="width: 100px; text-align: center;" data-i18n="thPrevStatus">Status</th>
+                </tr>
+              </thead>
+              <tbody id="previewTableBody">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--text-muted); padding:28px; font-size:13px;"
+                    data-i18n="emptyPrevMsg">No saved records found.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
 
       </div><!-- /.main-col -->
     </div><!-- /.dashboard-grid -->
@@ -1233,7 +1241,8 @@
         <button class="btn btn-light" onclick="selectAmount(200)">₹200</button>
         <button class="btn btn-light" onclick="selectAmount(500)">₹500</button>
       </div>
-      <input type="number" id="customAmount" class="form-control" placeholder="Custom Amount (₹)" value="1" style="margin-bottom: 14px;">
+      <input type="number" id="customAmount" class="form-control" placeholder="Custom Amount (₹)" value="1"
+        style="margin-bottom: 14px;">
       <div class="modal-footer">
         <button data-i18n="btnCancel" class="btn btn-light" onclick="closeModal('rechargeModal')">Cancel</button>
         <button data-i18n="btnPay" class="btn btn-primary" onclick="payWallet()">Proceed to Pay</button>
@@ -1418,7 +1427,7 @@
       }
     };
 
-    let currentLang = localStorage.getItem('onfarm_lang') || 'en';
+    let currentLang = 'en';
 
     function setLanguage(lang) {
       currentLang = lang;
@@ -1465,18 +1474,18 @@
 
     function formatSowingDate(input) {
       let v = input.value.replace(/\D/g, '').slice(0, 8);
-      if (v.length > 4) input.value = v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);
-      else if (v.length > 2) input.value = v.slice(0,2)+'/'+v.slice(2);
+      if (v.length > 4) input.value = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4);
+      else if (v.length > 2) input.value = v.slice(0, 2) + '/' + v.slice(2);
       else input.value = v;
     }
 
     function clearFormInputs() {
-      ['genName','genKhata','genDate','genMurabba','genKilas','genSubKilas'].forEach(id => document.getElementById(id).value = '');
+      ['genName', 'genKhata', 'genDate', 'genMurabba', 'genKilas', 'genSubKilas'].forEach(id => document.getElementById(id).value = '');
     }
 
     function switchView(view, btn) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      ['viewRunner','viewGenerator','viewPreview'].forEach(id => document.getElementById(id).style.display = 'none');
+      ['viewRunner', 'viewGenerator', 'viewPreview'].forEach(id => document.getElementById(id).style.display = 'none');
       document.getElementById(view === 'runner' ? 'viewRunner' : view === 'generator' ? 'viewGenerator' : 'viewPreview').style.display = 'block';
       if (btn) btn.classList.add('active');
       if (view === 'preview') loadExcelRows();
@@ -1497,22 +1506,20 @@
           document.getElementById('walletBal').textContent = '₹' + s.walletBalance;
         }
         if (s.subscription && s.subscription.is_active) {
-          document.getElementById('planName').textContent = t.planSub;
-          document.getElementById('planBadge').textContent = t.planBadgeActive;
-          document.getElementById('planBadge').style.background = 'rgba(34, 197, 94, 0.2)';
-          document.getElementById('planBadge').style.color = '#4ade80';
-          document.getElementById('planBadge').style.borderColor = 'rgba(34, 197, 94, 0.4)';
+          document.getElementById('planName').textContent = 'Monthly Pass (₹699 Unlimited)';
+          const b = document.getElementById('planBadge');
+          b.textContent = 'ACTIVE';
+          b.className = 'plan-badge badge-active';
         } else {
-          document.getElementById('planName').textContent = t.planWallet;
-          document.getElementById('planBadge').textContent = t.planBadgeActive;
-          document.getElementById('planBadge').style.background = 'rgba(34, 197, 94, 0.15)';
-          document.getElementById('planBadge').style.color = '#4ade80';
-          document.getElementById('planBadge').style.borderColor = 'rgba(34, 197, 94, 0.3)';
+          document.getElementById('planName').textContent = 'Pay As You Go';
+          const b = document.getElementById('planBadge');
+          b.textContent = 'INACTIVE';
+          b.className = 'plan-badge badge-inactive';
         }
         const dot = document.getElementById('statusDot');
         dot.className = 'status-dot ' + (s.isRunning ? 'dot-running' : (s.lastError ? 'dot-error' : 'dot-stopped'));
         document.getElementById('statusText').textContent = s.isRunning ? t.statusRunning : (s.lastError ? t.statusError : t.statusIdle);
-        document.getElementById('progressText').textContent = `${s.processedCount||0} / ${s.totalRows||0} ${t.processedSuffix}`;
+        document.getElementById('progressText').textContent = `${s.processedCount || 0} / ${s.totalRows || 0} ${t.processedSuffix}`;
         document.getElementById('startBtn').disabled = s.isRunning;
         document.getElementById('stopBtn').disabled = !s.isRunning;
         const errBox = document.getElementById('errorAlert');
@@ -1528,14 +1535,14 @@
     function parseMurabba(val) {
       if (!val) return { main: 0, sub: 0 };
       const p = String(val).trim().split(/[\/\.]/);
-      return { main: parseInt(p[0],10)||0, sub: p.length>1 ? (parseInt(p[1],10)||0) : 0 };
+      return { main: parseInt(p[0], 10) || 0, sub: p.length > 1 ? (parseInt(p[1], 10) || 0) : 0 };
     }
-    function makeKhasraJS(mM, mS, kM, kS=0) {
-      return '0'.repeat(11-String(mM).length) + mM + '0' + String(mS||0).padStart(2,'0') + String(kM||0).padStart(2,'0') + String(kS||0).padStart(2,'0');
+    function makeKhasraJS(mM, mS, kM, kS = 0) {
+      return '0'.repeat(11 - String(mM).length) + mM + '0' + String(mS || 0).padStart(2, '0') + String(kM || 0).padStart(2, '0') + String(kS || 0).padStart(2, '0');
     }
     function parseKilaStr(s) {
       const m = String(s).trim().match(/^(\d+)(?:[\/\.](\d+))?$/);
-      return m ? { main: parseInt(m[1],10), sub: parseInt(m[2]||0,10) } : { main:0, sub:0 };
+      return m ? { main: parseInt(m[1], 10), sub: parseInt(m[2] || 0, 10) } : { main: 0, sub: 0 };
     }
 
     function addKilasToReview() {
@@ -1550,33 +1557,33 @@
       const subKilasInput = document.getElementById('genSubKilas').value.trim();
 
       if (!name || !khata || !muraMain || !kilasInput) {
-        alert(currentLang==='hi' ? 'कृपया किसान का नाम, खाता संख्या, मुरब्बा और किले संख्या अवश्य भरें।' : 'Please enter Farmer Name, Khata Number, Murabba and Kila numbers.');
+        alert(currentLang === 'hi' ? 'कृपया किसान का नाम, खाता संख्या, मुरब्बा और किले संख्या अवश्य भरें।' : 'Please enter Farmer Name, Khata Number, Murabba and Kila numbers.');
         return;
       }
 
       const subMap = new Map();
       if (subKilasInput) {
-        subKilasInput.split(/[,\n]/).map(s=>s.trim()).filter(Boolean).forEach(item => {
+        subKilasInput.split(/[,\n]/).map(s => s.trim()).filter(Boolean).forEach(item => {
           const p = parseKilaStr(item);
-          if (p.main>0) { if (!subMap.has(p.main)) subMap.set(p.main,[]); subMap.get(p.main).push(p); }
+          if (p.main > 0) { if (!subMap.has(p.main)) subMap.set(p.main, []); subMap.get(p.main).push(p); }
         });
       }
 
-      kilasInput.split(/[,\n]/).map(s=>s.trim()).filter(Boolean).forEach(item => {
+      kilasInput.split(/[,\n]/).map(s => s.trim()).filter(Boolean).forEach(item => {
         const rm = item.match(/^(\d+)\s*(?:-|to)\s*(\d+)$/i);
         if (rm) {
-          for (let k=parseInt(rm[1],10); k<=parseInt(rm[2],10); k++) {
+          for (let k = parseInt(rm[1], 10); k <= parseInt(rm[2], 10); k++) {
             if (subMap.has(k)) {
               subMap.get(k).forEach(si => {
-                stagedRows.push({ kilaStr: si.sub?`${si.main}/${si.sub}`:`${si.main}`, muraMain, muraSub, khasraNo: makeKhasraJS(muraMain,muraSub,si.main,si.sub), name, khataNo:khata, crop, sowingDate, ownership, farmerName:name, status:'', error:'' });
+                stagedRows.push({ kilaStr: si.sub ? `${si.main}/${si.sub}` : `${si.main}`, muraMain, muraSub, khasraNo: makeKhasraJS(muraMain, muraSub, si.main, si.sub), name, khataNo: khata, crop, sowingDate, ownership, farmerName: name, status: '', error: '' });
               });
             } else {
-              stagedRows.push({ kilaStr:String(k), muraMain, muraSub, khasraNo: makeKhasraJS(muraMain,muraSub,k,0), name, khataNo:khata, crop, sowingDate, ownership, farmerName:name, status:'', error:'' });
+              stagedRows.push({ kilaStr: String(k), muraMain, muraSub, khasraNo: makeKhasraJS(muraMain, muraSub, k, 0), name, khataNo: khata, crop, sowingDate, ownership, farmerName: name, status: '', error: '' });
             }
           }
         } else {
           const p = parseKilaStr(item);
-          if (p.main>0) stagedRows.push({ kilaStr: p.sub?`${p.main}/${p.sub}`:`${p.main}`, muraMain, muraSub, khasraNo: makeKhasraJS(muraMain,muraSub,p.main,p.sub), name, khataNo:khata, crop, sowingDate, ownership, farmerName:name, status:'', error:'' });
+          if (p.main > 0) stagedRows.push({ kilaStr: p.sub ? `${p.main}/${p.sub}` : `${p.main}`, muraMain, muraSub, khasraNo: makeKhasraJS(muraMain, muraSub, p.main, p.sub), name, khataNo: khata, crop, sowingDate, ownership, farmerName: name, status: '', error: '' });
         }
       });
 
@@ -1595,9 +1602,9 @@
         tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px; font-size:13px;">${t.emptyReviewMsg}</td></tr>`;
         return;
       }
-      tbody.innerHTML = stagedRows.map((r,i) => `
+      tbody.innerHTML = stagedRows.map((r, i) => `
         <tr>
-          <td style="font-weight:600; color:var(--text-muted); font-size:12px; text-align:center;">${i+1}</td>
+          <td style="font-weight:600; color:var(--text-muted); font-size:12px; text-align:center;">${i + 1}</td>
           <td><input type="text" class="table-input" style="font-weight:700; width:72px;" value="${r.kilaStr}" oninput="updateStagedKila(${i},this.value)"></td>
           <td><span id="khasraSpan_${i}" class="khasra-chip">${r.khasraNo}</span></td>
           <td><input type="text" class="table-input" style="width:100%;" value="${r.name}" oninput="stagedRows[${i}].name=this.value;stagedRows[${i}].farmerName=this.value;"></td>
@@ -1607,32 +1614,32 @@
       `).join('');
     }
 
-    function updateStagedKila(i,val) {
+    function updateStagedKila(i, val) {
       stagedRows[i].kilaStr = val.trim();
       const p = parseKilaStr(val);
-      if (p.main>0 && stagedRows[i].muraMain) stagedRows[i].khasraNo = makeKhasraJS(stagedRows[i].muraMain, stagedRows[i].muraSub, p.main, p.sub);
+      if (p.main > 0 && stagedRows[i].muraMain) stagedRows[i].khasraNo = makeKhasraJS(stagedRows[i].muraMain, stagedRows[i].muraSub, p.main, p.sub);
       const sp = document.getElementById(`khasraSpan_${i}`);
       if (sp) sp.textContent = stagedRows[i].khasraNo;
     }
-    function deleteStagedRow(i) { stagedRows.splice(i,1); renderStagedTable(); }
+    function deleteStagedRow(i) { stagedRows.splice(i, 1); renderStagedTable(); }
     function clearStagedRows() {
-      if (confirm(currentLang==='hi' ? 'क्या आप सभी रिकॉर्ड हटाना चाहते हैं?' : 'Clear all records from the list?')) { stagedRows=[]; renderStagedTable(); }
+      if (confirm(currentLang === 'hi' ? 'क्या आप सभी रिकॉर्ड हटाना चाहते हैं?' : 'Clear all records from the list?')) { stagedRows = []; renderStagedTable(); }
     }
 
-    async function saveStagedToExcel(append=false) {
-      if (!stagedRows.length) { alert(currentLang==='hi' ? 'पहले "सूची में जोड़ें" से रिकॉर्ड जोड़ें।' : 'Add records using "Add to List" first.'); return; }
+    async function saveStagedToExcel(append = false) {
+      if (!stagedRows.length) { alert(currentLang === 'hi' ? 'पहले "सूची में जोड़ें" से रिकॉर्ड जोड़ें।' : 'Add records using "Add to List" first.'); return; }
       const a = document.getElementById('saveAlert');
-      a.style.display='block'; a.style.background='#eff6ff'; a.style.color='#1d4ed8'; a.style.border='1px solid #bfdbfe';
-      a.textContent = currentLang==='hi' ? 'सुरक्षित किए जा रहे हैं...' : 'Saving records...';
+      a.style.display = 'block'; a.style.background = '#eff6ff'; a.style.color = '#1d4ed8'; a.style.border = '1px solid #bfdbfe';
+      a.textContent = currentLang === 'hi' ? 'सुरक्षित किए जा रहे हैं...' : 'Saving records...';
       try {
-        const res = await fetch('/save-excel-rows', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({rows:stagedRows,append}) });
+        const res = await fetch('/save-excel-rows', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows: stagedRows, append }) });
         const data = await res.json();
         if (data.ok) {
-          a.style.background='#f0fdf4'; a.style.color='#15803d'; a.style.border='1px solid #bbf7d0';
-          a.textContent = currentLang==='hi' ? `${stagedRows.length} रिकॉर्ड सफलतापूर्वक सुरक्षित हो गए।` : `${stagedRows.length} records saved successfully.`;
+          a.style.background = '#f0fdf4'; a.style.color = '#15803d'; a.style.border = '1px solid #bbf7d0';
+          a.textContent = currentLang === 'hi' ? `${stagedRows.length} रिकॉर्ड सफलतापूर्वक सुरक्षित हो गए।` : `${stagedRows.length} records saved successfully.`;
           checkStatus(); loadExcelRows();
-        } else { a.style.background='#fef2f2'; a.style.color='#dc2626'; a.style.border='1px solid #fecaca'; a.textContent='Error: '+data.message; }
-      } catch(err) { a.style.background='#fef2f2'; a.style.color='#dc2626'; a.style.border='1px solid #fecaca'; a.textContent='Connection Error: '+err.message; }
+        } else { a.style.background = '#fef2f2'; a.style.color = '#dc2626'; a.style.border = '1px solid #fecaca'; a.textContent = 'Error: ' + data.message; }
+      } catch (err) { a.style.background = '#fef2f2'; a.style.color = '#dc2626'; a.style.border = '1px solid #fecaca'; a.textContent = 'Connection Error: ' + err.message; }
     }
 
     async function loadExcelRows() {
@@ -1657,37 +1664,37 @@
             </tr>
           `;
         }).join('');
-      } catch(e) { console.error(e); }
+      } catch (e) { console.error(e); }
     }
 
-    function startAutomation() { fetch('/start',{method:'POST'}).then(checkStatus); }
-    function stopAutomation() { fetch('/stop',{method:'POST'}).then(checkStatus); }
+    function startAutomation() { fetch('/start', { method: 'POST' }).then(checkStatus); }
+    function stopAutomation() { fetch('/stop', { method: 'POST' }).then(checkStatus); }
     function resetExcelStatus() {
-      if (confirm(currentLang==='hi' ? 'स्थिति रीसेट करें?' : 'Reset status of saved records?')) {
-        fetch('/reset-excel',{method:'POST'}).then(()=>{ checkStatus(); loadExcelRows(); });
+      if (confirm(currentLang === 'hi' ? 'स्थिति रीसेट करें?' : 'Reset status of saved records?')) {
+        fetch('/reset-excel', { method: 'POST' }).then(() => { checkStatus(); loadExcelRows(); });
       }
     }
 
-    function openRechargeModal() { document.getElementById('rechargeModal').style.display='flex'; }
-    function closeModal(id) { document.getElementById(id).style.display='none'; }
-    function selectAmount(v) { document.getElementById('customAmount').value=v; }
+    function openRechargeModal() { document.getElementById('rechargeModal').style.display = 'flex'; }
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+    function selectAmount(v) { document.getElementById('customAmount').value = v; }
 
     async function triggerCheckout(od) {
-      window.open(`https://neeraj2004kumar2006-pixel.github.io/on-farm/pay.html?session_id=${od.payment_session_id}`,'_blank');
-      const pi = setInterval(async()=>{
-        try { if(od.orderData&&od.orderData.order_id){ const v=await(await fetch('/verify-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orderId:od.orderData.order_id})})).json(); if(v.ok&&v.status==='PAID'){clearInterval(pi);checkStatus();alert(currentLang==='hi'?'भुगतान सफल! बैलेंस अपडेट हो गया।':'Payment successful! Balance updated.');} } } catch{}
-      },3000);
-      setTimeout(()=>clearInterval(pi),300000);
+      window.open(`https://neeraj2004kumar2006-pixel.github.io/on-farm/pay.html?session_id=${od.payment_session_id}`, '_blank');
+      const pi = setInterval(async () => {
+        try { if (od.orderData && od.orderData.order_id) { const v = await (await fetch('/verify-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId: od.orderData.order_id }) })).json(); if (v.ok && v.status === 'PAID') { clearInterval(pi); checkStatus(); alert(currentLang === 'hi' ? 'भुगतान सफल! बैलेंस अपडेट हो गया।' : 'Payment successful! Balance updated.'); } } } catch { }
+      }, 3000);
+      setTimeout(() => clearInterval(pi), 300000);
     }
 
     async function payWallet() {
-      const d = await(await fetch('/create-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'WALLET_RECHARGE',amount:document.getElementById('customAmount').value})})).json();
-      if(d.ok&&d.payment_session_id){closeModal('rechargeModal');triggerCheckout(d);} else alert(d.message||'Payment initiation failed.');
+      const d = await (await fetch('/create-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'WALLET_RECHARGE', amount: document.getElementById('customAmount').value }) })).json();
+      if (d.ok && d.payment_session_id) { closeModal('rechargeModal'); triggerCheckout(d); } else alert(d.message || 'Payment initiation failed.');
     }
     async function buySubscription() {
-      if(!confirm(currentLang==='hi'?'₹699 मासिक पास (असीमित) लेना चाहते हैं?':'Purchase ₹699 Monthly Pass for unlimited processing?')) return;
-      const d = await(await fetch('/create-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'SUBSCRIPTION_699',amount:699})})).json();
-      if(d.ok&&d.payment_session_id) triggerCheckout(d); else alert(d.message||'Payment initiation failed.');
+      if (!confirm(currentLang === 'hi' ? '₹699 मासिक पास (असीमित) लेना चाहते हैं?' : 'Purchase ₹699 Monthly Pass for unlimited processing?')) return;
+      const d = await (await fetch('/create-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'SUBSCRIPTION_699', amount: 699 }) })).json();
+      if (d.ok && d.payment_session_id) triggerCheckout(d); else alert(d.message || 'Payment initiation failed.');
     }
 
     setLanguage(currentLang);
@@ -1695,4 +1702,5 @@
     setInterval(checkStatus, 1500);
   </script>
 </body>
+
 </html>
