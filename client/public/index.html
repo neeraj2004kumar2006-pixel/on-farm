@@ -2064,9 +2064,13 @@
           window.currentOperatorUser = s.user;
           localStorage.setItem('onfarm_operator_phone', s.user.phone);
           if (s.user.name) localStorage.setItem('onfarm_operator_name', s.user.name);
+        } else {
+          window.currentOperatorUser = null;
+          localStorage.removeItem('onfarm_operator_phone');
+          localStorage.removeItem('onfarm_operator_name');
         }
 
-        const savedPhone = (s.user && s.user.phone) || (window.currentOperatorUser && window.currentOperatorUser.phone) || localStorage.getItem('onfarm_operator_phone') || '';
+        const savedPhone = (s.user && s.user.phone) || (window.currentOperatorUser && window.currentOperatorUser.phone) || '';
         const isLinked = Boolean(savedPhone && savedPhone !== '9999999999' && savedPhone.length === 10);
         updateTextIfDiff('headerPhoneDisplay', isLinked ? ('+91 ' + savedPhone) : 'Link Mobile No.');
         updateClassIfDiff('headerOperatorBtn', 'operator-profile-btn' + (isLinked ? ' linked' : ''));
@@ -2381,7 +2385,7 @@
     }
 
     function startAutomation() {
-      const savedPhone = (window.currentOperatorUser && window.currentOperatorUser.phone) || localStorage.getItem('onfarm_operator_phone');
+      const savedPhone = (window.currentOperatorUser && window.currentOperatorUser.phone) || '';
       if (!savedPhone || savedPhone.length !== 10) {
         openProfileModal();
         appAlert('Please link your 10-digit mobile number before starting form processing.', 'Account Setup Required', 'info');
@@ -2404,19 +2408,21 @@
     }
 
     async function openRechargeModal() {
-      if (!window.currentOperatorUser || !window.currentOperatorUser.phone) {
-        try {
-          const res = await fetch('/status');
-          const s = await res.json();
-          if (s.user && s.user.phone) {
-            window.currentOperatorUser = s.user;
-            localStorage.setItem('onfarm_operator_phone', s.user.phone);
-            if (s.user.name) localStorage.setItem('onfarm_operator_name', s.user.name);
-          }
-        } catch {}
-      }
+      try {
+        const res = await fetch('/status');
+        const s = await res.json();
+        if (s.user && s.user.phone) {
+          window.currentOperatorUser = s.user;
+          localStorage.setItem('onfarm_operator_phone', s.user.phone);
+          if (s.user.name) localStorage.setItem('onfarm_operator_name', s.user.name);
+        } else {
+          window.currentOperatorUser = null;
+          localStorage.removeItem('onfarm_operator_phone');
+          localStorage.removeItem('onfarm_operator_name');
+        }
+      } catch {}
       const u = window.currentOperatorUser;
-      const savedPhone = (u && u.phone) || localStorage.getItem('onfarm_operator_phone') || '';
+      const savedPhone = (u && u.phone) || '';
       const rPhone = document.getElementById('rechargePhone');
       if (rPhone) {
         if (savedPhone && savedPhone !== '9999999999' && savedPhone.length === 10) {
@@ -2437,20 +2443,22 @@
     }
 
     async function openProfileModal() {
-      if (!window.currentOperatorUser || !window.currentOperatorUser.phone) {
-        try {
-          const res = await fetch('/status');
-          const s = await res.json();
-          if (s.user && s.user.phone) {
-            window.currentOperatorUser = s.user;
-            localStorage.setItem('onfarm_operator_phone', s.user.phone);
-            if (s.user.name) localStorage.setItem('onfarm_operator_name', s.user.name);
-          }
-        } catch {}
-      }
+      try {
+        const res = await fetch('/status');
+        const s = await res.json();
+        if (s.user && s.user.phone) {
+          window.currentOperatorUser = s.user;
+          localStorage.setItem('onfarm_operator_phone', s.user.phone);
+          if (s.user.name) localStorage.setItem('onfarm_operator_name', s.user.name);
+        } else {
+          window.currentOperatorUser = null;
+          localStorage.removeItem('onfarm_operator_phone');
+          localStorage.removeItem('onfarm_operator_name');
+        }
+      } catch {}
       const u = window.currentOperatorUser;
-      const savedPhone = (u && u.phone) || localStorage.getItem('onfarm_operator_phone') || '';
-      const savedName = (u && u.name) || localStorage.getItem('onfarm_operator_name') || '';
+      const savedPhone = (u && u.phone) || '';
+      const savedName = (u && u.name) || '';
       const isLocked = Boolean(savedPhone && savedPhone !== '9999999999' && savedPhone.length === 10);
 
       const pIn = document.getElementById('profilePhoneInput');
@@ -2619,7 +2627,7 @@
     }
 
     async function buySubscription() {
-      let savedPhone = (window.currentOperatorUser && window.currentOperatorUser.phone) || localStorage.getItem('onfarm_operator_phone') || '';
+      let savedPhone = (window.currentOperatorUser && window.currentOperatorUser.phone) || '';
       if (!savedPhone || savedPhone === '9999999999' || savedPhone.length !== 10) {
         try {
           const res = await fetch('/status');
@@ -2628,6 +2636,11 @@
             window.currentOperatorUser = s.user;
             localStorage.setItem('onfarm_operator_phone', s.user.phone);
             savedPhone = s.user.phone;
+          } else {
+            window.currentOperatorUser = null;
+            localStorage.removeItem('onfarm_operator_phone');
+            localStorage.removeItem('onfarm_operator_name');
+            savedPhone = '';
           }
         } catch {}
       }

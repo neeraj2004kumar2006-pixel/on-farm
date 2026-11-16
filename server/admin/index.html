@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>On-Farm — Super Admin Control Center</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
   <style>
     :root {
       --primary: #15803d;
@@ -24,116 +26,346 @@
       --text-muted: #9ca3af;
       --radius: 12px;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
-      background: var(--bg); color: var(--text);
-      line-height: 1.5; min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
     }
-    header {
-      background: var(--card-bg); border-bottom: 1px solid var(--border);
-      padding: 18px 32px; display: flex; justify-content: space-between; align-items: center;
-      position: sticky; top: 0; z-index: 50;
-    }
-    .brand { display: flex; align-items: center; gap: 12px; font-weight: 800; font-size: 1.3rem; }
-    .badge { background: var(--primary); color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; text-transform: uppercase; }
-    .server-status { font-size: 0.85rem; display: flex; align-items: center; gap: 8px; color: var(--text-muted); }
-    .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 8px #22c55e; }
 
-    .main { max-width: 1300px; margin: 0 auto; padding: 32px 24px; }
+    header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      font-size: 1.3rem;
+    }
+
+    .badge {
+      background: var(--primary);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+    }
+
+    .server-status {
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+    }
+
+    .main {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
 
     /* Stats Grid */
     .stats-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 20px; margin-bottom: 32px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
     }
+
     .stat-card {
-      background: var(--card-bg); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 24px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
     }
-    .stat-card h4 { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
-    .stat-card .val { font-size: 2.2rem; font-weight: 800; color: #fff; }
-    .stat-card .desc { font-size: 0.8rem; color: var(--accent); margin-top: 4px; }
+
+    .stat-card h4 {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .stat-card .val {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .stat-card .desc {
+      font-size: 0.8rem;
+      color: var(--accent);
+      margin-top: 4px;
+    }
 
     /* Tabs */
-    .tabs { display: flex; gap: 12px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
-    .tab-btn {
-      background: none; border: none; padding: 12px 20px; color: var(--text-muted);
-      font-size: 0.95rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent;
+    .tabs {
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
     }
-    .tab-btn.active { color: var(--accent); border-color: var(--accent); }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      padding: 12px 20px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab-btn.active {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
 
     /* Section Cards */
     .panel-card {
-      background: var(--card-bg); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 28px; margin-bottom: 24px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
     }
-    .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .panel-header h3 { font-size: 1.25rem; font-weight: 700; }
+
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .panel-header h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
 
     /* Controls & Search */
     .search-bar {
-      background: #1f2937; border: 1px solid #374151; color: white;
-      padding: 10px 16px; border-radius: 8px; font-size: 0.9rem; width: 320px;
+      background: #1f2937;
+      border: 1px solid #374151;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      width: 320px;
     }
 
     /* Table */
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
-    th { padding: 14px 16px; background: #1f2937; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; }
-    td { padding: 14px 16px; border-bottom: 1px solid #1f2937; }
-    tr:hover { background: rgba(255,255,255,0.02); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    th {
+      padding: 14px 16px;
+      background: #1f2937;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+    }
+
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid #1f2937;
+    }
+
+    tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
 
     /* Badges & Buttons */
-    .chip { padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; display: inline-block; }
-    .chip-green { background: rgba(34,197,94,0.15); color: #4ade80; border: 1px solid rgba(34,197,94,0.3); }
-    .chip-yellow { background: rgba(234,179,8,0.15); color: #facc15; border: 1px solid rgba(234,179,8,0.3); }
-    .chip-red { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+    .chip {
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: inline-block;
+    }
+
+    .chip-green {
+      background: rgba(34, 197, 94, 0.15);
+      color: #4ade80;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .chip-yellow {
+      background: rgba(234, 179, 8, 0.15);
+      color: #facc15;
+      border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+
+    .chip-red {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
 
     .btn {
-      padding: 8px 14px; border-radius: 6px; font-size: 0.85rem; font-weight: 600;
-      border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-primary:hover { background: var(--primary-dark); }
-    .btn-secondary { background: #374151; color: white; }
-    .btn-secondary:hover { background: #4b5563; }
-    .btn-danger { background: var(--danger); color: white; }
-    .btn-danger:hover { background: #b91c1c; }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn-secondary {
+      background: #374151;
+      color: white;
+    }
+
+    .btn-secondary:hover {
+      background: #4b5563;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: #b91c1c;
+    }
 
     /* Inputs */
-    .form-group { margin-bottom: 18px; }
-    .form-group label { display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; }
-    .form-input, .form-textarea {
-      width: 100%; background: #1f2937; border: 1px solid #374151; color: white;
-      padding: 12px 14px; border-radius: 8px; font-size: 0.95rem; font-family: inherit;
+    .form-group {
+      margin-bottom: 18px;
     }
-    .form-textarea { font-family: 'Consolas', monospace; font-size: 0.85rem; min-height: 220px; }
+
+    .form-group label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    .form-input,
+    .form-textarea {
+      width: 100%;
+      background: #1f2937;
+      border: 1px solid #374151;
+      color: white;
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+
+    .form-textarea {
+      font-family: 'Consolas', monospace;
+      font-size: 0.85rem;
+      min-height: 220px;
+    }
 
     /* Modal */
     .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-      display: none; align-items: center; justify-content: center; z-index: 100;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
     }
+
     .modal-card {
-      background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius);
-      padding: 28px; width: 440px; max-width: 90%;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      width: 440px;
+      max-width: 90%;
     }
-    .modal-card h3 { margin-bottom: 16px; font-size: 1.2rem; }
+
+    .modal-card h3 {
+      margin-bottom: 16px;
+      font-size: 1.2rem;
+    }
 
     /* Admin Toast Notification */
     .admin-toast {
-      position: fixed; top: 24px; right: 24px;
-      background: #15803d; color: white; font-size: 14px; font-weight: 700;
-      padding: 12px 20px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-      border: 1px solid #22c55e; display: none; align-items: center; gap: 10px; z-index: 9999;
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      background: #15803d;
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+      padding: 12px 20px;
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      border: 1px solid #22c55e;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      z-index: 9999;
       animation: toastIn 0.2s ease-out;
     }
+
     @keyframes toastIn {
-      from { transform: translateY(-12px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+      from {
+        transform: translateY(-12px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
     }
   </style>
 </head>
+
 <body>
 
   <!-- Floating Toast Notification -->
@@ -187,7 +419,8 @@
     <div id="tabUsers" class="panel-card">
       <div class="panel-header">
         <h3>Registered Operators & CSC Centers</h3>
-        <input type="text" id="searchInput" class="search-bar" placeholder="🔍 Search by name or phone..." oninput="filterUsers()">
+        <input type="text" id="searchInput" class="search-bar" placeholder="🔍 Search by name or phone..."
+          oninput="filterUsers()">
       </div>
       <div style="overflow-x: auto;">
         <table>
@@ -203,7 +436,9 @@
             </tr>
           </thead>
           <tbody id="userTableBody">
-            <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Loading users from database...</td></tr>
+            <tr>
+              <td colspan="7" style="text-align: center; color: var(--text-muted);">Loading users from database...</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -215,7 +450,8 @@
         <div>
           <h3>1-Click Cloud Automation Push</h3>
           <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">
-            Publish new automation selectors or logic. It will be encrypted and transmitted directly to client RAM on their next run!
+            Publish new automation selectors or logic. It will be encrypted and transmitted directly to client RAM on
+            their next run!
           </p>
         </div>
       </div>
@@ -231,7 +467,8 @@
       </div>
       <div class="form-group">
         <label>Update Summary</label>
-        <input type="text" id="pushDesc" class="form-input" placeholder="e.g. Sowing date calendar fix and last row submit optimization">
+        <input type="text" id="pushDesc" class="form-input"
+          placeholder="e.g. Sowing date calendar fix and last row submit optimization">
       </div>
       <div class="form-group">
         <label>Automation Code Payload (Will be encrypted with AES-256):</label>
@@ -477,7 +714,7 @@ module.exports = {
 
     async function deleteUser(userId, phone) {
       if (!confirm(`⚠️ PERMANENT DELETE WARNING:\n\nAre you sure you want to permanently delete user +91 ${phone}?\nThis will erase their account, wallet balance, and subscriptions. This action CANNOT be undone.`)) return;
-      
+
       const row = document.getElementById(`user-row-${userId}`);
       if (row) row.style.opacity = '0.3';
       showToast(`Deleting user +91 ${phone}...`);
@@ -612,4 +849,5 @@ module.exports = {
     setInterval(fetchStats, 5000);
   </script>
 </body>
+
 </html>

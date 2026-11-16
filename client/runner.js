@@ -748,53 +748,42 @@ function startControlPanel() {
 // -------------------------------------------------------------------------
 async function syncUserBalance() {
   try {
-    const phone = (state.user && state.user.phone) || process.env.OPERATOR_PHONE;
-    if (!phone) {
-      // Cloud HWID auto-detection: Check if this machine is already registered
-      try {
-        const devRes = await axios.post(`${CLOUD_URL}/api/auth/device-status`, {
-          hwid: state.hwid,
-        }, { timeout: 6000 });
-
-        if (devRes.data && devRes.data.ok && devRes.data.bound && devRes.data.user) {
-          state.user = devRes.data.user;
-          state.walletBalance = devRes.data.wallet ? devRes.data.wallet.balance : 0;
-          state.subscription = devRes.data.subscription;
-          state.isOnline = true;
-          try {
-            fs.writeFileSync(SESSION_CACHE_FILE, JSON.stringify({
-              walletBalance: state.walletBalance,
-              user: state.user,
-              subscription: state.subscription,
-            }, null, 2));
-          } catch {}
-          return true;
-        }
-      } catch {}
-
-      state.isOnline = true;
-      return true;
-    }
-    const name = (state.user && state.user.name) || process.env.OPERATOR_NAME || `Operator_${phone.slice(-4)}`;
-    const loginRes = await axios.post(`${CLOUD_URL}/api/auth/login`, {
-      phone,
+    // Single Source of Truth: Check Cloud HWID binding status
+    const devRes = await axios.post(`${CLOUD_URL}/api/auth/device-status`, {
       hwid: state.hwid,
-      name,
     }, { timeout: 6000 });
 
-    if (loginRes.data && loginRes.data.ok) {
-      state.user = loginRes.data.user;
-      state.walletBalance = loginRes.data.wallet ? loginRes.data.wallet.balance : 0;
-      state.subscription = loginRes.data.subscription;
-      state.isOnline = true;
-      try {
-        fs.writeFileSync(SESSION_CACHE_FILE, JSON.stringify({
-          walletBalance: state.walletBalance,
-          user: state.user,
-          subscription: state.subscription,
-        }, null, 2));
-      } catch {}
-      return true;
+    if (devRes.data && devRes.data.ok) {
+      if (devRes.data.bound && devRes.data.user) {
+        // Device is legitimately bound to this user
+        state.user = devRes.data.user;
+        state.walletBalance = devRes.data.wallet ? devRes.data.wallet.balance : 0;
+        state.subscription = devRes.data.subscription;
+        state.isOnline = true;
+        try {
+          fs.writeFileSync(SESSION_CACHE_FILE, JSON.stringify({
+            walletBalance: state.walletBalance,
+            user: state.user,
+            subscription: state.subscription,
+          }, null, 2));
+        } catch {}
+        return true;
+      } else {
+        // Device is NOT bound in Cloud! (Admin deleted the user or reset the device)
+        if (state.user) {
+          log('Notice: Operator account was unlinked/deleted by Admin. Resetting local device session.');
+        }
+        state.user = null;
+        state.walletBalance = 0;
+        state.subscription = null;
+        state.isOnline = true;
+        try {
+          if (fs.existsSync(SESSION_CACHE_FILE)) {
+            fs.unlinkSync(SESSION_CACHE_FILE);
+          }
+        } catch {}
+        return true;
+      }
     }
   } catch (err) {
     // Keep last known balance if network momentarily blips
