@@ -563,10 +563,7 @@ function startControlPanel() {
     }
   });
 
-  app.get('/status', async (req, res) => {
-    if (!state.user) {
-      await syncUserBalance();
-    }
+  app.get('/status', (req, res) => {
     res.json({
       isOnline: state.isOnline,
       isRunning: state.isRunning,

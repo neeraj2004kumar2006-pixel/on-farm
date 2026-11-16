@@ -917,7 +917,6 @@
       position: fixed;
       inset: 0;
       background: rgba(15, 23, 42, 0.65);
-      backdrop-filter: blur(4px);
       display: none;
       align-items: center;
       justify-content: center;
@@ -1154,7 +1153,7 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 12px;">
-          <button type="button" class="operator-profile-btn" onclick="openProfileModal()" title="Operator Account / Mobile Number">
+          <button type="button" id="headerOperatorBtn" class="operator-profile-btn" onclick="openProfileModal()" title="Operator Account / Mobile Number">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
             </svg>
@@ -2044,33 +2043,27 @@
           updateTextIfDiff('walletBal', '₹' + s.walletBalance);
         }
 
-        const savedPhone = localStorage.getItem('onfarm_operator_phone') || (s.user && s.user.phone) || '';
-        const phoneBtn = document.querySelector('.operator-profile-btn');
-        if (savedPhone && savedPhone !== '9999999999') {
-          updateTextIfDiff('headerPhoneDisplay', '+91 ' + savedPhone);
-          if (phoneBtn) phoneBtn.classList.add('linked');
-        } else {
-          updateTextIfDiff('headerPhoneDisplay', 'Link Mobile No.');
-          if (phoneBtn) phoneBtn.classList.remove('linked');
-        }
+        const savedPhone = (s.user && s.user.phone) || localStorage.getItem('onfarm_operator_phone') || '';
+        const isLinked = Boolean(savedPhone && savedPhone !== '9999999999' && savedPhone.length === 10);
+        updateTextIfDiff('headerPhoneDisplay', isLinked ? ('+91 ' + savedPhone) : 'Link Mobile No.');
+        updateClassIfDiff('headerOperatorBtn', 'operator-profile-btn' + (isLinked ? ' linked' : ''));
 
         const isSub = Boolean(s.subscription && s.subscription.is_active);
         updateTextIfDiff('planName', isSub ? 'Monthly Pass (₹699 Unlimited)' : 'Pay As You Go');
         updateTextIfDiff('planBadge', isSub ? 'ACTIVE' : 'INACTIVE');
         updateClassIfDiff('planBadge', 'plan-badge ' + (isSub ? 'badge-active' : 'badge-inactive'));
 
-        const btnPass = document.getElementById('btnBuyPass');
-        if (btnPass) {
-          if (isSub) {
-            if (btnPass.textContent !== 'Pass Active') {
+        if (prevCheck['isSubPass'] !== isSub) {
+          prevCheck['isSubPass'] = isSub;
+          const btnPass = document.getElementById('btnBuyPass');
+          if (btnPass) {
+            if (isSub) {
               btnPass.textContent = 'Pass Active';
               btnPass.style.background = '#dcfce7';
               btnPass.style.color = '#15803d';
               btnPass.style.border = '1px solid #86efac';
               btnPass.style.cursor = 'default';
-            }
-          } else {
-            if (btnPass.textContent !== 'Monthly Pass (₹699)') {
+            } else {
               btnPass.textContent = 'Monthly Pass (₹699)';
               btnPass.style.background = '#00ff99';
               btnPass.style.color = '#052e16';
@@ -2533,14 +2526,6 @@
     setLanguage(currentLang);
     checkStatus();
     setInterval(checkStatus, 1500);
-
-    // Auto-prompt operator to link their mobile number on first open
-    setTimeout(() => {
-      const savedPhone = localStorage.getItem('onfarm_operator_phone');
-      if (!savedPhone || savedPhone.length !== 10) {
-        openProfileModal();
-      }
-    }, 800);
   </script>
 </body>
 

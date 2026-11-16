@@ -272,20 +272,38 @@ module.exports = {
     let selectedUserId = null;
 
     function getBackendUrl() {
-      const saved = localStorage.getItem('onfarm_backend_url');
-      if (saved && saved.trim()) {
-        const clean = saved.trim().replace(/\/+$/, '');
-        if (!clean.includes('localhost') || (typeof window !== 'undefined' && window.location.hostname === 'localhost')) {
-          return clean;
-        }
-      }
+      // If hosted on a website/domain, always prefer current origin
       if (typeof window !== 'undefined' && window.location.origin && window.location.origin.startsWith('http')) {
+        const saved = localStorage.getItem('onfarm_backend_url');
+        if (saved && (saved.includes('onfarm-tech') || (saved.includes('localhost') && window.location.hostname !== 'localhost'))) {
+          localStorage.removeItem('onfarm_backend_url');
+        }
+        if (saved && saved.trim() && !saved.includes('onfarm-tech') && (!saved.includes('localhost') || window.location.hostname === 'localhost')) {
+          return saved.trim().replace(/\/+$/, '');
+        }
         return window.location.origin;
       }
-      return '';
+      const saved = localStorage.getItem('onfarm_backend_url');
+      if (saved && saved.trim() && !saved.includes('onfarm-tech')) {
+        return saved.trim().replace(/\/+$/, '');
+      }
+      return 'https://on-farm.vercel.app';
     }
     function getAdminKey() {
-      return localStorage.getItem('onfarm_admin_key') || 'onfarm_admin_master_2026';
+      const saved = localStorage.getItem('onfarm_admin_key');
+      if (saved && saved.trim()) return saved.trim();
+      return 'onfarm_admin_master_2026';
+    }
+
+    function resetSettings() {
+      localStorage.removeItem('onfarm_backend_url');
+      localStorage.removeItem('onfarm_admin_key');
+      const bInput = document.getElementById('backendUrl');
+      const kInput = document.getElementById('adminKey');
+      if (bInput) bInput.value = getBackendUrl();
+      if (kInput) kInput.value = 'onfarm_admin_master_2026';
+      fetchStats();
+      fetchUsers();
     }
 
     function switchTab(tab) {
@@ -298,7 +316,8 @@ module.exports = {
 
     async function fetchStats() {
       try {
-        const res = await fetch(`${getBackendUrl()}/api/admin/stats`, {
+        const backend = getBackendUrl();
+        const res = await fetch(`${backend}/api/admin/stats`, {
           headers: { 'x-admin-key': getAdminKey() }
         });
         const data = await res.json();
@@ -309,10 +328,13 @@ module.exports = {
           document.getElementById('statKilas').textContent = data.stats.total_kilas_processed;
           document.getElementById('statusDot').style.background = '#22c55e';
           document.getElementById('serverStatusText').textContent = 'Cloud Backend Online';
+        } else {
+          document.getElementById('statusDot').style.background = '#dc2626';
+          document.getElementById('serverStatusText').textContent = data.message || 'Auth Failed';
         }
       } catch (err) {
         document.getElementById('statusDot').style.background = '#dc2626';
-        document.getElementById('serverStatusText').textContent = 'Backend Offline / Check URL';
+        document.getElementById('serverStatusText').innerHTML = `Backend Offline (<a href="javascript:void(0)" onclick="resetSettings()" style="color:#60a5fa;text-decoration:underline;cursor:pointer;">Reset to Live Server</a>)`;
       }
     }
 

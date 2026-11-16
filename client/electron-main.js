@@ -30,10 +30,6 @@ function waitForServer(url, timeoutMs = 15000) {
   });
 }
 
-if (app && typeof app.disableHardwareAcceleration === 'function') {
-  app.disableHardwareAcceleration();
-}
-
 async function createWindow() {
   const iconPath = path.join(__dirname, 'public', process.platform === 'win32' ? 'icon.ico' : 'icon.png');
   mainWindow = new BrowserWindow({
@@ -44,11 +40,16 @@ async function createWindow() {
     title: 'On-Farm',
     icon: iconPath,
     backgroundColor: '#f8fafc',
+    show: false,
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
     },
+  });
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
   });
 
   // Start internal background runner
