@@ -35,7 +35,7 @@ async function createOrder({ orderId, orderAmount, customerId, customerPhone, cu
       customer_name: customerName || 'Valued Farmer / Operator',
     },
     order_meta: {
-      return_url: returnUrl || `https://onfarm-tech.vercel.app/?order_id=${orderId}`,
+      return_url: returnUrl || `https://neeraj2004kumar2006-pixel.github.io/on-farm/pay.html?order_id=${orderId}`,
     },
     order_note: orderNote || 'On-Farm Automation Plan',
   };

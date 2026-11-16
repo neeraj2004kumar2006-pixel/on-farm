@@ -199,7 +199,7 @@ app.post('/api/auth/login', async (req, res) => {
  * type: 'SUBSCRIPTION_699' | 'WALLET_RECHARGE'
  */
 app.post('/api/pay/create-order', async (req, res) => {
-  const { userId, type, customAmount } = req.body;
+  const { userId, type, customAmount, returnUrl } = req.body;
   if (!userId || !type) {
     return res.status(400).json({ ok: false, message: 'userId and type are required' });
   }
@@ -217,16 +217,21 @@ app.post('/api/pay/create-order', async (req, res) => {
     const { data: user, error: userErr } = await supabase.from('users').select('*').eq('id', userId).single();
     if (userErr || !user) throw new Error('User not found');
 
-    const orderId = `order_${user.phone}_${Date.now()}`;
+    const prefix = type === 'SUBSCRIPTION_699' ? 'PASS' : 'WAL';
+    const cleanPhone = String(user.phone || 'OPERATOR').replace(/\D/g, '').slice(-10);
+    const timeCode = Date.now().toString(36).toUpperCase();
+    const randCode = Math.floor(1000 + Math.random() * 9000);
+    const orderId = `ONFARM_${prefix}_${cleanPhone}_${timeCode}${randCode}`;
 
     // Call Cashfree API
     const orderData = await cashfree.createOrder({
       orderId,
       orderAmount: amount,
       customerId: user.id,
-      customerPhone: user.phone,
-      customerName: user.name,
+      customerPhone: cleanPhone,
+      customerName: user.name || 'Neeraj Poonia',
       orderNote,
+      returnUrl,
     });
 
     // Record pending transaction in Supabase

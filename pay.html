@@ -27,6 +27,11 @@
       max-width: 440px;
       width: 100%;
       text-align: center;
+      animation: popIn 0.25s ease-out;
+    }
+    @keyframes popIn {
+      from { transform: scale(0.96); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
     }
     .brand-wrap {
       display: inline-flex;
@@ -77,10 +82,64 @@
       font-size: 12px;
       font-weight: 600;
     }
+
+    /* ── SUCCESS VIEW ── */
+    .success-icon-wrap {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: #052e16;
+      border: 3px solid #00ff99;
+      box-shadow: 0 0 25px rgba(0, 255, 153, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .success-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #052e16;
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+    .order-ref-badge {
+      display: inline-block;
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      padding: 7px 14px;
+      font-size: 12.5px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: #334155;
+      margin-bottom: 24px;
+      word-break: break-all;
+    }
+    .btn-return {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 13px 20px;
+      background: #00ff99;
+      color: #052e16;
+      border: none;
+      border-radius: 8px;
+      font-size: 14.5px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0, 255, 153, 0.35);
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .btn-return:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(0, 255, 153, 0.45);
+    }
   </style>
 </head>
 <body>
-  <div class="card">
+  <!-- Checkout Card -->
+  <div class="card" id="checkoutCard">
     <div class="brand-wrap">
       <div class="brand-icon">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00ff99" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
@@ -103,11 +162,37 @@
     </div>
   </div>
 
+  <!-- Success Card -->
+  <div class="card" id="successCard" style="display: none;">
+    <div class="success-icon-wrap">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#00ff99" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+        <polyline points="22 4 12 14.01 9 11.01" />
+      </svg>
+    </div>
+    <div class="success-title">Payment Successful!</div>
+    <div class="status-text">Your payment has been received and verified. Your On-Farm account balance / Monthly Pass is now active.</div>
+    <div class="order-ref-badge" id="orderRefDisplay"></div>
+    <button class="btn-return" onclick="window.close()">Return to On-Farm App</button>
+  </div>
+
   <script>
     const urlParams = new URLSearchParams(window.location.search);
+    const orderId = urlParams.get('order_id') || urlParams.get('orderId');
     const sessionId = urlParams.get('session_id') || urlParams.get('session');
 
-    if (!sessionId) {
+    if (orderId) {
+      document.getElementById('checkoutCard').style.display = 'none';
+      document.getElementById('successCard').style.display = 'block';
+      document.getElementById('orderRefDisplay').textContent = 'Order Reference: ' + orderId;
+
+      // Trigger server verify in background for instant confirmation
+      fetch('https://on-farm.vercel.app/api/pay/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: orderId })
+      }).catch(() => {});
+    } else if (!sessionId) {
       document.getElementById('spinner').style.display = 'none';
       document.getElementById('status').textContent = 'Error: Invalid payment session. Please try initiating checkout from the app again.';
       document.getElementById('status').style.color = '#dc2626';

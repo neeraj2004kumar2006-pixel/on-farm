@@ -616,6 +616,7 @@ function startControlPanel() {
         userId: state.user.id,
         type,
         customAmount: amount,
+        returnUrl: `https://neeraj2004kumar2006-pixel.github.io/on-farm/pay.html?order_id={order_id}`,
       });
       const sessionUrl = `https://payments.cashfree.com/order/#${orderRes.data.payment_session_id}`;
       res.json({
@@ -660,11 +661,12 @@ function startControlPanel() {
 // -------------------------------------------------------------------------
 async function syncUserBalance() {
   try {
-    const operatorPhone = process.env.OPERATOR_PHONE || '9999999999';
+    const operatorPhone = process.env.OPERATOR_PHONE || '7740892754';
+    const operatorName = process.env.OPERATOR_NAME || 'Neeraj Poonia';
     const loginRes = await axios.post(`${CLOUD_URL}/api/auth/login`, {
       phone: operatorPhone,
       hwid: state.hwid,
-      name: 'Default Operator',
+      name: operatorName,
     }, { timeout: 6000 });
 
     if (loginRes.data && loginRes.data.ok) {
