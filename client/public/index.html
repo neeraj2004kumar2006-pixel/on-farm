@@ -216,6 +216,33 @@
       display: inline-block;
     }
 
+    .operator-profile-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .operator-profile-btn:hover {
+      background: #f1f5f9;
+      color: var(--text);
+      border-color: #94a3b8;
+    }
+
+    .operator-profile-btn.linked {
+      background: #f0fdf4;
+      border-color: #86efac;
+      color: #15803d;
+    }
+
     /* ── ACCOUNT SIDEBAR CARD ── */
     .account-card {
       background: var(--card-bg);
@@ -1126,9 +1153,18 @@
           <span class="badge-pro">PRO</span>
         </div>
 
-        <div class="lang-display">
-          <span class="lang-label">Language:</span>
-          <span class="lang-pill-en">English</span>
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <button type="button" class="operator-profile-btn" onclick="openProfileModal()" title="Operator Account / Mobile Number">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+            <span id="headerPhoneDisplay">Link Mobile No.</span>
+          </button>
+
+          <div class="lang-display">
+            <span class="lang-label">Language:</span>
+            <span class="lang-pill-en">English</span>
+          </div>
         </div>
       </div>
       <code id="hwidDisplay" style="display: none;"></code>
@@ -1400,10 +1436,37 @@
         <button class="btn btn-light" onclick="selectAmount(500)">₹500</button>
       </div>
       <input type="number" id="customAmount" class="form-control" placeholder="Custom Amount (₹)" value="1"
-        style="margin-bottom: 14px;">
+        style="margin-bottom: 12px;">
+      <div class="form-group" style="text-align: left; margin-bottom: 16px;">
+        <label style="font-size: 11.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; display: block;">Operator Mobile Number (for receipt & checkout)</label>
+        <input type="tel" id="rechargePhone" class="form-control" placeholder="10-digit Mobile Number" maxlength="10">
+      </div>
       <div class="modal-footer">
         <button data-i18n="btnCancel" class="btn btn-light" onclick="closeModal('rechargeModal')">Cancel</button>
         <button data-i18n="btnPay" class="btn btn-primary" onclick="payWallet()">Proceed to Pay</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ OPERATOR PROFILE MODAL ═══════════ -->
+  <div id="profileModal" class="modal-overlay">
+    <div class="modal-card" style="max-width: 420px; text-align: left;">
+      <div class="modal-title" style="text-align: center;">Operator Account Setup</div>
+      <div class="modal-desc" style="text-align: center; margin-bottom: 18px;">
+        Enter your mobile number to link your license, wallet balance and monthly pass to this computer.
+      </div>
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 5px; display: block;">10-Digit Mobile Number *</label>
+        <input type="tel" id="profilePhoneInput" class="form-control" placeholder="e.g. 9812345678" maxlength="10">
+        <div id="warnProfilePhone" class="field-warning"></div>
+      </div>
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 5px; display: block;">Operator / Shop Name (Optional)</label>
+        <input type="text" id="profileNameInput" class="form-control" placeholder="e.g. CSC Center / Operator Name">
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-light" onclick="closeModal('profileModal')">Cancel</button>
+        <button class="btn btn-primary" id="saveProfileBtn" onclick="saveOperatorProfile()">Save & Link Account</button>
       </div>
     </div>
   </div>
@@ -1981,6 +2044,16 @@
           updateTextIfDiff('walletBal', '₹' + s.walletBalance);
         }
 
+        const savedPhone = localStorage.getItem('onfarm_operator_phone') || (s.user && s.user.phone) || '';
+        const phoneBtn = document.querySelector('.operator-profile-btn');
+        if (savedPhone && savedPhone !== '9999999999') {
+          updateTextIfDiff('headerPhoneDisplay', '+91 ' + savedPhone);
+          if (phoneBtn) phoneBtn.classList.add('linked');
+        } else {
+          updateTextIfDiff('headerPhoneDisplay', 'Link Mobile No.');
+          if (phoneBtn) phoneBtn.classList.remove('linked');
+        }
+
         const isSub = Boolean(s.subscription && s.subscription.is_active);
         updateTextIfDiff('planName', isSub ? 'Monthly Pass (₹699 Unlimited)' : 'Pay As You Go');
         updateTextIfDiff('planBadge', isSub ? 'ACTIVE' : 'INACTIVE');
@@ -2291,7 +2364,15 @@
       } catch (e) { console.error(e); }
     }
 
-    function startAutomation() { fetch('/start', { method: 'POST' }).then(checkStatus); }
+    function startAutomation() {
+      const savedPhone = localStorage.getItem('onfarm_operator_phone');
+      if (!savedPhone || savedPhone.length !== 10) {
+        openProfileModal();
+        appAlert('Please link your 10-digit mobile number before starting form processing.', 'Account Setup Required', 'info');
+        return;
+      }
+      fetch('/start', { method: 'POST' }).then(checkStatus);
+    }
     function stopAutomation() { fetch('/stop', { method: 'POST' }).then(checkStatus); }
     async function resetExcelStatus() {
       const ok = await showAppDialog({
@@ -2306,7 +2387,73 @@
       }
     }
 
-    function openRechargeModal() { document.getElementById('rechargeModal').style.display = 'flex'; }
+    function openRechargeModal() {
+      const savedPhone = localStorage.getItem('onfarm_operator_phone') || '';
+      const rPhone = document.getElementById('rechargePhone');
+      if (rPhone) rPhone.value = (savedPhone && savedPhone !== '9999999999') ? savedPhone : '';
+      document.getElementById('rechargeModal').style.display = 'flex';
+    }
+
+    function openProfileModal() {
+      const savedPhone = localStorage.getItem('onfarm_operator_phone') || '';
+      const savedName = localStorage.getItem('onfarm_operator_name') || '';
+      const pIn = document.getElementById('profilePhoneInput');
+      const nIn = document.getElementById('profileNameInput');
+      if (pIn) pIn.value = (savedPhone && savedPhone !== '9999999999') ? savedPhone : '';
+      if (nIn) nIn.value = savedName;
+      const warn = document.getElementById('warnProfilePhone');
+      if (warn) warn.style.display = 'none';
+      document.getElementById('profileModal').style.display = 'flex';
+    }
+
+    async function saveOperatorProfile() {
+      const phoneInput = document.getElementById('profilePhoneInput');
+      const nameInput = document.getElementById('profileNameInput');
+      const warn = document.getElementById('warnProfilePhone');
+      const phone = phoneInput ? phoneInput.value.replace(/\D/g, '').slice(-10) : '';
+      const name = nameInput ? nameInput.value.trim() : '';
+
+      if (!phone || phone.length !== 10) {
+        if (warn) {
+          warn.textContent = 'Please enter a valid 10-digit mobile number.';
+          warn.style.display = 'flex';
+        }
+        if (phoneInput) phoneInput.classList.add('input-invalid');
+        return;
+      }
+
+      const btn = document.getElementById('saveProfileBtn');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+      }
+
+      try {
+        const res = await fetch('/set-operator', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, name })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          localStorage.setItem('onfarm_operator_phone', phone);
+          localStorage.setItem('onfarm_operator_name', name);
+          closeModal('profileModal');
+          checkStatus();
+          appAlert(`Account linked to +91 ${phone}!`, 'Account Linked', 'success');
+        } else {
+          appAlert(data.message || 'Failed to link account.', 'Account Error', 'danger');
+        }
+      } catch (err) {
+        appAlert('Connection error: ' + err.message, 'Network Error', 'danger');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Save & Link Account';
+        }
+      }
+    }
+
     function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     function selectAmount(v) { document.getElementById('customAmount').value = v; }
 
@@ -2329,11 +2476,25 @@
 
     async function payWallet() {
       const amt = document.getElementById('customAmount').value;
+      const phoneInput = document.getElementById('rechargePhone');
+      const phone = phoneInput ? phoneInput.value.replace(/\D/g, '').slice(-10) : '';
+
+      if (!phone || phone.length !== 10) {
+        appAlert('Please enter your 10-digit mobile number for checkout.', 'Mobile Number Required', 'warning');
+        if (phoneInput) phoneInput.focus();
+        return;
+      }
+      localStorage.setItem('onfarm_operator_phone', phone);
+
       if (!amt || isNaN(amt) || Number(amt) <= 0) {
         appAlert('Please enter a valid recharge amount.', 'Invalid Amount', 'warning');
         return;
       }
-      const d = await (await fetch('/create-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'WALLET_RECHARGE', amount: amt }) })).json();
+      const d = await (await fetch('/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'WALLET_RECHARGE', amount: amt, phone })
+      })).json();
       if (d.ok && d.payment_session_id) {
         closeModal('rechargeModal');
         triggerCheckout(d);
@@ -2343,15 +2504,25 @@
     }
 
     async function buySubscription() {
+      let savedPhone = localStorage.getItem('onfarm_operator_phone') || '';
+      if (!savedPhone || savedPhone === '9999999999' || savedPhone.length !== 10) {
+        openProfileModal();
+        appAlert('Please enter your 10-digit mobile number before purchasing the Monthly Pass.', 'Mobile Number Required', 'info');
+        return;
+      }
       const ok = await showAppDialog({
         title: 'Activate Monthly Pass',
-        message: 'Purchase the 30-Day Unlimited Crop Insurance Pass for ₹699 with zero per-entry deductions?',
+        message: `Purchase the 30-Day Unlimited Crop Insurance Pass for ₹699 for mobile number +91 ${savedPhone}?`,
         type: 'primary',
         confirmText: 'Pay ₹699',
         cancelText: 'Cancel'
       });
       if (!ok) return;
-      const d = await (await fetch('/create-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'SUBSCRIPTION_699', amount: 699 }) })).json();
+      const d = await (await fetch('/create-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'SUBSCRIPTION_699', amount: 699, phone: savedPhone })
+      })).json();
       if (d.ok && d.payment_session_id) {
         triggerCheckout(d);
       } else {
@@ -2362,6 +2533,14 @@
     setLanguage(currentLang);
     checkStatus();
     setInterval(checkStatus, 1500);
+
+    // Auto-prompt operator to link their mobile number on first open
+    setTimeout(() => {
+      const savedPhone = localStorage.getItem('onfarm_operator_phone');
+      if (!savedPhone || savedPhone.length !== 10) {
+        openProfileModal();
+      }
+    }, 800);
   </script>
 </body>
 

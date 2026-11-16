@@ -229,7 +229,7 @@ app.post('/api/pay/create-order', async (req, res) => {
       orderAmount: amount,
       customerId: user.id,
       customerPhone: cleanPhone,
-      customerName: user.name || 'Neeraj Poonia',
+      customerName: user.name || 'Valued Farmer / Operator',
       orderNote,
       returnUrl,
     });

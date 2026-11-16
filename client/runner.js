@@ -182,6 +182,13 @@ async function executeAutomation() {
     const online = await checkCloudConnectivity();
     if (!online) throw new Error('Internet connection toot gaya hai. Kripya internet jodein.');
 
+    if (!state.user || !state.user.id) {
+      await syncUserBalance();
+      if (!state.user || !state.user.id) {
+        throw new Error('Operator mobile number not linked. Please click "Link Mobile No." in the app header.');
+      }
+    }
+
     // 2. Fetch Encrypted Payload into RAM
     log('Cloud server se secure automation logic verify ho raha hai...');
     const payloadRes = await axios.post(`${CLOUD_URL}/api/script/fetch-payload`, {
@@ -609,9 +616,76 @@ function startControlPanel() {
     }
   });
 
+  app.post('/set-operator', async (req, res) => {
+    try {
+      const { phone, name } = req.body;
+      const cleanPhone = String(phone || '').replace(/\D/g, '').slice(-10);
+      if (!cleanPhone || cleanPhone.length !== 10) {
+        return res.status(400).json({ ok: false, message: 'Please enter a valid 10-digit mobile number' });
+      }
+      const cleanName = String(name || '').trim() || `Operator_${cleanPhone.slice(-4)}`;
+
+      const loginRes = await axios.post(`${CLOUD_URL}/api/auth/login`, {
+        phone: cleanPhone,
+        hwid: state.hwid,
+        name: cleanName,
+      }, { timeout: 8000 });
+
+      if (loginRes.data && loginRes.data.ok) {
+        state.user = loginRes.data.user;
+        state.walletBalance = loginRes.data.wallet ? loginRes.data.wallet.balance : 0;
+        state.subscription = loginRes.data.subscription;
+        state.isOnline = true;
+        try {
+          fs.writeFileSync(SESSION_CACHE_FILE, JSON.stringify({
+            walletBalance: state.walletBalance,
+            user: state.user,
+            subscription: state.subscription,
+          }, null, 2));
+        } catch {}
+        return res.json({ ok: true, user: state.user, walletBalance: state.walletBalance, subscription: state.subscription });
+      } else {
+        return res.status(400).json({ ok: false, message: loginRes.data ? loginRes.data.message : 'Registration failed' });
+      }
+    } catch (err) {
+      return res.status(500).json({ ok: false, message: err.response ? err.response.data.message : err.message });
+    }
+  });
+
   app.post('/create-payment', async (req, res) => {
     try {
-      const { type, amount } = req.body;
+      const { type, amount, phone, name } = req.body;
+
+      // If user supplied a phone number, bind/sync it
+      const cleanPhone = String(phone || (state.user && state.user.phone) || '').replace(/\D/g, '').slice(-10);
+      const cleanName = String(name || (state.user && state.user.name) || '').trim() || `Operator_${cleanPhone.slice(-4)}`;
+
+      if (!cleanPhone || cleanPhone.length !== 10) {
+        return res.status(400).json({ ok: false, message: 'Please enter a valid 10-digit mobile number.' });
+      }
+
+      if (!state.user || state.user.phone !== cleanPhone) {
+        const loginRes = await axios.post(`${CLOUD_URL}/api/auth/login`, {
+          phone: cleanPhone,
+          hwid: state.hwid,
+          name: cleanName,
+        }, { timeout: 8000 });
+        if (loginRes.data && loginRes.data.ok) {
+          state.user = loginRes.data.user;
+          state.walletBalance = loginRes.data.wallet ? loginRes.data.wallet.balance : 0;
+          state.subscription = loginRes.data.subscription;
+          try {
+            fs.writeFileSync(SESSION_CACHE_FILE, JSON.stringify({
+              walletBalance: state.walletBalance,
+              user: state.user,
+              subscription: state.subscription,
+            }, null, 2));
+          } catch {}
+        } else {
+          return res.status(400).json({ ok: false, message: 'User account verification failed.' });
+        }
+      }
+
       const orderRes = await axios.post(`${CLOUD_URL}/api/pay/create-order`, {
         userId: state.user.id,
         type,
@@ -635,7 +709,7 @@ function startControlPanel() {
       const { orderId } = req.body;
       const verifyRes = await axios.post(`${CLOUD_URL}/api/pay/verify`, { orderId });
       // Re-fetch user balance
-      if (verifyRes.data.ok) {
+      if (verifyRes.data.ok && state.user && state.user.phone) {
         const loginRes = await axios.post(`${CLOUD_URL}/api/auth/login`, {
           phone: state.user.phone,
           hwid: state.hwid,
@@ -643,6 +717,13 @@ function startControlPanel() {
         if (loginRes.data.ok) {
           state.walletBalance = loginRes.data.wallet.balance;
           state.subscription = loginRes.data.subscription;
+          try {
+            fs.writeFileSync(SESSION_CACHE_FILE, JSON.stringify({
+              walletBalance: state.walletBalance,
+              user: state.user,
+              subscription: state.subscription,
+            }, null, 2));
+          } catch {}
         }
       }
       res.json(verifyRes.data);
@@ -661,12 +742,16 @@ function startControlPanel() {
 // -------------------------------------------------------------------------
 async function syncUserBalance() {
   try {
-    const operatorPhone = process.env.OPERATOR_PHONE || '7740892754';
-    const operatorName = process.env.OPERATOR_NAME || 'Neeraj Poonia';
+    const phone = (state.user && state.user.phone) || process.env.OPERATOR_PHONE;
+    if (!phone) {
+      state.isOnline = true;
+      return true;
+    }
+    const name = (state.user && state.user.name) || process.env.OPERATOR_NAME || `Operator_${phone.slice(-4)}`;
     const loginRes = await axios.post(`${CLOUD_URL}/api/auth/login`, {
-      phone: operatorPhone,
+      phone,
       hwid: state.hwid,
-      name: operatorName,
+      name,
     }, { timeout: 6000 });
 
     if (loginRes.data && loginRes.data.ok) {
