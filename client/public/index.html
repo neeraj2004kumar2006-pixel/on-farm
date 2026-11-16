@@ -336,7 +336,7 @@
       font-size: 13px;
       justify-content: center;
       background: var(--primary);
-      color: white;
+      color: black;
       border: none;
       border-radius: var(--radius-sm);
       cursor: pointer;
@@ -909,6 +909,98 @@
       margin-top: 14px;
     }
 
+    /* ── CUSTOM DIALOG MODAL (CONFIRM / ALERT) ── */
+    .custom-dialog-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 26px 28px;
+      width: 440px;
+      max-width: 92%;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35);
+      border: 1px solid var(--border);
+      text-align: center;
+      animation: dialogPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes dialogPop {
+      0% { transform: scale(0.92); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .dialog-icon-wrapper {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon-wrap-primary {
+      background: #e6fffa;
+      color: #059669;
+      border: 2px solid #00ff99;
+      box-shadow: 0 0 18px rgba(0, 255, 153, 0.3);
+    }
+
+    .icon-wrap-warning {
+      background: #fefce8;
+      color: #ca8a04;
+      border: 2px solid #fde047;
+      box-shadow: 0 0 16px rgba(234, 179, 8, 0.2);
+    }
+
+    .icon-wrap-danger {
+      background: #fef2f2;
+      color: #dc2626;
+      border: 2px solid #fca5a5;
+      box-shadow: 0 0 16px rgba(220, 38, 38, 0.2);
+    }
+
+    .icon-wrap-success {
+      background: #f0fdf4;
+      color: #16a34a;
+      border: 2px solid #86efac;
+      box-shadow: 0 0 16px rgba(34, 197, 94, 0.2);
+    }
+
+    .icon-wrap-info {
+      background: #eff6ff;
+      color: #2563eb;
+      border: 2px solid #93c5fd;
+      box-shadow: 0 0 16px rgba(37, 99, 235, 0.15);
+    }
+
+    .dialog-title {
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .dialog-message {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.55;
+      margin-bottom: 24px;
+    }
+
+    .dialog-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .dialog-actions .btn {
+      flex: 1;
+      padding: 11px 18px;
+      font-size: 14px;
+      font-weight: 800;
+      border-radius: 8px;
+    }
+
     /* ── OFFLINE BLOCK ── */
     #offlineBlock {
       position: fixed;
@@ -1278,7 +1370,108 @@
     </div>
   </div>
 
+  <!-- ═══════════ CUSTOM DIALOG MODAL (CONFIRM / ALERT) ═══════════ -->
+  <div id="customDialogModal" class="modal-overlay">
+    <div class="custom-dialog-card">
+      <div class="dialog-icon-wrapper" id="dialogIconWrap"></div>
+      <div class="dialog-content">
+        <h3 class="dialog-title" id="dialogTitle">Confirmation</h3>
+        <p class="dialog-message" id="dialogMessage">Are you sure you want to proceed?</p>
+      </div>
+      <div class="dialog-actions" id="dialogActions">
+        <button type="button" class="btn btn-light" id="dialogCancelBtn">Cancel</button>
+        <button type="button" class="btn btn-primary" id="dialogConfirmBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
   <script>
+    function showAppDialog({
+      title = 'Notice',
+      message = '',
+      type = 'primary',
+      confirmText = 'Confirm',
+      cancelText = 'Cancel',
+      isAlert = false
+    }) {
+      return new Promise((resolve) => {
+        const modal = document.getElementById('customDialogModal');
+        const iconWrap = document.getElementById('dialogIconWrap');
+        const titleEl = document.getElementById('dialogTitle');
+        const msgEl = document.getElementById('dialogMessage');
+        const confirmBtn = document.getElementById('dialogConfirmBtn');
+        const cancelBtn = document.getElementById('dialogCancelBtn');
+
+        titleEl.textContent = title;
+        msgEl.textContent = message;
+        confirmBtn.textContent = confirmText;
+        cancelBtn.textContent = cancelText;
+        cancelBtn.style.display = isAlert ? 'none' : 'inline-flex';
+
+        iconWrap.className = 'dialog-icon-wrapper icon-wrap-' + type;
+
+        if (type === 'primary') {
+          iconWrap.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>';
+          confirmBtn.style.background = '#00ff99';
+          confirmBtn.style.color = '#052e16';
+        } else if (type === 'warning') {
+          iconWrap.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ca8a04" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+          confirmBtn.style.background = '#00ff99';
+          confirmBtn.style.color = '#052e16';
+        } else if (type === 'danger') {
+          iconWrap.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+          confirmBtn.style.background = '#dc2626';
+          confirmBtn.style.color = '#ffffff';
+        } else if (type === 'success') {
+          iconWrap.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+          confirmBtn.style.background = '#00ff99';
+          confirmBtn.style.color = '#052e16';
+        } else {
+          iconWrap.innerHTML = '<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+          confirmBtn.style.background = '#00ff99';
+          confirmBtn.style.color = '#052e16';
+        }
+
+        function finish(val) {
+          modal.style.display = 'none';
+          confirmBtn.onclick = null;
+          cancelBtn.onclick = null;
+          modal.onclick = null;
+          window.removeEventListener('keydown', onKey);
+          resolve(val);
+        }
+
+        const onKey = (e) => {
+          if (e.key === 'Escape') finish(false);
+        };
+        window.addEventListener('keydown', onKey);
+
+        modal.onclick = (e) => {
+          if (e.target === modal) finish(false);
+        };
+
+        confirmBtn.onclick = () => finish(true);
+        cancelBtn.onclick = () => finish(false);
+        modal.style.display = 'flex';
+      });
+    }
+
+    function appAlert(message, title = 'Notice', type = 'info') {
+      return showAppDialog({ title, message, type, confirmText: 'OK', isAlert: true });
+    }
+
+    function appConfirm(message, title = 'Confirm Action', type = 'primary', confirmText = 'Confirm', cancelText = 'Cancel') {
+      return showAppDialog({ title, message, type, confirmText, cancelText, isAlert: false });
+    }
+
+    window.alert = function(msg) {
+      return appAlert(String(msg || ''));
+    };
+
+    window.confirm = function(msg) {
+      return appAlert(String(msg || ''), 'Notice', 'info');
+    };
+
     const CROPS_I18N = {
       en: [
         { val: 'Groundnut (Pea Nut)', label: 'Groundnut (Pea Nut)' },
@@ -1621,7 +1814,7 @@
       const subKilasInput = document.getElementById('genSubKilas').value.trim();
 
       if (!name || !khata || !muraMain || !kilasInput) {
-        alert(currentLang === 'hi' ? 'कृपया किसान का नाम, खाता संख्या, मुरब्बा और किले संख्या अवश्य भरें।' : 'Please enter Farmer Name, Khata Number, Murabba and Kila numbers.');
+        appAlert('Please enter Farmer Name, Khata Number, Murabba and Kila numbers.', 'Missing Details', 'warning');
         return;
       }
 
@@ -1686,21 +1879,34 @@
       if (sp) sp.textContent = stagedRows[i].khasraNo;
     }
     function deleteStagedRow(i) { stagedRows.splice(i, 1); renderStagedTable(); }
-    function clearStagedRows() {
-      if (confirm(currentLang === 'hi' ? 'क्या आप सभी रिकॉर्ड हटाना चाहते हैं?' : 'Clear all records from the list?')) { stagedRows = []; renderStagedTable(); }
+    async function clearStagedRows() {
+      const ok = await showAppDialog({
+        title: 'Clear Staged List',
+        message: 'Are you sure you want to remove all staged records from this list?',
+        type: 'danger',
+        confirmText: 'Clear All',
+        cancelText: 'Keep Records'
+      });
+      if (ok) {
+        stagedRows = [];
+        renderStagedTable();
+      }
     }
 
     async function saveStagedToExcel(append = false) {
-      if (!stagedRows.length) { alert(currentLang === 'hi' ? 'पहले "सूची में जोड़ें" से रिकॉर्ड जोड़ें।' : 'Add records using "Add to List" first.'); return; }
+      if (!stagedRows.length) {
+        appAlert('Please enter details above and click "Add to List" before saving.', 'No Records Added', 'info');
+        return;
+      }
       const a = document.getElementById('saveAlert');
       a.style.display = 'block'; a.style.background = '#eff6ff'; a.style.color = '#1d4ed8'; a.style.border = '1px solid #bfdbfe';
-      a.textContent = currentLang === 'hi' ? 'सुरक्षित किए जा रहे हैं...' : 'Saving records...';
+      a.textContent = 'Saving records...';
       try {
         const res = await fetch('/save-excel-rows', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rows: stagedRows, append }) });
         const data = await res.json();
         if (data.ok) {
           a.style.background = '#f0fdf4'; a.style.color = '#15803d'; a.style.border = '1px solid #bbf7d0';
-          a.textContent = currentLang === 'hi' ? `${stagedRows.length} रिकॉर्ड सफलतापूर्वक सुरक्षित हो गए।` : `${stagedRows.length} records saved successfully.`;
+          a.textContent = `${stagedRows.length} records saved successfully.`;
           checkStatus(); loadExcelRows();
         } else { a.style.background = '#fef2f2'; a.style.color = '#dc2626'; a.style.border = '1px solid #fecaca'; a.textContent = 'Error: ' + data.message; }
       } catch (err) { a.style.background = '#fef2f2'; a.style.color = '#dc2626'; a.style.border = '1px solid #fecaca'; a.textContent = 'Connection Error: ' + err.message; }
@@ -1733,8 +1939,15 @@
 
     function startAutomation() { fetch('/start', { method: 'POST' }).then(checkStatus); }
     function stopAutomation() { fetch('/stop', { method: 'POST' }).then(checkStatus); }
-    function resetExcelStatus() {
-      if (confirm(currentLang === 'hi' ? 'स्थिति रीसेट करें?' : 'Reset status of saved records?')) {
+    async function resetExcelStatus() {
+      const ok = await showAppDialog({
+        title: 'Reset Processing Status',
+        message: 'Reset processing status of all saved records back to ready?',
+        type: 'warning',
+        confirmText: 'Reset Status',
+        cancelText: 'Cancel'
+      });
+      if (ok) {
         fetch('/reset-excel', { method: 'POST' }).then(() => { checkStatus(); loadExcelRows(); });
       }
     }
@@ -1746,19 +1959,50 @@
     async function triggerCheckout(od) {
       window.open(`https://neeraj2004kumar2006-pixel.github.io/on-farm/pay.html?session_id=${od.payment_session_id}`, '_blank');
       const pi = setInterval(async () => {
-        try { if (od.orderData && od.orderData.order_id) { const v = await (await fetch('/verify-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId: od.orderData.order_id }) })).json(); if (v.ok && v.status === 'PAID') { clearInterval(pi); checkStatus(); alert(currentLang === 'hi' ? 'भुगतान सफल! बैलेंस अपडेट हो गया।' : 'Payment successful! Balance updated.'); } } } catch { }
+        try {
+          if (od.orderData && od.orderData.order_id) {
+            const v = await (await fetch('/verify-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ orderId: od.orderData.order_id }) })).json();
+            if (v.ok && v.status === 'PAID') {
+              clearInterval(pi);
+              checkStatus();
+              appAlert('Payment successful! Your account has been updated.', 'Payment Received', 'success');
+            }
+          }
+        } catch { }
       }, 3000);
       setTimeout(() => clearInterval(pi), 300000);
     }
 
     async function payWallet() {
-      const d = await (await fetch('/create-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'WALLET_RECHARGE', amount: document.getElementById('customAmount').value }) })).json();
-      if (d.ok && d.payment_session_id) { closeModal('rechargeModal'); triggerCheckout(d); } else alert(d.message || 'Payment initiation failed.');
+      const amt = document.getElementById('customAmount').value;
+      if (!amt || isNaN(amt) || Number(amt) <= 0) {
+        appAlert('Please enter a valid recharge amount.', 'Invalid Amount', 'warning');
+        return;
+      }
+      const d = await (await fetch('/create-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'WALLET_RECHARGE', amount: amt }) })).json();
+      if (d.ok && d.payment_session_id) {
+        closeModal('rechargeModal');
+        triggerCheckout(d);
+      } else {
+        appAlert(d.message || 'Payment initiation failed. Please try again.', 'Payment Error', 'danger');
+      }
     }
+
     async function buySubscription() {
-      if (!confirm(currentLang === 'hi' ? '₹699 मासिक पास (असीमित) लेना चाहते हैं?' : 'Purchase ₹699 Monthly Pass for unlimited processing?')) return;
+      const ok = await showAppDialog({
+        title: 'Activate Monthly Pass',
+        message: 'Purchase the 30-Day Unlimited Crop Insurance Pass for ₹699 with zero per-entry deductions?',
+        type: 'primary',
+        confirmText: 'Pay ₹699',
+        cancelText: 'Cancel'
+      });
+      if (!ok) return;
       const d = await (await fetch('/create-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'SUBSCRIPTION_699', amount: 699 }) })).json();
-      if (d.ok && d.payment_session_id) triggerCheckout(d); else alert(d.message || 'Payment initiation failed.');
+      if (d.ok && d.payment_session_id) {
+        triggerCheckout(d);
+      } else {
+        appAlert(d.message || 'Payment initiation failed. Please try again.', 'Payment Error', 'danger');
+      }
     }
 
     setLanguage(currentLang);
