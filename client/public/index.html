@@ -6,239 +6,1016 @@
   <title>On-Farm</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Cashfree Checkout SDK v3 -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
   <style>
     :root {
-      --primary: #15803d;
-      --primary-dark: #166534;
-      --primary-light: #dcfce7;
-      --accent: #22c55e;
+      --primary: #16a34a;
+      --primary-hover: #15803d;
+      --primary-active: #166534;
+      --primary-subtle: #f0fdf4;
+      --primary-border: #bbf7d0;
+      --primary-text: #166534;
+      
       --danger: #dc2626;
+      --danger-hover: #b91c1c;
+      --danger-subtle: #fef2f2;
+      --danger-border: #fecaca;
+      
       --bg: #f8fafc;
       --card-bg: #ffffff;
       --border: #e2e8f0;
+      --border-focus: #cbd5e1;
+      
       --text: #0f172a;
+      --text-secondary: #475569;
       --text-muted: #64748b;
-      --radius: 12px;
+      --text-faint: #94a3b8;
+      
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+      --radius-full: 9999px;
+      
+      --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.03);
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --shadow-glow: 0 0 0 3px rgba(22, 163, 74, 0.15);
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg); color: var(--text); padding: 20px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px 20px 48px;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    .container { max-width: 860px; margin: 0 auto; }
 
-    /* Header Card */
+    .container {
+      max-width: 880px;
+      margin: 0 auto;
+    }
+
+    /* ── TOP ACCENT BAR ── */
+    .top-accent {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #16a34a 0%, #22c55e 50%, #4ade80 100%);
+      z-index: 100;
+    }
+
+    /* ── CARDS ── */
     .card {
-      background: var(--card-bg); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 22px; margin-bottom: 18px;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 22px 26px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow-sm);
     }
-    .header-row { display: flex; justify-content: space-between; align-items: center; }
-    .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.3rem; color: var(--primary); }
-    .badge { background: var(--primary); color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; letter-spacing: 0.5px; }
 
-    /* Language Switcher */
-    .lang-switcher {
-      display: inline-flex;
+    /* ── HEADER ── */
+    .header-card {
+      padding: 14px 22px;
+      margin-bottom: 16px;
+    }
+
+    .header-row {
+      display: flex;
+      justify-content: space-between;
       align-items: center;
-      gap: 6px;
-      background: #f1f5f9;
-      padding: 3px 5px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
       border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 2px 6px rgba(22, 163, 74, 0.3);
+    }
+
+    .brand-title {
+      font-weight: 800;
+      font-size: 18px;
+      color: var(--text);
+      letter-spacing: -0.02em;
+    }
+
+    .badge-pro {
+      background: var(--primary-subtle);
+      color: var(--primary-text);
+      border: 1px solid var(--primary-border);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* ── LANGUAGE SWITCHER ── */
+    .lang-switcher {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .lang-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .lang-pills {
+      display: flex;
+      background: #f1f5f9;
+      border-radius: 8px;
+      padding: 3px;
       border: 1px solid var(--border);
     }
-    .lang-label {
-      font-size: 0.72rem;
-      font-weight: 800;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      padding: 0 4px;
-    }
-    .lang-pills { display: flex; gap: 4px; }
+
     .lang-pill {
-      padding: 4px 12px;
+      padding: 5px 14px;
       border-radius: 6px;
       border: none;
-      font-size: 0.82rem;
-      font-weight: 700;
+      font-size: 12px;
+      font-weight: 600;
       cursor: pointer;
       background: transparent;
-      color: #64748b;
+      color: var(--text-muted);
+      transition: all 0.15s ease;
+      font-family: inherit;
+      line-height: 1.4;
+    }
+
+    .lang-pill:hover {
+      color: var(--text);
+    }
+
+    .lang-pill.active {
+      background: white;
+      color: var(--text);
+      font-weight: 700;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    /* ── LICENSE & WALLET HERO CARD ── */
+    .license-card {
+      background: linear-gradient(135deg, #090d16 0%, #111827 50%, #1e293b 100%);
+      color: white;
+      border-radius: var(--radius-lg);
+      padding: 22px 26px;
+      margin-bottom: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.16);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .license-card::before {
+      content: '';
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 140px;
+      height: 140px;
+      background: radial-gradient(circle, rgba(34, 197, 94, 0.15) 0%, transparent 70%);
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .license-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .plan-meta {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .plan-label {
+      font-size: 11px;
+      color: #94a3b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .plan-name {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 4px;
+      letter-spacing: -0.01em;
+      color: #ffffff;
+    }
+
+    .plan-badge {
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      background: rgba(234, 179, 8, 0.15);
+      color: #facc15;
+      border: 1px solid rgba(234, 179, 8, 0.3);
+    }
+
+    .license-divider {
+      height: 1px;
+      background: rgba(255, 255, 255, 0.08);
+      margin: 18px 0 16px;
+    }
+
+    .license-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .bal-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .bal-label {
+      font-size: 11px;
+      color: #94a3b8;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .bal-value {
+      font-size: 30px;
+      font-weight: 800;
+      margin-top: 2px;
+      letter-spacing: -0.03em;
+      color: #ffffff;
+      line-height: 1.1;
+    }
+
+    .license-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .btn-topup {
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
       transition: all 0.15s ease;
       font-family: inherit;
     }
-    .lang-pill.active {
-      background: white;
-      color: var(--primary);
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+
+    .btn-topup:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.25);
     }
 
-    /* License & Wallet Card */
-    .license-card {
-      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-      color: white; border-radius: var(--radius); padding: 20px 24px; margin-bottom: 18px;
-    }
-    .license-row { display: flex; justify-content: space-between; align-items: center; }
-    .plan-badge {
-      display: inline-block; padding: 4px 12px; border-radius: 999px;
-      font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
-      background: #22c55e; color: #052e16;
-    }
-    .wallet-val { font-size: 1.8rem; font-weight: 800; margin-top: 4px; }
-
-    /* Tabs */
-    .tabs-nav {
-      display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid var(--border);
-    }
-    .tab-btn {
-      background: none; border: none; padding: 10px 18px; font-weight: 700; font-size: 0.95rem;
-      color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -2px;
-      transition: all 0.2s; font-family: inherit;
-    }
-    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
-
-    /* Buttons */
-    .btn {
-      padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 0.95rem;
-      border: none; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+    .btn-monthly-pass {
+      background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+      color: #ffffff;
+      border: none;
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s ease;
       font-family: inherit;
+      box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);
     }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-primary:hover { background: var(--primary-dark); }
-    .btn-danger { background: var(--danger); color: white; }
-    .btn-danger:hover { background: #b91c1c; }
-    .btn-light { background: #f1f5f9; color: var(--text); border: 1px solid var(--border); }
-    .btn-light:hover { background: #e2e8f0; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .btn-remove {
-      background: #fee2e2; color: #dc2626; border: 1px solid #fecaca;
-      border-radius: 6px; width: 28px; height: 28px; font-size: 1.15rem; line-height: 1;
-      display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
-      transition: all 0.15s; font-family: inherit;
+    .btn-monthly-pass:hover {
+      background: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
     }
-    .btn-remove:hover { background: #dc2626; color: white; }
 
-    /* Progress & Actions */
-    .status-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
-    .dot-running { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
-    .dot-stopped { background: #94a3b8; }
-    .dot-error { background: #ef4444; }
+    /* ── TABS NAVIGATION ── */
+    .tabs-nav {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 18px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 5px;
+      box-shadow: var(--shadow-xs);
+    }
 
-    .action-group { display: flex; gap: 12px; margin: 18px 0; }
+    .tab-btn {
+      flex: 1;
+      background: none;
+      border: 1px solid transparent;
+      padding: 10px 14px;
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: var(--radius-sm);
+      transition: all 0.15s ease;
+      font-family: inherit;
+      text-align: center;
+      white-space: nowrap;
+    }
 
-    /* Activity Log Console */
+    .tab-btn:hover {
+      color: var(--text);
+      background: #f8fafc;
+    }
+
+    .tab-btn.active {
+      color: var(--primary-text);
+      background: var(--primary-subtle);
+      border-color: var(--primary-border);
+      font-weight: 700;
+      box-shadow: 0 1px 2px rgba(22, 163, 74, 0.06);
+    }
+
+    /* ── BUTTONS GENERAL ── */
+    .btn {
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      font-size: 13px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: inherit;
+      line-height: 1.4;
+      white-space: nowrap;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(22, 163, 74, 0.15);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-danger {
+      background: var(--danger-subtle);
+      color: var(--danger);
+      border: 1px solid var(--danger-border);
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: var(--danger);
+      color: white;
+      border-color: var(--danger);
+    }
+
+    .btn-light {
+      background: #ffffff;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-xs);
+    }
+
+    .btn-light:hover {
+      background: #f8fafc;
+      border-color: var(--border-focus);
+      color: var(--text);
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    .btn-lg {
+      padding: 10px 22px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none !important;
+    }
+
+    .btn-ghost-danger {
+      background: var(--danger-subtle);
+      color: var(--danger);
+      border: 1px solid var(--danger-border);
+      border-radius: var(--radius-sm);
+      width: 28px;
+      height: 28px;
+      font-size: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .btn-ghost-danger:hover {
+      background: var(--danger);
+      color: white;
+      border-color: var(--danger);
+    }
+
+    /* ── STATUS BAR ── */
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 18px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot-running {
+      background: #22c55e;
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.2);
+    }
+
+    .dot-stopped {
+      background: #94a3b8;
+    }
+
+    .dot-error {
+      background: #ef4444;
+      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.2);
+    }
+
+    .status-label {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .progress-chip {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: #f1f5f9;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border);
+    }
+
+    .action-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    /* ── ACTIVITY LOG ── */
+    .log-panel {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: #0f172a;
+    }
+
+    .log-header {
+      background: #1e293b;
+      padding: 8px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .log-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .log-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #475569;
+    }
+
+    .log-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
     #logsConsole {
-      background: #f8fafc; color: #334155; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      font-size: 0.83rem; padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border);
-      height: 180px; overflow-y: auto; white-space: pre-wrap; margin-top: 8px; line-height: 1.5;
+      background: #090d16;
+      color: #cbd5e1;
+      font-family: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+      font-size: 12px;
+      padding: 14px 16px;
+      height: 170px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.6;
     }
 
-    /* Form Styles */
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-    .form-group { margin-bottom: 12px; }
-    .form-group label { display: block; font-size: 0.85rem; font-weight: 700; color: #334155; margin-bottom: 4px; }
+    /* ── FORM ── */
+    .form-section-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 4px;
+      letter-spacing: -0.01em;
+    }
+
+    .form-section-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px 20px;
+      margin-bottom: 4px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #334155;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+
     .form-control {
-      width: 100%; padding: 10px 12px; border: 1px solid var(--border);
-      border-radius: 8px; font-size: 0.95rem; font-family: inherit; background: white;
+      width: 100%;
+      height: 40px;
+      padding: 0 13px;
+      border: 1px solid #cbd5e1;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-family: inherit;
+      background: white;
+      color: var(--text);
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(21,128,61,0.15); }
-    .help-hint { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
 
-    /* Table */
-    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 10px; }
-    th { padding: 10px 12px; background: #f1f5f9; text-align: left; font-weight: 700; color: #475569; }
-    td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: var(--shadow-glow);
+    }
 
-    /* Modal */
+    .form-control::placeholder {
+      color: #94a3b8;
+    }
+
+    .help-hint {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 5px;
+      line-height: 1.4;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 8px;
+      margin-bottom: 24px;
+    }
+
+    /* ── REVIEW SECTION ── */
+    .review-section {
+      border-top: 1px solid var(--border);
+      padding-top: 24px;
+      margin-top: 8px;
+    }
+
+    .review-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .review-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .review-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .review-count-badge {
+      background: var(--primary-subtle);
+      color: var(--primary-text);
+      border: 1px solid var(--primary-border);
+      font-weight: 700;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+    }
+
+    .review-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 3px;
+    }
+
+    .review-table-wrap {
+      max-height: 380px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      margin-bottom: 14px;
+      box-shadow: var(--shadow-xs);
+      background: white;
+    }
+
+    /* ── TABLES ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      padding: 10px 14px;
+      background: #f8fafc;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    td {
+      padding: 9px 14px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+      color: var(--text);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody tr:hover {
+      background: #f8fafc;
+    }
+
+    .khasra-chip {
+      display: inline-block;
+      font-family: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', monospace;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #dbeafe;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .table-input {
+      height: 32px;
+      padding: 0 8px;
+      border: 1px solid #cbd5e1;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-family: inherit;
+      background: white;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .table-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.15);
+    }
+
+    .review-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f8fafc;
+      padding: 12px 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border);
+    }
+
+    .review-footer-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .review-footer-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .review-footer-count {
+      color: var(--primary-text);
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    /* ── STATUS PILLS FOR PREVIEW ── */
+    .status-pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: var(--radius-full);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      display: inline-block;
+    }
+
+    .status-pill-done {
+      background: var(--primary-subtle);
+      color: var(--primary-text);
+      border: 1px solid var(--primary-border);
+    }
+
+    .status-pill-error {
+      background: var(--danger-subtle);
+      color: var(--danger);
+      border: 1px solid var(--danger-border);
+    }
+
+    .status-pill-pending {
+      background: #f1f5f9;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    /* ── MODAL ── */
     .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
-      display: none; align-items: center; justify-content: center; z-index: 100;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
     }
-    .modal-card { background: white; border-radius: var(--radius); padding: 28px; width: 440px; max-width: 90%; }
 
+    .modal-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      padding: 26px;
+      width: 420px;
+      max-width: 92%;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
+    }
+
+    .modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .modal-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+
+    .modal-amounts {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .modal-amounts .btn {
+      padding: 10px 4px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 14px;
+    }
+
+    /* ── OFFLINE BLOCK ── */
     #offlineBlock {
-      position: fixed; inset: 0; background: #0f172a; z-index: 999;
-      display: none; align-items: center; justify-content: center; text-align: center; color: white; padding: 20px;
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #090d16 0%, #111827 50%, #1e293b 100%);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      color: white;
+      padding: 24px;
+    }
+
+    .offline-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -0.01em;
+    }
+
+    .offline-desc {
+      font-size: 14px;
+      color: #94a3b8;
+      max-width: 420px;
+      margin: 0 auto 24px;
+      line-height: 1.5;
+    }
+
+    /* ── ALERT STRIP ── */
+    .alert-strip {
+      display: none;
+      padding: 11px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 14px;
+      line-height: 1.4;
+    }
+
+    /* ── CUSTOM SCROLLBAR ── */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
     }
   </style>
 </head>
 <body>
 
-  <!-- Offline Block Overlay -->
+  <div class="top-accent"></div>
+
+  <!-- Offline Block -->
   <div id="offlineBlock">
     <div>
-      <h2 data-i18n="offlineTitle" style="margin-bottom: 8px;">Internet Connection Required</h2>
-      <p data-i18n="offlineDesc" style="color: #94a3b8; max-width: 440px; margin-bottom: 20px;">
-        On-Farm requires an active internet connection to operate.
-      </p>
-      <button data-i18n="btnRetry" class="btn btn-primary" onclick="checkStatus()">Retry Connection</button>
+      <div class="offline-title" data-i18n="offlineTitle">Internet Connection Required</div>
+      <div class="offline-desc" data-i18n="offlineDesc">On-Farm requires an active internet connection to operate.</div>
+      <button data-i18n="btnRetry" class="btn btn-primary btn-lg" onclick="checkStatus()">Retry Connection</button>
     </div>
   </div>
 
   <div class="container">
-    <!-- Header -->
-    <div class="card">
+
+    <!-- ═══════════ HEADER ═══════════ -->
+    <div class="card header-card">
       <div class="header-row">
-        <div style="display: flex; align-items: center; gap: 20px;">
-          <div class="brand">
-            <span class="badge">PRO</span>
-            <span data-i18n="brandTitle">On-Farm</span>
+        <div class="brand-group">
+          <div class="brand-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+            </svg>
           </div>
+          <span class="brand-title" data-i18n="brandTitle">On-Farm</span>
+          <span class="badge-pro">PRO</span>
+        </div>
 
-          <!-- Language Switcher (Left Side) -->
-          <div class="lang-switcher">
-            <span class="lang-label" data-i18n="langLabel">Language:</span>
-            <div class="lang-pills">
-              <button type="button" class="lang-pill" id="btnLangEn" onclick="setLanguage('en')">English</button>
-              <button type="button" class="lang-pill" id="btnLangHi" onclick="setLanguage('hi')">हिन्दी</button>
-            </div>
+        <div class="lang-switcher">
+          <span class="lang-label" data-i18n="langLabel">Language:</span>
+          <div class="lang-pills">
+            <button type="button" class="lang-pill" id="btnLangEn" onclick="setLanguage('en')">English</button>
+            <button type="button" class="lang-pill" id="btnLangHi" onclick="setLanguage('hi')">हिन्दी</button>
           </div>
         </div>
-        <code id="hwidDisplay" style="display: none;"></code>
       </div>
+      <code id="hwidDisplay" style="display: none;"></code>
     </div>
 
-    <!-- License & Wallet Card -->
+    <!-- ═══════════ LICENSE & WALLET HERO ═══════════ -->
     <div class="license-card">
-      <div class="license-row">
-        <div>
-          <div data-i18n="planHeading" style="font-size: 0.85rem; color: #94a3b8;">Current Plan</div>
-          <div id="planName" style="font-size: 1.25rem; font-weight: 800; margin-top: 4px;">Pay As You Go</div>
+      <div class="license-top">
+        <div class="plan-meta">
+          <span class="plan-label" data-i18n="planHeading">Current Plan</span>
+          <span class="plan-name" id="planName">Pay As You Go</span>
         </div>
-        <div id="planBadge" class="plan-badge">ACTIVE</div>
+        <div id="planBadge" class="plan-badge">PAY AS YOU GO</div>
       </div>
-      <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
-        <div>
-          <div data-i18n="walletHeading" style="font-size: 0.8rem; color: #94a3b8;">Available Balance</div>
-          <div class="wallet-val" id="walletBal">₹1.00</div>
+
+      <div class="license-divider"></div>
+
+      <div class="license-bottom">
+        <div class="bal-group">
+          <span class="bal-label" data-i18n="walletHeading">Available Balance</span>
+          <span class="bal-value" id="walletBal">₹1.00</span>
         </div>
-        <div style="display: flex; gap: 10px;">
-          <button data-i18n="btnRecharge" class="btn btn-light" style="color:white; background:rgba(255,255,255,0.15);" onclick="openRechargeModal()">+ Add Balance</button>
-          <button data-i18n="btnBuyPass" class="btn btn-primary" style="background:#22c55e; color:#052e16;" onclick="buySubscription()">Monthly Pass (₹699)</button>
+        <div class="license-actions">
+          <button data-i18n="btnRecharge" class="btn-topup" onclick="openRechargeModal()">+ Add Balance</button>
+          <button data-i18n="btnBuyPass" class="btn-monthly-pass" onclick="buySubscription()">Monthly Pass (₹699)</button>
         </div>
       </div>
     </div>
 
-    <!-- Navigation Tabs -->
+    <!-- ═══════════ TABS ═══════════ -->
     <div class="tabs-nav">
       <button data-i18n="tabRunner" class="tab-btn active" onclick="switchView('runner', this)">Application Processing</button>
       <button data-i18n="tabGenerator" class="tab-btn" onclick="switchView('generator', this)">Land & Farmer Entry</button>
       <button data-i18n="tabPreview" class="tab-btn" onclick="switchView('preview', this)">Saved Records</button>
     </div>
 
-    <!-- TAB 1: APPLICATION PROCESSING -->
+    <!-- ═══════════ TAB 1: APPLICATION PROCESSING ═══════════ -->
     <div id="viewRunner" class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center;">
-        <div style="display: flex; align-items: center; gap: 8px;">
+      <div class="status-bar">
+        <div class="status-indicator">
           <span id="statusDot" class="status-dot dot-stopped"></span>
-          <strong id="statusText">Ready</strong>
+          <span id="statusText" class="status-label">Ready</span>
         </div>
-        <div id="progressText" style="font-size: 0.9rem; color: var(--text-muted);">0 / 0 Completed</div>
+        <span id="progressText" class="progress-chip">0 / 0 Completed</span>
       </div>
 
       <div class="action-group">
@@ -247,18 +1024,23 @@
         <button data-i18n="btnResetExcel" class="btn btn-light" onclick="resetExcelStatus()">Reset Status</button>
       </div>
 
-      <div id="errorAlert" style="display:none; background:#fee2e2; color:#dc2626; padding:12px; border-radius:8px; font-size:0.85rem; margin-top:12px;"></div>
+      <div id="errorAlert" style="display:none; background:#fef2f2; color:#dc2626; padding:11px 16px; border-radius:8px; font-size:13px; border:1px solid #fecaca; margin-bottom:16px;"></div>
 
-      <div style="font-size:0.85rem; font-weight:700; color:#475569; margin-top:14px;" data-i18n="activityLogTitle">Activity Log</div>
-      <div id="logsConsole" data-i18n="consoleWaiting">Ready to process applications.</div>
+      <div class="log-panel">
+        <div class="log-header">
+          <div class="log-header-left">
+            <span class="log-dot"></span>
+            <span class="log-label" data-i18n="activityLogTitle">Activity Log</span>
+          </div>
+        </div>
+        <div id="logsConsole" data-i18n="consoleWaiting">Ready to process applications.</div>
+      </div>
     </div>
 
-    <!-- TAB 2: LAND & FARMER ENTRY -->
+    <!-- ═══════════ TAB 2: LAND & FARMER ENTRY ═══════════ -->
     <div id="viewGenerator" class="card" style="display: none;">
-      <h3 data-i18n="genTitle" style="margin-bottom: 4px; font-size: 1.15rem;">Land & Farmer Entry Form</h3>
-      <p data-i18n="genSubtitle" style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">
-        Enter farmer and land details to prepare application records.
-      </p>
+      <div class="form-section-title" data-i18n="genTitle">Land & Farmer Entry Form</div>
+      <div class="form-section-desc" data-i18n="genSubtitle">Enter farmer and land details to prepare application records.</div>
 
       <div class="form-grid">
         <div class="form-group">
@@ -311,120 +1093,106 @@
         <div class="form-group">
           <label data-i18n="lblKilas">Kila Numbers</label>
           <input type="text" id="genKilas" class="form-control" data-i18n-ph="phKilas" placeholder="e.g. 1-25 or 1, 2, 4, 7-12" value="">
-          <div class="help-hint" data-i18n="hintKilas">
-            Enter 1-25 to include all kilas in the murabba
-          </div>
+          <div class="help-hint" data-i18n="hintKilas">Enter 1-25 to include all kilas in the murabba</div>
         </div>
         <div class="form-group">
           <label data-i18n="lblSubKilas">Divided Kilas (with /1, /2)</label>
           <input type="text" id="genSubKilas" class="form-control" data-i18n-ph="phSubKilas" placeholder="e.g. 1/1, 10/1, 11/1 (if any)" value="">
-          <div class="help-hint" data-i18n="hintSubKilas">
-            Enter kilas having /1 or /2 to partition them automatically
-          </div>
+          <div class="help-hint" data-i18n="hintSubKilas">Enter kilas having /1 or /2 to partition them automatically</div>
         </div>
       </div>
 
-      <!-- Action Button below Form -->
-      <div style="display: flex; gap: 12px; margin-top: 14px; margin-bottom: 22px;">
-        <button data-i18n="btnAddReview" class="btn btn-primary" style="padding: 11px 26px; font-size: 1rem;" onclick="addKilasToReview()">
-          Add to List
-        </button>
-        <button data-i18n="btnClearForm" class="btn btn-light" style="padding: 11px 18px; font-size: 0.9rem;" onclick="clearFormInputs()">
-          Clear Form
-        </button>
+      <div class="form-actions">
+        <button data-i18n="btnAddReview" class="btn btn-primary btn-lg" onclick="addKilasToReview()">Add to List</button>
+        <button data-i18n="btnClearForm" class="btn btn-light" onclick="clearFormInputs()">Clear Form</button>
       </div>
 
-      <!-- STAGED REVIEW & EDIT TABLE (BEFORE SAVING) -->
-      <div id="stagedReviewSection" style="border-top: 2px dashed var(--border); padding-top: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+      <!-- Review Section -->
+      <div id="stagedReviewSection" class="review-section">
+        <div class="review-header">
           <div>
-            <h4 style="font-size: 1.1rem; color: #1e293b;">
-              <span data-i18n="reviewHeading">Application Records</span> 
-              (<span id="stagedCount" style="color:var(--primary); font-weight:800;">0</span> <span data-i18n="kilaUnit">Records</span>)
-            </h4>
-            <p data-i18n="reviewSubtitle" style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">
-              Verify entries before saving. You can edit numbers/names or remove rows:
-            </p>
+            <div class="review-title-group">
+              <span class="review-title" data-i18n="reviewHeading">Application Records</span>
+              <span class="review-count-badge"><span id="stagedCount">0</span> <span data-i18n="kilaUnit">Records</span></span>
+            </div>
+            <div class="review-desc" data-i18n="reviewSubtitle">Verify entries before saving. You can edit numbers/names or remove rows:</div>
           </div>
-          <div>
-            <button data-i18n="btnClearList" class="btn btn-light" style="padding: 6px 14px; font-size: 0.85rem; color: var(--danger); border-color: #fca5a5;" onclick="clearStagedRows()">Clear List</button>
-          </div>
+          <button data-i18n="btnClearList" class="btn btn-sm btn-danger" onclick="clearStagedRows()">Clear List</button>
         </div>
 
-        <div style="max-height: 420px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px;">
-          <table style="margin-top: 0; width: 100%;">
-            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 2;">
+        <div class="review-table-wrap">
+          <table>
+            <thead>
               <tr>
-                <th style="width: 40px;">#</th>
-                <th style="width: 90px;" data-i18n="thKila">Kila No.</th>
-                <th style="width: 210px;" data-i18n="thKhasra">Khasra Number</th>
+                <th style="width: 44px; text-align: center;">#</th>
+                <th style="width: 95px;" data-i18n="thKila">Kila No.</th>
+                <th style="width: 200px;" data-i18n="thKhasra">Khasra Number</th>
                 <th data-i18n="thFarmer">Farmer Name</th>
-                <th style="width: 80px;" data-i18n="thKhata">Khata No.</th>
+                <th style="width: 85px;" data-i18n="thKhata">Khata No.</th>
                 <th style="width: 50px; text-align: center;" data-i18n="thDelete">Remove</th>
               </tr>
             </thead>
             <tbody id="stagedTableBody">
-              <tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;" data-i18n="emptyReviewMsg">Enter details above and click "Add to List".</td></tr>
+              <tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px; font-size:13px;" data-i18n="emptyReviewMsg">Enter details above and click "Add to List".</td></tr>
             </tbody>
           </table>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 14px 18px; border-radius: 8px;">
-          <div style="font-size: 0.95rem; font-weight: 700; color: #334155;">
-            <span data-i18n="totalKilasLabel">Total Records:</span> <span id="stagedFooterCount" style="color:var(--primary); font-size: 1.15rem;">0</span>
+        <div class="review-footer">
+          <div class="review-footer-left">
+            <span class="review-footer-label" data-i18n="totalKilasLabel">Total Records:</span>
+            <span id="stagedFooterCount" class="review-footer-count">0</span>
           </div>
-          <div>
-            <button data-i18n="btnCreateExcel" class="btn btn-primary" style="padding: 11px 28px; font-size: 1rem;" onclick="saveStagedToExcel(false)">
-              Save Records
-            </button>
-          </div>
+          <button data-i18n="btnCreateExcel" class="btn btn-primary btn-lg" onclick="saveStagedToExcel(false)">Save Records</button>
         </div>
 
-        <div id="saveAlert" style="display:none; padding:12px; border-radius:8px; font-size:0.9rem; margin-top:12px; font-weight:600;"></div>
+        <div id="saveAlert" class="alert-strip"></div>
       </div>
     </div>
 
-    <!-- TAB 3: SAVED RECORDS -->
+    <!-- ═══════════ TAB 3: SAVED RECORDS ═══════════ -->
     <div id="viewPreview" class="card" style="display: none;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <h3 data-i18n="previewHeading" style="font-size: 1.15rem;">Saved Records Summary</h3>
-        <button data-i18n="btnRefresh" class="btn btn-light" style="padding: 6px 12px; font-size: 0.8rem;" onclick="loadExcelRows()">Refresh</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <div>
+          <div class="form-section-title" data-i18n="previewHeading" style="margin-bottom:0;">Saved Records Summary</div>
+        </div>
+        <button data-i18n="btnRefresh" class="btn btn-light btn-sm" onclick="loadExcelRows()">Refresh</button>
       </div>
-      <div style="max-height: 380px; overflow-y: auto;">
+
+      <div class="review-table-wrap" style="max-height: 420px; margin-bottom: 0;">
         <table>
           <thead>
             <tr>
-              <th>#</th>
+              <th style="width: 44px; text-align: center;">#</th>
               <th data-i18n="thPrevFarmer">Farmer Name</th>
               <th data-i18n="thPrevCrop">Crop</th>
               <th data-i18n="thPrevKhata">Khata No.</th>
               <th data-i18n="thPrevKhasra">Khasra Number</th>
-              <th data-i18n="thPrevStatus">Status</th>
+              <th style="width: 100px; text-align: center;" data-i18n="thPrevStatus">Status</th>
             </tr>
           </thead>
           <tbody id="previewTableBody">
-            <tr><td colspan="6" style="text-align: center; color: var(--text-muted);" data-i18n="emptyPrevMsg">No saved records found.</td></tr>
+            <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding:28px; font-size:13px;" data-i18n="emptyPrevMsg">No saved records found.</td></tr>
           </tbody>
         </table>
       </div>
     </div>
+
   </div>
 
-  <!-- Recharge Modal -->
+  <!-- ═══════════ RECHARGE MODAL ═══════════ -->
   <div id="rechargeModal" class="modal-overlay">
     <div class="modal-card">
-      <h3 data-i18n="rechargeTitle" style="margin-bottom: 8px;">Add Balance</h3>
-      <p data-i18n="rechargeDesc" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">
-        Select or enter top-up amount:
-      </p>
-      <div style="display: flex; gap: 10px; margin-bottom: 18px;">
-        <button class="btn btn-light" onclick="selectAmount(1)">₹1 (Test)</button>
+      <div class="modal-title" data-i18n="rechargeTitle">Add Balance</div>
+      <div class="modal-desc" data-i18n="rechargeDesc">Select or enter top-up amount:</div>
+      <div class="modal-amounts">
+        <button class="btn btn-light" onclick="selectAmount(1)">₹1</button>
         <button class="btn btn-light" onclick="selectAmount(100)">₹100</button>
         <button class="btn btn-light" onclick="selectAmount(200)">₹200</button>
         <button class="btn btn-light" onclick="selectAmount(500)">₹500</button>
       </div>
-      <input type="number" id="customAmount" class="form-control" placeholder="Custom Amount (₹)" value="1" style="margin-bottom: 18px;">
-      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+      <input type="number" id="customAmount" class="form-control" placeholder="Custom Amount (₹)" value="1" style="margin-bottom: 14px;">
+      <div class="modal-footer">
         <button data-i18n="btnCancel" class="btn btn-light" onclick="closeModal('rechargeModal')">Cancel</button>
         <button data-i18n="btnPay" class="btn btn-primary" onclick="payWallet()">Proceed to Pay</button>
       </div>
@@ -432,9 +1200,6 @@
   </div>
 
   <script>
-    // -------------------------------------------------------------------------
-    // BILINGUAL LANGUAGE ENGINE (100% CLEAN ENGLISH & HINDI)
-    // -------------------------------------------------------------------------
     const CROPS_I18N = {
       en: [
         { val: 'Groundnut (Pea Nut)', label: 'Groundnut (Pea Nut)' },
@@ -616,184 +1381,122 @@
     function setLanguage(lang) {
       currentLang = lang;
       localStorage.setItem('onfarm_lang', lang);
-
-      // Update toggle buttons styling
       const btnEn = document.getElementById('btnLangEn');
       const btnHi = document.getElementById('btnLangHi');
       if (btnEn && btnHi) {
-        if (lang === 'en') {
-          btnEn.classList.add('active');
-          btnHi.classList.remove('active');
-        } else {
-          btnHi.classList.add('active');
-          btnEn.classList.remove('active');
-        }
+        btnEn.classList.toggle('active', lang === 'en');
+        btnHi.classList.toggle('active', lang === 'hi');
       }
-
       applyLanguage(lang);
     }
 
     function applyLanguage(lang) {
       const t = I18N[lang] || I18N.en;
-
-      // Text contents
       document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
         if (t[key]) el.textContent = t[key];
       });
-
-      // Placeholders
       document.querySelectorAll('[data-i18n-ph]').forEach(el => {
         const key = el.getAttribute('data-i18n-ph');
         if (t[key]) el.placeholder = t[key];
       });
-
-      // Update Crop Select Options
       const cropSelect = document.getElementById('genCrop');
       if (cropSelect) {
-        const currentVal = cropSelect.value;
-        const cropList = CROPS_I18N[lang] || CROPS_I18N.en;
-        cropSelect.innerHTML = cropList.map(c => 
-          `<option value="${c.val}" ${c.val === currentVal ? 'selected' : ''}>${c.label}</option>`
+        const cv = cropSelect.value;
+        cropSelect.innerHTML = (CROPS_I18N[lang] || CROPS_I18N.en).map(c =>
+          `<option value="${c.val}" ${c.val === cv ? 'selected' : ''}>${c.label}</option>`
         ).join('');
       }
-
-      // Update Ownership Select Options
       const ownSelect = document.getElementById('genOwnership');
       if (ownSelect) {
-        const curOwn = ownSelect.value;
+        const co = ownSelect.value;
         ownSelect.innerHTML = `
-          <option value="Owner" ${curOwn === 'Owner' ? 'selected' : ''}>${t.optOwner}</option>
-          <option value="Tenant" ${curOwn === 'Tenant' ? 'selected' : ''}>${t.optTenant}</option>
+          <option value="Owner" ${co === 'Owner' ? 'selected' : ''}>${t.optOwner}</option>
+          <option value="Tenant" ${co === 'Tenant' ? 'selected' : ''}>${t.optTenant}</option>
         `;
       }
-
-      // Table placeholder if empty
       if (stagedRows.length === 0) {
         const tbody = document.getElementById('stagedTableBody');
-        if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">${t.emptyReviewMsg}</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px; font-size:13px;">${t.emptyReviewMsg}</td></tr>`;
       }
     }
 
-    // -------------------------------------------------------------------------
-    // DATE AUTO-FORMATTING: DD/MM/YYYY (Inserts slashes automatically!)
-    // -------------------------------------------------------------------------
     function formatSowingDate(input) {
       let v = input.value.replace(/\D/g, '').slice(0, 8);
-      if (v.length > 4) {
-        input.value = v.slice(0, 2) + '/' + v.slice(2, 4) + '/' + v.slice(4);
-      } else if (v.length > 2) {
-        input.value = v.slice(0, 2) + '/' + v.slice(2);
-      } else {
-        input.value = v;
-      }
+      if (v.length > 4) input.value = v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);
+      else if (v.length > 2) input.value = v.slice(0,2)+'/'+v.slice(2);
+      else input.value = v;
     }
 
     function clearFormInputs() {
-      document.getElementById('genName').value = '';
-      document.getElementById('genKhata').value = '';
-      document.getElementById('genDate').value = '';
-      document.getElementById('genMurabba').value = '';
-      document.getElementById('genKilas').value = '';
-      document.getElementById('genSubKilas').value = '';
+      ['genName','genKhata','genDate','genMurabba','genKilas','genSubKilas'].forEach(id => document.getElementById(id).value = '');
     }
 
     function switchView(view, btn) {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById('viewRunner').style.display = view === 'runner' ? 'block' : 'none';
-      document.getElementById('viewGenerator').style.display = view === 'generator' ? 'block' : 'none';
-      document.getElementById('viewPreview').style.display = view === 'preview' ? 'block' : 'none';
-      if (btn) {
-        btn.classList.add('active');
-      } else if (window.event && window.event.target) {
-        window.event.target.classList.add('active');
-      }
+      ['viewRunner','viewGenerator','viewPreview'].forEach(id => document.getElementById(id).style.display = 'none');
+      document.getElementById(view === 'runner' ? 'viewRunner' : view === 'generator' ? 'viewGenerator' : 'viewPreview').style.display = 'block';
+      if (btn) btn.classList.add('active');
       if (view === 'preview') loadExcelRows();
     }
 
-    // Initialize balance from local cache immediately
     const cachedBal = localStorage.getItem('onfarm_cached_bal');
-    if (cachedBal !== null) {
-      document.getElementById('walletBal').textContent = '₹' + cachedBal;
-    }
+    if (cachedBal !== null) document.getElementById('walletBal').textContent = '₹' + cachedBal;
 
     async function checkStatus() {
       try {
         const res = await fetch('/status');
         const s = await res.json();
         const t = I18N[currentLang] || I18N.en;
-
         document.getElementById('offlineBlock').style.display = s.isOnline ? 'none' : 'flex';
-        document.getElementById('hwidDisplay').textContent = s.hwid || 'N/A';
-
+        document.getElementById('hwidDisplay').textContent = s.hwid || '';
         if (s.walletBalance !== undefined && s.walletBalance !== null) {
           localStorage.setItem('onfarm_cached_bal', s.walletBalance);
           document.getElementById('walletBal').textContent = '₹' + s.walletBalance;
         }
-
         if (s.subscription && s.subscription.is_active) {
           document.getElementById('planName').textContent = t.planSub;
           document.getElementById('planBadge').textContent = t.planBadgeActive;
-          document.getElementById('planBadge').style.background = '#22c55e';
+          document.getElementById('planBadge').style.background = 'rgba(34, 197, 94, 0.2)';
+          document.getElementById('planBadge').style.color = '#4ade80';
+          document.getElementById('planBadge').style.borderColor = 'rgba(34, 197, 94, 0.4)';
         } else {
           document.getElementById('planName').textContent = t.planWallet;
           document.getElementById('planBadge').textContent = t.planBadgePayAsYouGo;
-          document.getElementById('planBadge').style.background = '#eab308';
+          document.getElementById('planBadge').style.background = 'rgba(234, 179, 8, 0.15)';
+          document.getElementById('planBadge').style.color = '#facc15';
+          document.getElementById('planBadge').style.borderColor = 'rgba(234, 179, 8, 0.3)';
         }
-
         const dot = document.getElementById('statusDot');
         dot.className = 'status-dot ' + (s.isRunning ? 'dot-running' : (s.lastError ? 'dot-error' : 'dot-stopped'));
         document.getElementById('statusText').textContent = s.isRunning ? t.statusRunning : (s.lastError ? t.statusError : t.statusIdle);
-        document.getElementById('progressText').textContent = `${s.processedCount || 0} / ${s.totalRows || 0} ${t.processedSuffix}`;
-
+        document.getElementById('progressText').textContent = `${s.processedCount||0} / ${s.totalRows||0} ${t.processedSuffix}`;
         document.getElementById('startBtn').disabled = s.isRunning;
         document.getElementById('stopBtn').disabled = !s.isRunning;
-
         const errBox = document.getElementById('errorAlert');
-        if (s.lastError) {
-          errBox.style.display = 'block';
-          errBox.textContent = s.lastError;
-        } else {
-          errBox.style.display = 'none';
-        }
-
+        if (s.lastError) { errBox.style.display = 'block'; errBox.textContent = s.lastError; } else { errBox.style.display = 'none'; }
         const logs = document.getElementById('logsConsole');
         logs.textContent = (s.logs || []).join('\n');
         logs.scrollTop = logs.scrollHeight;
-      } catch (err) {
-        document.getElementById('offlineBlock').style.display = 'flex';
-      }
+      } catch { document.getElementById('offlineBlock').style.display = 'flex'; }
     }
 
-    // -------------------------------------------------------------------------
-    // STAGED KILAS REVIEW & EDIT LOGIC
-    // -------------------------------------------------------------------------
     let stagedRows = [];
 
     function parseMurabba(val) {
       if (!val) return { main: 0, sub: 0 };
-      const parts = String(val).trim().split(/[\/\.]/);
-      const main = parseInt(parts[0], 10) || 0;
-      const sub = parts.length > 1 ? (parseInt(parts[1], 10) || 0) : 0;
-      return { main, sub };
+      const p = String(val).trim().split(/[\/\.]/);
+      return { main: parseInt(p[0],10)||0, sub: p.length>1 ? (parseInt(p[1],10)||0) : 0 };
     }
-
-    function makeKhasraJS(muraMain, muraSub, kilaMain, kilaSub = 0) {
-      const leading = '0'.repeat(11 - String(muraMain).length);
-      const sub2 = String(muraSub || 0).padStart(2, '0');
-      const k2 = String(kilaMain || 0).padStart(2, '0');
-      const ks2 = String(kilaSub || 0).padStart(2, '0');
-      return leading + muraMain + '0' + sub2 + k2 + ks2;
+    function makeKhasraJS(mM, mS, kM, kS=0) {
+      return '0'.repeat(11-String(mM).length) + mM + '0' + String(mS||0).padStart(2,'0') + String(kM||0).padStart(2,'0') + String(kS||0).padStart(2,'0');
     }
-
-    function parseKilaStr(kilaStr) {
-      const m = String(kilaStr).trim().match(/^(\d+)(?:[\/\.](\d+))?$/);
-      if (!m) return { main: 0, sub: 0 };
-      return { main: parseInt(m[1], 10), sub: parseInt(m[2] || 0, 10) };
+    function parseKilaStr(s) {
+      const m = String(s).trim().match(/^(\d+)(?:[\/\.](\d+))?$/);
+      return m ? { main: parseInt(m[1],10), sub: parseInt(m[2]||0,10) } : { main:0, sub:0 };
     }
 
     function addKilasToReview() {
-      const t = I18N[currentLang] || I18N.en;
       const name = document.getElementById('genName').value.trim();
       const khata = document.getElementById('genKhata').value.trim();
       const crop = document.getElementById('genCrop').value.trim();
@@ -805,77 +1508,38 @@
       const subKilasInput = document.getElementById('genSubKilas').value.trim();
 
       if (!name || !khata || !muraMain || !kilasInput) {
-        alert(currentLang === 'hi' 
-          ? 'कृपया किसान का नाम, खाता संख्या, मुरब्बा (जैसे 67/58) और किले संख्या अवश्य भरें।' 
-          : 'Please enter Farmer Name, Khata Number, Murabba (e.g. 67/58) and Kila numbers.');
+        alert(currentLang==='hi' ? 'कृपया किसान का नाम, खाता संख्या, मुरब्बा और किले संख्या अवश्य भरें।' : 'Please enter Farmer Name, Khata Number, Murabba and Kila numbers.');
         return;
       }
 
-      // 1. Sub-Kilas Map (1/1, 10/1, 11/1, 20/1, 21/1 etc.)
       const subMap = new Map();
       if (subKilasInput) {
-        const subItems = subKilasInput.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
-        for (const item of subItems) {
+        subKilasInput.split(/[,\n]/).map(s=>s.trim()).filter(Boolean).forEach(item => {
           const p = parseKilaStr(item);
-          if (p.main > 0) {
-            if (!subMap.has(p.main)) subMap.set(p.main, []);
-            subMap.get(p.main).push(p);
-          }
-        }
+          if (p.main>0) { if (!subMap.has(p.main)) subMap.set(p.main,[]); subMap.get(p.main).push(p); }
+        });
       }
 
-      // 2. Main Range parsing (1-25 or comma separated)
-      const items = kilasInput.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
-
-      for (const item of items) {
-        const rangeMatch = item.match(/^(\d+)\s*(?:-|to)\s*(\d+)$/i);
-        if (rangeMatch) {
-          const from = parseInt(rangeMatch[1], 10);
-          const to = parseInt(rangeMatch[2], 10);
-          for (let k = from; k <= to; k++) {
+      kilasInput.split(/[,\n]/).map(s=>s.trim()).filter(Boolean).forEach(item => {
+        const rm = item.match(/^(\d+)\s*(?:-|to)\s*(\d+)$/i);
+        if (rm) {
+          for (let k=parseInt(rm[1],10); k<=parseInt(rm[2],10); k++) {
             if (subMap.has(k)) {
-              for (const subItem of subMap.get(k)) {
-                const kStr = subItem.sub ? `${subItem.main}/${subItem.sub}` : `${subItem.main}`;
-                const khasra = makeKhasraJS(muraMain, muraSub, subItem.main, subItem.sub);
-                stagedRows.push({
-                  kilaStr: kStr,
-                  muraMain, muraSub,
-                  khasraNo: khasra,
-                  name, khataNo: khata, crop, sowingDate, ownership,
-                  farmerName: name, status: '', error: ''
-                });
-              }
-            } else {
-              const khasra = makeKhasraJS(muraMain, muraSub, k, 0);
-              stagedRows.push({
-                kilaStr: String(k),
-                muraMain, muraSub,
-                khasraNo: khasra,
-                name, khataNo: khata, crop, sowingDate, ownership,
-                farmerName: name, status: '', error: ''
+              subMap.get(k).forEach(si => {
+                stagedRows.push({ kilaStr: si.sub?`${si.main}/${si.sub}`:`${si.main}`, muraMain, muraSub, khasraNo: makeKhasraJS(muraMain,muraSub,si.main,si.sub), name, khataNo:khata, crop, sowingDate, ownership, farmerName:name, status:'', error:'' });
               });
+            } else {
+              stagedRows.push({ kilaStr:String(k), muraMain, muraSub, khasraNo: makeKhasraJS(muraMain,muraSub,k,0), name, khataNo:khata, crop, sowingDate, ownership, farmerName:name, status:'', error:'' });
             }
           }
         } else {
           const p = parseKilaStr(item);
-          if (p.main > 0) {
-            const kStr = p.sub ? `${p.main}/${p.sub}` : `${p.main}`;
-            const khasra = makeKhasraJS(muraMain, muraSub, p.main, p.sub);
-            stagedRows.push({
-              kilaStr: kStr,
-              muraMain, muraSub,
-              khasraNo: khasra,
-              name, khataNo: khata, crop, sowingDate, ownership,
-              farmerName: name, status: '', error: ''
-            });
-          }
+          if (p.main>0) stagedRows.push({ kilaStr: p.sub?`${p.main}/${p.sub}`:`${p.main}`, muraMain, muraSub, khasraNo: makeKhasraJS(muraMain,muraSub,p.main,p.sub), name, khataNo:khata, crop, sowingDate, ownership, farmerName:name, status:'', error:'' });
         }
-      }
+      });
 
       renderStagedTable();
       document.getElementById('saveAlert').style.display = 'none';
-
-      // Clear the kila inputs so operator can type next set of kilas/murabba immediately
       document.getElementById('genKilas').value = '';
       document.getElementById('genSubKilas').value = '';
     }
@@ -885,104 +1549,48 @@
       const t = I18N[currentLang] || I18N.en;
       document.getElementById('stagedCount').textContent = stagedRows.length;
       document.getElementById('stagedFooterCount').textContent = stagedRows.length;
-
-      if (stagedRows.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">${t.emptyReviewMsg}</td></tr>`;
+      if (!stagedRows.length) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px; font-size:13px;">${t.emptyReviewMsg}</td></tr>`;
         return;
       }
-
-      tbody.innerHTML = stagedRows.map((r, i) => `
+      tbody.innerHTML = stagedRows.map((r,i) => `
         <tr>
-          <td style="font-weight:700; color:#64748b;">${i + 1}</td>
-          <td>
-            <input type="text" class="form-control" style="padding:4px 8px; font-weight:700; width:80px; font-size:0.9rem;" 
-              value="${r.kilaStr}" oninput="updateStagedKila(${i}, this.value)">
-          </td>
-          <td>
-            <span id="khasraSpan_${i}" style="font-family:Consolas,monospace; background:#e0f2fe; color:#0369a1; padding:3px 6px; border-radius:4px; font-size:0.8rem; font-weight:700;">
-              ${r.khasraNo}
-            </span>
-          </td>
-          <td>
-            <input type="text" class="form-control" style="padding:4px 8px; font-size:0.9rem;" 
-              value="${r.name}" oninput="stagedRows[${i}].name = this.value; stagedRows[${i}].farmerName = this.value;">
-          </td>
-          <td>
-            <input type="text" class="form-control" style="padding:4px 8px; width:70px; font-size:0.9rem;" 
-              value="${r.khataNo}" oninput="stagedRows[${i}].khataNo = this.value">
-          </td>
-          <td style="text-align:center;">
-            <button class="btn-remove" title="${t.thDelete}" onclick="deleteStagedRow(${i})">&times;</button>
-          </td>
+          <td style="font-weight:600; color:var(--text-muted); font-size:12px; text-align:center;">${i+1}</td>
+          <td><input type="text" class="table-input" style="font-weight:700; width:72px;" value="${r.kilaStr}" oninput="updateStagedKila(${i},this.value)"></td>
+          <td><span id="khasraSpan_${i}" class="khasra-chip">${r.khasraNo}</span></td>
+          <td><input type="text" class="table-input" style="width:100%;" value="${r.name}" oninput="stagedRows[${i}].name=this.value;stagedRows[${i}].farmerName=this.value;"></td>
+          <td><input type="text" class="table-input" style="width:68px;" value="${r.khataNo}" oninput="stagedRows[${i}].khataNo=this.value"></td>
+          <td style="text-align:center;"><button class="btn-ghost-danger" title="${t.thDelete}" onclick="deleteStagedRow(${i})">&times;</button></td>
         </tr>
       `).join('');
     }
 
-    function updateStagedKila(index, val) {
-      stagedRows[index].kilaStr = val.trim();
+    function updateStagedKila(i,val) {
+      stagedRows[i].kilaStr = val.trim();
       const p = parseKilaStr(val);
-      const muraMain = stagedRows[index].muraMain;
-      const muraSub = stagedRows[index].muraSub;
-      if (p.main > 0 && muraMain) {
-        stagedRows[index].khasraNo = makeKhasraJS(muraMain, muraSub, p.main, p.sub);
-      }
-      const span = document.getElementById(`khasraSpan_${index}`);
-      if (span) span.textContent = stagedRows[index].khasraNo;
+      if (p.main>0 && stagedRows[i].muraMain) stagedRows[i].khasraNo = makeKhasraJS(stagedRows[i].muraMain, stagedRows[i].muraSub, p.main, p.sub);
+      const sp = document.getElementById(`khasraSpan_${i}`);
+      if (sp) sp.textContent = stagedRows[i].khasraNo;
     }
-
-    function deleteStagedRow(index) {
-      stagedRows.splice(index, 1);
-      renderStagedTable();
-    }
-
+    function deleteStagedRow(i) { stagedRows.splice(i,1); renderStagedTable(); }
     function clearStagedRows() {
-      const msg = currentLang === 'hi' ? 'क्या आप सभी समीक्षा रिकॉर्ड हटाना चाहते हैं?' : 'Clear all staged records from the list?';
-      if (confirm(msg)) {
-        stagedRows = [];
-        renderStagedTable();
-      }
+      if (confirm(currentLang==='hi' ? 'क्या आप सभी रिकॉर्ड हटाना चाहते हैं?' : 'Clear all records from the list?')) { stagedRows=[]; renderStagedTable(); }
     }
 
-    async function saveStagedToExcel(append = false) {
-      const t = I18N[currentLang] || I18N.en;
-      if (stagedRows.length === 0) {
-        alert(currentLang === 'hi' 
-          ? 'कृपया पहले ऊपर विवरण भरकर "सूची में जोड़ें" पर क्लिक करें।' 
-          : 'Please enter details above and click "Add to List" first.');
-        return;
-      }
-
-      const alertEl = document.getElementById('saveAlert');
-      alertEl.style.display = 'block';
-      alertEl.style.background = '#e0f2fe';
-      alertEl.style.color = '#0369a1';
-      alertEl.textContent = currentLang === 'hi' ? 'रिकॉर्ड सुरक्षित किए जा रहे हैं...' : 'Saving records...';
-
+    async function saveStagedToExcel(append=false) {
+      if (!stagedRows.length) { alert(currentLang==='hi' ? 'पहले "सूची में जोड़ें" से रिकॉर्ड जोड़ें।' : 'Add records using "Add to List" first.'); return; }
+      const a = document.getElementById('saveAlert');
+      a.style.display='block'; a.style.background='#eff6ff'; a.style.color='#1d4ed8'; a.style.border='1px solid #bfdbfe';
+      a.textContent = currentLang==='hi' ? 'सुरक्षित किए जा रहे हैं...' : 'Saving records...';
       try {
-        const res = await fetch('/save-excel-rows', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rows: stagedRows, append })
-        });
+        const res = await fetch('/save-excel-rows', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({rows:stagedRows,append}) });
         const data = await res.json();
         if (data.ok) {
-          alertEl.style.background = '#dcfce7';
-          alertEl.style.color = '#15803d';
-          alertEl.textContent = currentLang === 'hi' 
-            ? `${stagedRows.length} रिकॉर्ड सफलतापूर्वक सुरक्षित हो गए।` 
-            : `${stagedRows.length} records successfully saved.`;
-          checkStatus();
-          loadExcelRows();
-        } else {
-          alertEl.style.background = '#fee2e2';
-          alertEl.style.color = '#dc2626';
-          alertEl.textContent = 'Error: ' + data.message;
-        }
-      } catch (err) {
-        alertEl.style.background = '#fee2e2';
-        alertEl.style.color = '#dc2626';
-        alertEl.textContent = 'Connection Error: ' + err.message;
-      }
+          a.style.background='#f0fdf4'; a.style.color='#15803d'; a.style.border='1px solid #bbf7d0';
+          a.textContent = currentLang==='hi' ? `${stagedRows.length} रिकॉर्ड सफलतापूर्वक सुरक्षित हो गए।` : `${stagedRows.length} records saved successfully.`;
+          checkStatus(); loadExcelRows();
+        } else { a.style.background='#fef2f2'; a.style.color='#dc2626'; a.style.border='1px solid #fecaca'; a.textContent='Error: '+data.message; }
+      } catch(err) { a.style.background='#fef2f2'; a.style.color='#dc2626'; a.style.border='1px solid #fecaca'; a.textContent='Connection Error: '+err.message; }
     }
 
     async function loadExcelRows() {
@@ -991,110 +1599,53 @@
         const data = await res.json();
         const tbody = document.getElementById('previewTableBody');
         const t = I18N[currentLang] || I18N.en;
-        if (!data.rows || !data.rows.length) {
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#9ca3af;">${t.emptyPrevMsg}</td></tr>`;
-          return;
-        }
-        tbody.innerHTML = data.rows.map(r => `
-          <tr>
-            <td>${r.index}</td>
-            <td><strong>${r.name}</strong></td>
-            <td>${r.crop}</td>
-            <td>${r.khata}</td>
-            <td><code style="background:#f1f5f9; padding:2px 6px; border-radius:4px;">${r.khasra}</code></td>
-            <td>
-              <span style="font-weight:700; color:${r.status === 'DONE' ? '#15803d' : (r.status === 'ERROR' ? '#dc2626' : '#64748b')}">
-                ${r.status}
-              </span>
-            </td>
-          </tr>
-        `).join('');
-      } catch (e) {
-        console.error(e);
-      }
+        if (!data.rows || !data.rows.length) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px; font-size:13px;">${t.emptyPrevMsg}</td></tr>`; return; }
+        tbody.innerHTML = data.rows.map(r => {
+          let pillClass = 'status-pill-pending';
+          if (r.status === 'DONE') pillClass = 'status-pill-done';
+          else if (r.status === 'ERROR') pillClass = 'status-pill-error';
+          return `
+            <tr>
+              <td style="font-size:12px; color:var(--text-muted); text-align:center;">${r.index}</td>
+              <td style="font-weight:600;">${r.name}</td>
+              <td>${r.crop}</td>
+              <td>${r.khata}</td>
+              <td><span class="khasra-chip">${r.khasra}</span></td>
+              <td style="text-align:center;"><span class="status-pill ${pillClass}">${r.status || 'READY'}</span></td>
+            </tr>
+          `;
+        }).join('');
+      } catch(e) { console.error(e); }
     }
 
-    function startAutomation() {
-      fetch('/start', { method: 'POST' }).then(checkStatus);
-    }
-    function stopAutomation() {
-      fetch('/stop', { method: 'POST' }).then(checkStatus);
-    }
+    function startAutomation() { fetch('/start',{method:'POST'}).then(checkStatus); }
+    function stopAutomation() { fetch('/stop',{method:'POST'}).then(checkStatus); }
     function resetExcelStatus() {
-      const msg = currentLang === 'hi' ? 'क्या आप रिकॉर्ड स्थिति रीसेट करना चाहते हैं?' : 'Reset status of saved records?';
-      if (confirm(msg)) {
-        fetch('/reset-excel', { method: 'POST' }).then(() => {
-          checkStatus();
-          loadExcelRows();
-        });
+      if (confirm(currentLang==='hi' ? 'स्थिति रीसेट करें?' : 'Reset status of saved records?')) {
+        fetch('/reset-excel',{method:'POST'}).then(()=>{ checkStatus(); loadExcelRows(); });
       }
     }
 
-    function openRechargeModal() {
-      document.getElementById('rechargeModal').style.display = 'flex';
-    }
-    function closeModal(id) {
-      document.getElementById(id).style.display = 'none';
-    }
-    function selectAmount(val) {
-      document.getElementById('customAmount').value = val;
-    }
+    function openRechargeModal() { document.getElementById('rechargeModal').style.display='flex'; }
+    function closeModal(id) { document.getElementById(id).style.display='none'; }
+    function selectAmount(v) { document.getElementById('customAmount').value=v; }
 
-    async function triggerCheckout(orderData) {
-      const payUrl = `https://neeraj2004kumar2006-pixel.github.io/on-farm/pay.html?session_id=${orderData.payment_session_id}`;
-      window.open(payUrl, '_blank');
-
-      const pollInterval = setInterval(async () => {
-        try {
-          if (orderData.orderData && orderData.orderData.order_id) {
-            const vRes = await fetch('/verify-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ orderId: orderData.orderData.order_id })
-            });
-            const vData = await vRes.json();
-            if (vData.ok && vData.status === 'PAID') {
-              clearInterval(pollInterval);
-              checkStatus();
-              alert(currentLang === 'hi' ? 'भुगतान सफल रहा! बैलेंस अपडेट हो गया।' : 'Payment Successful! Available balance updated.');
-            }
-          }
-        } catch {}
-      }, 3000);
-
-      setTimeout(() => clearInterval(pollInterval), 300000);
+    async function triggerCheckout(od) {
+      window.open(`https://neeraj2004kumar2006-pixel.github.io/on-farm/pay.html?session_id=${od.payment_session_id}`,'_blank');
+      const pi = setInterval(async()=>{
+        try { if(od.orderData&&od.orderData.order_id){ const v=await(await fetch('/verify-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orderId:od.orderData.order_id})})).json(); if(v.ok&&v.status==='PAID'){clearInterval(pi);checkStatus();alert(currentLang==='hi'?'भुगतान सफल! बैलेंस अपडेट हो गया।':'Payment successful! Balance updated.');} } } catch{}
+      },3000);
+      setTimeout(()=>clearInterval(pi),300000);
     }
 
     async function payWallet() {
-      const amount = document.getElementById('customAmount').value;
-      const res = await fetch('/create-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'WALLET_RECHARGE', amount })
-      });
-      const data = await res.json();
-      if (data.ok && data.payment_session_id) {
-        closeModal('rechargeModal');
-        triggerCheckout(data);
-      } else {
-        alert(data.message || 'Payment initiation failed.');
-      }
+      const d = await(await fetch('/create-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'WALLET_RECHARGE',amount:document.getElementById('customAmount').value})})).json();
+      if(d.ok&&d.payment_session_id){closeModal('rechargeModal');triggerCheckout(d);} else alert(d.message||'Payment initiation failed.');
     }
-
     async function buySubscription() {
-      const msg = currentLang === 'hi' ? '₹699 मासिक पास (असीमित) प्राप्त करना चाहते हैं?' : 'Purchase ₹699 Monthly Pass for unlimited processing?';
-      if (!confirm(msg)) return;
-      const res = await fetch('/create-payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'SUBSCRIPTION_699', amount: 699 })
-      });
-      const data = await res.json();
-      if (data.ok && data.payment_session_id) {
-        triggerCheckout(data);
-      } else {
-        alert(data.message || 'Payment initiation failed.');
-      }
+      if(!confirm(currentLang==='hi'?'₹699 मासिक पास (असीमित) लेना चाहते हैं?':'Purchase ₹699 Monthly Pass for unlimited processing?')) return;
+      const d = await(await fetch('/create-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'SUBSCRIPTION_699',amount:699})})).json();
+      if(d.ok&&d.payment_session_id) triggerCheckout(d); else alert(d.message||'Payment initiation failed.');
     }
 
     setLanguage(currentLang);
