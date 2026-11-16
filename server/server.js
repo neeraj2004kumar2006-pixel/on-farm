@@ -15,6 +15,15 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
+// Serve Admin Dashboard
+app.use('/admin', express.static(path.join(__dirname, 'admin')));
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin', 'index.html'));
+});
+app.get('/', (req, res) => {
+  res.redirect('/admin');
+});
+
 // Initialize Supabase Client
 function getSupabase() {
   const url = process.env.SUPABASE_URL;

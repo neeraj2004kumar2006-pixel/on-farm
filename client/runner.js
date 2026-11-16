@@ -15,8 +15,8 @@ const CLIENT_VERSION = '1.0.0';
 const PANEL_PORT = 3789;
 const CDP_PORT = 9222;
 
-// Cloud backend URL (change to production URL when deployed to Vercel/Render)
-const CLOUD_URL = process.env.ONFARM_CLOUD_URL || 'http://localhost:4000';
+// Cloud backend URL (Points to 24/7 Vercel Cloud Server)
+const CLOUD_URL = process.env.ONFARM_CLOUD_URL || 'https://on-farm.vercel.app';
 
 // In-Memory state
 const state = {
