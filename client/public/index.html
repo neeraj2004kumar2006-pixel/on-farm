@@ -2060,7 +2060,13 @@
           updateTextIfDiff('walletBal', '₹' + s.walletBalance);
         }
 
-        const savedPhone = (s.user && s.user.phone) || localStorage.getItem('onfarm_operator_phone') || '';
+        if (s.user && s.user.phone) {
+          window.currentOperatorUser = s.user;
+          localStorage.setItem('onfarm_operator_phone', s.user.phone);
+          if (s.user.name) localStorage.setItem('onfarm_operator_name', s.user.name);
+        }
+
+        const savedPhone = (s.user && s.user.phone) || (window.currentOperatorUser && window.currentOperatorUser.phone) || localStorage.getItem('onfarm_operator_phone') || '';
         const isLinked = Boolean(savedPhone && savedPhone !== '9999999999' && savedPhone.length === 10);
         updateTextIfDiff('headerPhoneDisplay', isLinked ? ('+91 ' + savedPhone) : 'Link Mobile No.');
         updateClassIfDiff('headerOperatorBtn', 'operator-profile-btn' + (isLinked ? ' linked' : ''));
@@ -2398,10 +2404,11 @@
     }
 
     function openRechargeModal() {
-      const savedPhone = localStorage.getItem('onfarm_operator_phone') || '';
+      const u = window.currentOperatorUser;
+      const savedPhone = (u && u.phone) || localStorage.getItem('onfarm_operator_phone') || '';
       const rPhone = document.getElementById('rechargePhone');
       if (rPhone) {
-        if (savedPhone && savedPhone !== '9999999999') {
+        if (savedPhone && savedPhone !== '9999999999' && savedPhone.length === 10) {
           rPhone.value = savedPhone;
           rPhone.readOnly = true;
           rPhone.style.background = '#f8fafc';
@@ -2419,8 +2426,9 @@
     }
 
     function openProfileModal() {
-      const savedPhone = localStorage.getItem('onfarm_operator_phone') || '';
-      const savedName = localStorage.getItem('onfarm_operator_name') || '';
+      const u = window.currentOperatorUser;
+      const savedPhone = (u && u.phone) || localStorage.getItem('onfarm_operator_phone') || '';
+      const savedName = (u && u.name) || localStorage.getItem('onfarm_operator_name') || '';
       const isLocked = Boolean(savedPhone && savedPhone !== '9999999999' && savedPhone.length === 10);
 
       const pIn = document.getElementById('profilePhoneInput');

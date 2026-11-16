@@ -750,6 +750,28 @@ async function syncUserBalance() {
   try {
     const phone = (state.user && state.user.phone) || process.env.OPERATOR_PHONE;
     if (!phone) {
+      // Cloud HWID auto-detection: Check if this machine is already registered
+      try {
+        const devRes = await axios.post(`${CLOUD_URL}/api/auth/device-status`, {
+          hwid: state.hwid,
+        }, { timeout: 6000 });
+
+        if (devRes.data && devRes.data.ok && devRes.data.bound && devRes.data.user) {
+          state.user = devRes.data.user;
+          state.walletBalance = devRes.data.wallet ? devRes.data.wallet.balance : 0;
+          state.subscription = devRes.data.subscription;
+          state.isOnline = true;
+          try {
+            fs.writeFileSync(SESSION_CACHE_FILE, JSON.stringify({
+              walletBalance: state.walletBalance,
+              user: state.user,
+              subscription: state.subscription,
+            }, null, 2));
+          } catch {}
+          return true;
+        }
+      } catch {}
+
       state.isOnline = true;
       return true;
     }

@@ -88,6 +88,73 @@ app.get('/api/config', async (req, res) => {
 });
 
 /**
+ * Device HWID Status Check
+ * Automatically recognizes if this physical computer is already bound to an operator
+ */
+app.post('/api/auth/device-status', async (req, res) => {
+  const { hwid } = req.body;
+  if (!hwid) {
+    return res.status(400).json({ ok: false, message: 'hwid is required' });
+  }
+
+  try {
+    const supabase = getSupabase();
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*, wallets(*), subscriptions(*)')
+      .eq('hwid', hwid)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!user) {
+      return res.json({ ok: true, bound: false, message: 'Device not yet bound to any operator.' });
+    }
+
+    if (user.is_blocked) {
+      return res.status(403).json({
+        ok: false,
+        code: 'USER_BLOCKED',
+        message: 'This device account has been blocked by Admin.',
+      });
+    }
+
+    const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', user.id).maybeSingle();
+    const { data: subs } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .gt('expires_at', new Date().toISOString())
+      .order('expires_at', { ascending: false })
+      .maybeSingle();
+
+    res.json({
+      ok: true,
+      bound: true,
+      user: {
+        id: user.id,
+        name: user.name,
+        phone: user.phone,
+        hwid: user.hwid,
+      },
+      wallet: {
+        balance: Number(wallet ? wallet.balance : 0),
+        total_recharged: wallet ? wallet.total_recharged : 0,
+        total_kilas: wallet ? wallet.total_kilas_processed : 0,
+      },
+      subscription: subs ? {
+        plan: subs.plan_name,
+        expires_at: subs.expires_at,
+        is_active: true,
+      } : null,
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+/**
  * User Login + HWID Device Locking
  */
 app.post('/api/auth/login', async (req, res) => {
