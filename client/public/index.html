@@ -270,11 +270,8 @@
       </div>
 
       <div style="display: flex; gap: 12px; margin-top: 14px; margin-bottom: 20px;">
-        <button class="btn btn-primary" onclick="generateStagedKilas()">
-          📋 1. Generate & Review Kilas (नीचे लिस्ट देखें)
-        </button>
-        <button class="btn btn-light" onclick="submitGenerateExcel(false)">
-          ⚡ Direct Quick Save
+        <button class="btn btn-primary" style="padding: 11px 24px; font-size: 1rem;" onclick="addKilasToReview()">
+          ➕ Add to Review List (नीचे लिस्ट में जोड़ें)
         </button>
       </div>
 
@@ -284,12 +281,11 @@
           <div>
             <h4 style="font-size: 1.1rem; color: #1e293b;">📋 Review & Edit Kilas (<span id="stagedCount" style="color:var(--primary); font-weight:800;">0</span> किले)</h4>
             <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">
-              Excel में सेव करने से पहले यहाँ चेक कर लें। आप किसी भी किले का नंबर (उदा. 1 से 1/1), नाम, खसरा बदल सकते हैं या ❌ हटा सकते हैं:
+              ऊपर से जितने चाहें उतने मुरब्बे और किले जोड़ते रहें। यहाँ आप किसी भी नंबर/नाम को बदल सकते हैं या ❌ से हटा सकते हैं:
             </p>
           </div>
-          <div style="display: flex; gap: 8px;">
-            <button class="btn btn-light" style="padding: 6px 12px; font-size: 0.82rem;" onclick="addStagedRow()">+ Add Row</button>
-            <button class="btn btn-light" style="padding: 6px 12px; font-size: 0.82rem; color: var(--danger);" onclick="clearStagedRows()">Clear</button>
+          <div>
+            <button class="btn btn-light" style="padding: 6px 14px; font-size: 0.85rem; color: var(--danger); border-color: #fca5a5;" onclick="clearStagedRows()">🗑️ Clear List (खाली करें)</button>
           </div>
         </div>
 
@@ -306,21 +302,18 @@
               </tr>
             </thead>
             <tbody id="stagedTableBody">
-              <tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">ऊपर "Generate & Review Kilas" पर क्लिक करें।</td></tr>
+              <tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">ऊपर डिटेल्स भरकर "➕ Add to Review List" पर क्लिक करें।</td></tr>
             </tbody>
           </table>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 14px 18px; border-radius: 8px;">
           <div style="font-size: 0.95rem; font-weight: 700; color: #334155;">
-            Ready to Save: <span id="stagedFooterCount" style="color:var(--primary); font-size: 1.1rem;">0</span> Kilas
+            Total Kilas: <span id="stagedFooterCount" style="color:var(--primary); font-size: 1.15rem;">0</span>
           </div>
-          <div style="display: flex; gap: 12px;">
-            <button class="btn btn-primary" style="padding: 10px 20px;" onclick="saveStagedToExcel(false)">
-              💾 Apply Changes to Excel (farmers.xlsx में Save करें)
-            </button>
-            <button class="btn btn-light" onclick="saveStagedToExcel(true)">
-              ➕ Append to Existing
+          <div>
+            <button class="btn btn-primary" style="padding: 11px 26px; font-size: 1rem;" onclick="saveStagedToExcel(false)">
+              💾 Create Excel (farmers.xlsx बनाएं)
             </button>
           </div>
         </div>
@@ -459,7 +452,7 @@
       return { main: parseInt(m[1], 10), sub: parseInt(m[2] || 0, 10) };
     }
 
-    function generateStagedKilas() {
+    function addKilasToReview() {
       const name = document.getElementById('genName').value.trim();
       const khata = document.getElementById('genKhata').value.trim();
       const crop = document.getElementById('genCrop').value.trim();
@@ -489,8 +482,8 @@
       }
 
       // 2. Main Range parsing (1-25 or comma separated)
+      // Note: We DO NOT wipe stagedRows, so user can add multiple murabbas or kilas!
       const items = kilasInput.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
-      stagedRows = [];
 
       for (const item of items) {
         const rangeMatch = item.match(/^(\d+)\s*(?:-|to)\s*(\d+)$/i);
@@ -539,7 +532,13 @@
 
       renderStagedTable();
       document.getElementById('saveAlert').style.display = 'none';
+
+      // Clear the kila inputs so operator can type next set of kilas/murabba immediately
+      document.getElementById('genKilas').value = '';
+      document.getElementById('genSubKilas').value = '';
     }
+
+    const generateStagedKilas = addKilasToReview;
 
     function renderStagedTable() {
       const tbody = document.getElementById('stagedTableBody');
@@ -547,7 +546,7 @@
       document.getElementById('stagedFooterCount').textContent = stagedRows.length;
 
       if (stagedRows.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">Koi kila add nahi hai. Upar se generate karein ya "+ Add Row" dabayein.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">ऊपर डिटेल्स भरकर "➕ Add to Review List" पर क्लिक करें।</td></tr>';
         return;
       }
 
@@ -595,27 +594,6 @@
       renderStagedTable();
     }
 
-    function addStagedRow() {
-      const murabbaVal = document.getElementById('genMurabba').value.trim();
-      const { main: muraMain, sub: muraSub } = parseMurabba(murabbaVal);
-      const name = document.getElementById('genName').value.trim() || '';
-      const khata = document.getElementById('genKhata').value.trim() || '';
-      const crop = document.getElementById('genCrop').value.trim() || 'Groundnut (Pea Nut)';
-      const sowingDate = document.getElementById('genDate').value.trim() || '';
-      const ownership = document.getElementById('genOwnership').value.trim() || 'Owner';
-
-      const nextKila = stagedRows.length + 1;
-      const khasra = muraMain > 0 ? makeKhasraJS(muraMain, muraSub, nextKila, 0) : '';
-      stagedRows.push({
-        kilaStr: String(nextKila),
-        muraMain, muraSub,
-        khasraNo: khasra,
-        name, khataNo: khata, crop, sowingDate, ownership,
-        farmerName: name, status: '', error: ''
-      });
-      renderStagedTable();
-    }
-
     function clearStagedRows() {
       if (confirm('Kya aap sabhi review kile hatana chahte hain?')) {
         stagedRows = [];
@@ -625,7 +603,7 @@
 
     async function saveStagedToExcel(append = false) {
       if (stagedRows.length === 0) {
-        alert('Pehle "Generate & Review Kilas" par click karke kile check karein.');
+        alert('Pehle upar details bharkar "➕ Add to Review List" par click karein.');
         return;
       }
 
@@ -645,7 +623,7 @@
         if (data.ok) {
           alertEl.style.background = '#dcfce7';
           alertEl.style.color = '#15803d';
-          alertEl.textContent = '✅ ' + data.message;
+          alertEl.textContent = '✅ ' + data.message + ' (अब Automation Runner टैब में जाकर START दबाएं!)';
           checkStatus();
           loadExcelRows(); // refresh tab 3
         } else {
