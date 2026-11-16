@@ -426,8 +426,16 @@ function startControlPanel() {
   // Excel Generator API (App se direct Kila aur Farmer add karna)
   app.post('/generate-excel', async (req, res) => {
     try {
-      const { name, crop, sowingDate, ownership, khataNo, muraMain, muraSub, kilasInput, subKilasInput, append = false } = req.body;
-      if (!name || !crop || !sowingDate || !khataNo || !muraMain || !kilasInput) {
+      const { name, crop, sowingDate, ownership, khataNo, muraMain, muraSub, murabbaInput, kilasInput, subKilasInput, append = false } = req.body;
+      let main = parseInt(muraMain, 10) || 0;
+      let sub = parseInt(muraSub, 10) || 0;
+      if (murabbaInput) {
+        const parts = String(murabbaInput).trim().split(/[\/\.]/);
+        main = parseInt(parts[0], 10) || 0;
+        sub = parts.length > 1 ? (parseInt(parts[1], 10) || 0) : 0;
+      }
+
+      if (!name || !crop || !sowingDate || !khataNo || !main || !kilasInput) {
         return res.status(400).json({ ok: false, message: 'All required fields (Name, Crop, Sowing Date, Khata, Murabba, Kilas) must be filled.' });
       }
 
@@ -462,7 +470,7 @@ function startControlPanel() {
 
       const generatedRows = [];
       for (const k of parsedKilas) {
-        const khasra18 = makeKhasra(muraMain, muraSub, k.main, k.sub);
+        const khasra18 = makeKhasra(main, sub, k.main, k.sub);
         const rowData = [
           name.trim(),
           crop.trim(),
@@ -491,7 +499,7 @@ function startControlPanel() {
       await wb.xlsx.writeFile(excelPath);
       state.totalRows = ws.rowCount - 1;
       state.processedCount = 0;
-      log(`Excel Generated: ${generatedRows.length} kilas added for ${name} (Murabba: ${muraMain}/${muraSub})`);
+      log(`Excel Generated: ${generatedRows.length} kilas added for ${name} (Murabba: ${main}/${sub})`);
 
       res.json({
         ok: true,

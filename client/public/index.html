@@ -208,11 +208,11 @@
       <div class="form-grid">
         <div class="form-group">
           <label>Farmer Name (किसान का नाम)</label>
-          <input type="text" id="genName" class="form-control" placeholder="उदा. हलीमा" value="हलीमा">
+          <input type="text" id="genName" class="form-control" placeholder="उदा. किसान का नाम (जैसे हलीमा)" value="">
         </div>
         <div class="form-group">
           <label>Khata No (खाता संख्या नया)</label>
-          <input type="text" id="genKhata" class="form-control" placeholder="उदा. 61" value="61">
+          <input type="text" id="genKhata" class="form-control" placeholder="उदा. 61" value="">
         </div>
       </div>
 
@@ -233,7 +233,7 @@
         </div>
         <div class="form-group">
           <label>Sowing Date (बुवाई की तारीख - DD/MM/YYYY)</label>
-          <input type="text" id="genDate" class="form-control" placeholder="20/06/2026" value="20/06/2026">
+          <input type="text" id="genDate" class="form-control" placeholder="उदा. 20/06/2026" value="">
         </div>
       </div>
 
@@ -246,26 +246,23 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Murabba No (मुरब्बा संख्या - Main / Sub)</label>
-          <div style="display: flex; gap: 8px;">
-            <input type="number" id="genMuraMain" class="form-control" placeholder="67" value="67">
-            <input type="number" id="genMuraSub" class="form-control" placeholder="58" value="58">
-          </div>
-          <div class="help-hint">उदा: 67 / 58</div>
+          <label>Murabba No (मुरब्बा संख्या - जैसे 67/58)</label>
+          <input type="text" id="genMurabba" class="form-control" placeholder="उदा: 67/58 या 207/6" value="">
+          <div class="help-hint">💡 मुरब्बा एक साथ लिखें (जैसे: <strong>67/58</strong> या <strong>207/6</strong>)</div>
         </div>
       </div>
 
       <div class="form-grid">
         <div class="form-group">
           <label>Kila Numbers (किले संख्या - Range या Comma-separated)</label>
-          <input type="text" id="genKilas" class="form-control" placeholder="उदा: 1-25 या 1, 2, 4, 7-12" value="1-25">
+          <input type="text" id="genKilas" class="form-control" placeholder="उदा: 1-25 या 1, 2, 4, 7-12" value="">
           <div class="help-hint">
             💡 पूरा मुरब्बा भरने के लिए <strong>1-25</strong> लिखें।
           </div>
         </div>
         <div class="form-group">
           <label>Sub-Kilas / Minjhla (किले जिनमें /1 या /2 है)</label>
-          <input type="text" id="genSubKilas" class="form-control" placeholder="उदा: 1/1, 10/1, 11/1, 20/1, 21/1" value="1/1, 10/1, 11/1, 20/1, 21/1">
+          <input type="text" id="genSubKilas" class="form-control" placeholder="उदा: 1/1, 10/1, 11/1 (अगर कोई हो)" value="">
           <div class="help-hint">
             💡 1-25 के बीच जिन किलों में /1 या /2 है, वो यहाँ लिखें (उदा: <strong>1/1, 10/1, 11/1, 20/1, 21/1</strong>)
           </div>
@@ -391,7 +388,6 @@
         window.event.target.classList.add('active');
       }
       if (view === 'preview') loadExcelRows();
-      if (view === 'generator' && stagedRows.length === 0) generateStagedKilas();
     }
 
     async function checkStatus() {
@@ -441,6 +437,14 @@
     // -------------------------------------------------------------------------
     let stagedRows = [];
 
+    function parseMurabba(val) {
+      if (!val) return { main: 0, sub: 0 };
+      const parts = String(val).trim().split(/[\/\.]/);
+      const main = parseInt(parts[0], 10) || 0;
+      const sub = parts.length > 1 ? (parseInt(parts[1], 10) || 0) : 0;
+      return { main, sub };
+    }
+
     function makeKhasraJS(muraMain, muraSub, kilaMain, kilaSub = 0) {
       const leading = '0'.repeat(11 - String(muraMain).length);
       const sub2 = String(muraSub || 0).padStart(2, '0');
@@ -461,13 +465,13 @@
       const crop = document.getElementById('genCrop').value.trim();
       const sowingDate = document.getElementById('genDate').value.trim();
       const ownership = document.getElementById('genOwnership').value.trim();
-      const muraMain = parseInt(document.getElementById('genMuraMain').value, 10);
-      const muraSub = parseInt(document.getElementById('genMuraSub').value || 0, 10);
+      const murabbaVal = document.getElementById('genMurabba').value.trim();
+      const { main: muraMain, sub: muraSub } = parseMurabba(murabbaVal);
       const kilasInput = document.getElementById('genKilas').value.trim();
       const subKilasInput = document.getElementById('genSubKilas').value.trim();
 
       if (!name || !khata || !muraMain || !kilasInput) {
-        alert('Kripya Kisan ka naam, Khata, Murabba aur Kila numbers zaroor bharein.');
+        alert('Kripya Kisan ka naam, Khata, Murabba (jaise 67/58) aur Kila numbers zaroor bharein.');
         return;
       }
 
@@ -592,16 +596,16 @@
     }
 
     function addStagedRow() {
-      const muraMain = parseInt(document.getElementById('genMuraMain').value, 10) || 67;
-      const muraSub = parseInt(document.getElementById('genMuraSub').value, 10) || 58;
-      const name = document.getElementById('genName').value.trim() || 'हलीमा';
-      const khata = document.getElementById('genKhata').value.trim() || '61';
+      const murabbaVal = document.getElementById('genMurabba').value.trim();
+      const { main: muraMain, sub: muraSub } = parseMurabba(murabbaVal);
+      const name = document.getElementById('genName').value.trim() || '';
+      const khata = document.getElementById('genKhata').value.trim() || '';
       const crop = document.getElementById('genCrop').value.trim() || 'Groundnut (Pea Nut)';
-      const sowingDate = document.getElementById('genDate').value.trim() || '20/06/2026';
+      const sowingDate = document.getElementById('genDate').value.trim() || '';
       const ownership = document.getElementById('genOwnership').value.trim() || 'Owner';
 
       const nextKila = stagedRows.length + 1;
-      const khasra = makeKhasraJS(muraMain, muraSub, nextKila, 0);
+      const khasra = muraMain > 0 ? makeKhasraJS(muraMain, muraSub, nextKila, 0) : '';
       stagedRows.push({
         kilaStr: String(nextKila),
         muraMain, muraSub,
@@ -662,8 +666,8 @@
       const crop = document.getElementById('genCrop').value;
       const sowingDate = document.getElementById('genDate').value;
       const ownership = document.getElementById('genOwnership').value;
-      const muraMain = document.getElementById('genMuraMain').value;
-      const muraSub = document.getElementById('genMuraSub').value;
+      const murabbaVal = document.getElementById('genMurabba').value.trim();
+      const { main: muraMain, sub: muraSub } = parseMurabba(murabbaVal);
       const kilasInput = document.getElementById('genKilas').value;
       const subKilasInput = document.getElementById('genSubKilas').value;
 
@@ -671,7 +675,7 @@
         const res = await fetch('/generate-excel', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, khataNo, crop, sowingDate, ownership, muraMain, muraSub, kilasInput, subKilasInput, append })
+          body: JSON.stringify({ name, khataNo, crop, sowingDate, ownership, muraMain, muraSub, murabbaInput: murabbaVal, kilasInput, subKilasInput, append })
         });
         const d = await res.json();
         if (d.ok) {
