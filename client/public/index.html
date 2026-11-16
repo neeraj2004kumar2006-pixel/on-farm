@@ -255,21 +255,80 @@
         </div>
       </div>
 
-      <div class="form-group">
-        <label>Kila Numbers (किले संख्या - Range या Comma-separated)</label>
-        <textarea id="genKilas" class="form-control" rows="3" placeholder="उदा: 1-25 (रेंज) या 1, 2, 3, 10/1, 21/2">1-25</textarea>
-        <div class="help-hint">
-          💡 पूरा मुरब्बा भरने के लिए <strong>1-25</strong> लिखें, या अलग-अलग किलों के लिए कॉमा लगाएं: <strong>1, 2, 4/1, 10, 21/1</strong>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Kila Numbers (किले संख्या - Range या Comma-separated)</label>
+          <input type="text" id="genKilas" class="form-control" placeholder="उदा: 1-25 या 1, 2, 4, 7-12" value="1-25">
+          <div class="help-hint">
+            💡 पूरा मुरब्बा भरने के लिए <strong>1-25</strong> लिखें।
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Sub-Kilas / Minjhla (किले जिनमें /1 या /2 है)</label>
+          <input type="text" id="genSubKilas" class="form-control" placeholder="उदा: 1/1, 10/1, 11/1, 20/1, 21/1" value="1/1, 10/1, 11/1, 20/1, 21/1">
+          <div class="help-hint">
+            💡 1-25 के बीच जिन किलों में /1 या /2 है, वो यहाँ लिखें (उदा: <strong>1/1, 10/1, 11/1, 20/1, 21/1</strong>)
+          </div>
         </div>
       </div>
 
-      <div style="display: flex; gap: 12px; margin-top: 16px;">
-        <button class="btn btn-primary" onclick="submitGenerateExcel(false)">
-          ✨ Generate & Save Fresh Excel
+      <div style="display: flex; gap: 12px; margin-top: 14px; margin-bottom: 20px;">
+        <button class="btn btn-primary" onclick="generateStagedKilas()">
+          📋 1. Generate & Review Kilas (नीचे लिस्ट देखें)
         </button>
-        <button class="btn btn-light" onclick="submitGenerateExcel(true)">
-          ➕ Append to Existing
+        <button class="btn btn-light" onclick="submitGenerateExcel(false)">
+          ⚡ Direct Quick Save
         </button>
+      </div>
+
+      <!-- STAGED REVIEW & EDIT TABLE (BEFORE SAVING TO EXCEL) -->
+      <div id="stagedReviewSection" style="border-top: 2px dashed var(--border); padding-top: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+          <div>
+            <h4 style="font-size: 1.1rem; color: #1e293b;">📋 Review & Edit Kilas (<span id="stagedCount" style="color:var(--primary); font-weight:800;">0</span> किले)</h4>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 2px;">
+              Excel में सेव करने से पहले यहाँ चेक कर लें। आप किसी भी किले का नंबर (उदा. 1 से 1/1), नाम, खसरा बदल सकते हैं या ❌ हटा सकते हैं:
+            </p>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-light" style="padding: 6px 12px; font-size: 0.82rem;" onclick="addStagedRow()">+ Add Row</button>
+            <button class="btn btn-light" style="padding: 6px 12px; font-size: 0.82rem; color: var(--danger);" onclick="clearStagedRows()">Clear</button>
+          </div>
+        </div>
+
+        <div style="max-height: 420px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 16px;">
+          <table style="margin-top: 0; width: 100%;">
+            <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 2;">
+              <tr>
+                <th style="width: 40px;">#</th>
+                <th style="width: 90px;">किला (Kila)</th>
+                <th style="width: 210px;">18-Digit खसरा (Auto)</th>
+                <th>किसान का नाम</th>
+                <th style="width: 80px;">खाता सं.</th>
+                <th style="width: 50px; text-align: center;">हटाएं</th>
+              </tr>
+            </thead>
+            <tbody id="stagedTableBody">
+              <tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">ऊपर "Generate & Review Kilas" पर क्लिक करें।</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; background: #f1f5f9; padding: 14px 18px; border-radius: 8px;">
+          <div style="font-size: 0.95rem; font-weight: 700; color: #334155;">
+            Ready to Save: <span id="stagedFooterCount" style="color:var(--primary); font-size: 1.1rem;">0</span> Kilas
+          </div>
+          <div style="display: flex; gap: 12px;">
+            <button class="btn btn-primary" style="padding: 10px 20px;" onclick="saveStagedToExcel(false)">
+              💾 Apply Changes to Excel (farmers.xlsx में Save करें)
+            </button>
+            <button class="btn btn-light" onclick="saveStagedToExcel(true)">
+              ➕ Append to Existing
+            </button>
+          </div>
+        </div>
+
+        <div id="saveAlert" style="display:none; padding:12px; border-radius:8px; font-size:0.9rem; margin-top:12px; font-weight:600;"></div>
       </div>
     </div>
 
@@ -332,6 +391,7 @@
         window.event.target.classList.add('active');
       }
       if (view === 'preview') loadExcelRows();
+      if (view === 'generator' && stagedRows.length === 0) generateStagedKilas();
     }
 
     async function checkStatus() {
@@ -376,6 +436,226 @@
       }
     }
 
+    // -------------------------------------------------------------------------
+    // STAGED KILAS REVIEW & EDIT LOGIC (User's Exact Feature!)
+    // -------------------------------------------------------------------------
+    let stagedRows = [];
+
+    function makeKhasraJS(muraMain, muraSub, kilaMain, kilaSub = 0) {
+      const leading = '0'.repeat(11 - String(muraMain).length);
+      const sub2 = String(muraSub || 0).padStart(2, '0');
+      const k2 = String(kilaMain || 0).padStart(2, '0');
+      const ks2 = String(kilaSub || 0).padStart(2, '0');
+      return leading + muraMain + '0' + sub2 + k2 + ks2;
+    }
+
+    function parseKilaStr(kilaStr) {
+      const m = String(kilaStr).trim().match(/^(\d+)(?:[\/\.](\d+))?$/);
+      if (!m) return { main: 0, sub: 0 };
+      return { main: parseInt(m[1], 10), sub: parseInt(m[2] || 0, 10) };
+    }
+
+    function generateStagedKilas() {
+      const name = document.getElementById('genName').value.trim();
+      const khata = document.getElementById('genKhata').value.trim();
+      const crop = document.getElementById('genCrop').value.trim();
+      const sowingDate = document.getElementById('genDate').value.trim();
+      const ownership = document.getElementById('genOwnership').value.trim();
+      const muraMain = parseInt(document.getElementById('genMuraMain').value, 10);
+      const muraSub = parseInt(document.getElementById('genMuraSub').value || 0, 10);
+      const kilasInput = document.getElementById('genKilas').value.trim();
+      const subKilasInput = document.getElementById('genSubKilas').value.trim();
+
+      if (!name || !khata || !muraMain || !kilasInput) {
+        alert('Kripya Kisan ka naam, Khata, Murabba aur Kila numbers zaroor bharein.');
+        return;
+      }
+
+      // 1. Sub-Kilas Map (1/1, 10/1, 11/1, 20/1, 21/1 etc.)
+      const subMap = new Map();
+      if (subKilasInput) {
+        const subItems = subKilasInput.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+        for (const item of subItems) {
+          const p = parseKilaStr(item);
+          if (p.main > 0) {
+            if (!subMap.has(p.main)) subMap.set(p.main, []);
+            subMap.get(p.main).push(p);
+          }
+        }
+      }
+
+      // 2. Main Range parsing (1-25 or comma separated)
+      const items = kilasInput.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+      stagedRows = [];
+
+      for (const item of items) {
+        const rangeMatch = item.match(/^(\d+)\s*(?:-|to)\s*(\d+)$/i);
+        if (rangeMatch) {
+          const from = parseInt(rangeMatch[1], 10);
+          const to = parseInt(rangeMatch[2], 10);
+          for (let k = from; k <= to; k++) {
+            if (subMap.has(k)) {
+              for (const subItem of subMap.get(k)) {
+                const kStr = subItem.sub ? `${subItem.main}/${subItem.sub}` : `${subItem.main}`;
+                const khasra = makeKhasraJS(muraMain, muraSub, subItem.main, subItem.sub);
+                stagedRows.push({
+                  kilaStr: kStr,
+                  muraMain, muraSub,
+                  khasraNo: khasra,
+                  name, khataNo: khata, crop, sowingDate, ownership,
+                  farmerName: name, status: '', error: ''
+                });
+              }
+            } else {
+              const khasra = makeKhasraJS(muraMain, muraSub, k, 0);
+              stagedRows.push({
+                kilaStr: String(k),
+                muraMain, muraSub,
+                khasraNo: khasra,
+                name, khataNo: khata, crop, sowingDate, ownership,
+                farmerName: name, status: '', error: ''
+              });
+            }
+          }
+        } else {
+          const p = parseKilaStr(item);
+          if (p.main > 0) {
+            const kStr = p.sub ? `${p.main}/${p.sub}` : `${p.main}`;
+            const khasra = makeKhasraJS(muraMain, muraSub, p.main, p.sub);
+            stagedRows.push({
+              kilaStr: kStr,
+              muraMain, muraSub,
+              khasraNo: khasra,
+              name, khataNo: khata, crop, sowingDate, ownership,
+              farmerName: name, status: '', error: ''
+            });
+          }
+        }
+      }
+
+      renderStagedTable();
+      document.getElementById('saveAlert').style.display = 'none';
+    }
+
+    function renderStagedTable() {
+      const tbody = document.getElementById('stagedTableBody');
+      document.getElementById('stagedCount').textContent = stagedRows.length;
+      document.getElementById('stagedFooterCount').textContent = stagedRows.length;
+
+      if (stagedRows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">Koi kila add nahi hai. Upar se generate karein ya "+ Add Row" dabayein.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = stagedRows.map((r, i) => `
+        <tr>
+          <td style="font-weight:700; color:#64748b;">${i + 1}</td>
+          <td>
+            <input type="text" class="form-control" style="padding:4px 8px; font-weight:700; width:80px; font-size:0.9rem;" 
+              value="${r.kilaStr}" oninput="updateStagedKila(${i}, this.value)">
+          </td>
+          <td>
+            <span id="khasraSpan_${i}" style="font-family:Consolas,monospace; background:#e0f2fe; color:#0369a1; padding:3px 6px; border-radius:4px; font-size:0.8rem; font-weight:700;">
+              ${r.khasraNo}
+            </span>
+          </td>
+          <td>
+            <input type="text" class="form-control" style="padding:4px 8px; font-size:0.9rem;" 
+              value="${r.name}" oninput="stagedRows[${i}].name = this.value; stagedRows[${i}].farmerName = this.value;">
+          </td>
+          <td>
+            <input type="text" class="form-control" style="padding:4px 8px; width:70px; font-size:0.9rem;" 
+              value="${r.khataNo}" oninput="stagedRows[${i}].khataNo = this.value">
+          </td>
+          <td style="text-align:center;">
+            <button class="btn btn-light" style="padding:3px 8px; color:#dc2626; font-size:0.85rem;" title="इस किले को हटाएं" onclick="deleteStagedRow(${i})">❌</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function updateStagedKila(index, val) {
+      stagedRows[index].kilaStr = val.trim();
+      const p = parseKilaStr(val);
+      const muraMain = stagedRows[index].muraMain;
+      const muraSub = stagedRows[index].muraSub;
+      if (p.main > 0 && muraMain) {
+        stagedRows[index].khasraNo = makeKhasraJS(muraMain, muraSub, p.main, p.sub);
+      }
+      const span = document.getElementById(`khasraSpan_${index}`);
+      if (span) span.textContent = stagedRows[index].khasraNo;
+    }
+
+    function deleteStagedRow(index) {
+      stagedRows.splice(index, 1);
+      renderStagedTable();
+    }
+
+    function addStagedRow() {
+      const muraMain = parseInt(document.getElementById('genMuraMain').value, 10) || 67;
+      const muraSub = parseInt(document.getElementById('genMuraSub').value, 10) || 58;
+      const name = document.getElementById('genName').value.trim() || 'हलीमा';
+      const khata = document.getElementById('genKhata').value.trim() || '61';
+      const crop = document.getElementById('genCrop').value.trim() || 'Groundnut (Pea Nut)';
+      const sowingDate = document.getElementById('genDate').value.trim() || '20/06/2026';
+      const ownership = document.getElementById('genOwnership').value.trim() || 'Owner';
+
+      const nextKila = stagedRows.length + 1;
+      const khasra = makeKhasraJS(muraMain, muraSub, nextKila, 0);
+      stagedRows.push({
+        kilaStr: String(nextKila),
+        muraMain, muraSub,
+        khasraNo: khasra,
+        name, khataNo: khata, crop, sowingDate, ownership,
+        farmerName: name, status: '', error: ''
+      });
+      renderStagedTable();
+    }
+
+    function clearStagedRows() {
+      if (confirm('Kya aap sabhi review kile hatana chahte hain?')) {
+        stagedRows = [];
+        renderStagedTable();
+      }
+    }
+
+    async function saveStagedToExcel(append = false) {
+      if (stagedRows.length === 0) {
+        alert('Pehle "Generate & Review Kilas" par click karke kile check karein.');
+        return;
+      }
+
+      const alertEl = document.getElementById('saveAlert');
+      alertEl.style.display = 'block';
+      alertEl.style.background = '#e0f2fe';
+      alertEl.style.color = '#0369a1';
+      alertEl.textContent = 'Saving to farmers.xlsx...';
+
+      try {
+        const res = await fetch('/save-excel-rows', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rows: stagedRows, append })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          alertEl.style.background = '#dcfce7';
+          alertEl.style.color = '#15803d';
+          alertEl.textContent = '✅ ' + data.message;
+          checkStatus();
+          loadExcelRows(); // refresh tab 3
+        } else {
+          alertEl.style.background = '#fee2e2';
+          alertEl.style.color = '#dc2626';
+          alertEl.textContent = '❌ Error: ' + data.message;
+        }
+      } catch (err) {
+        alertEl.style.background = '#fee2e2';
+        alertEl.style.color = '#dc2626';
+        alertEl.textContent = '❌ Server Error: ' + err.message;
+      }
+    }
+
     async function submitGenerateExcel(append = false) {
       const name = document.getElementById('genName').value;
       const khataNo = document.getElementById('genKhata').value;
@@ -385,18 +665,18 @@
       const muraMain = document.getElementById('genMuraMain').value;
       const muraSub = document.getElementById('genMuraSub').value;
       const kilasInput = document.getElementById('genKilas').value;
+      const subKilasInput = document.getElementById('genSubKilas').value;
 
       try {
         const res = await fetch('/generate-excel', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, khataNo, crop, sowingDate, ownership, muraMain, muraSub, kilasInput, append })
+          body: JSON.stringify({ name, khataNo, crop, sowingDate, ownership, muraMain, muraSub, kilasInput, subKilasInput, append })
         });
         const d = await res.json();
         if (d.ok) {
           alert(`✅ Safalta! ${d.count} kilas automatically calculate hokar Excel sheet me add ho gaye!`);
           checkStatus();
-          // Switch to preview tab
           document.querySelectorAll('.tab-btn')[2].click();
         } else {
           alert('Error: ' + d.message);

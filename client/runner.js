@@ -310,7 +310,22 @@ function makeKhasra(muraMain, muraSub = 0, kilaMain = 0, kilaSub = 0) {
   return leading + muraMain + '0' + sub2 + k2 + ks2;
 }
 
-function parseKilasInput(kilasStr) {
+function parseKilasInput(kilasStr, subKilasStr = '') {
+  // Parse sub-kilas overrides first, e.g. "1/1, 10/1, 11/1, 20/1, 21/1"
+  const subMap = new Map();
+  if (subKilasStr) {
+    const subItems = String(subKilasStr).split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+    for (const item of subItems) {
+      const match = item.match(/^(\d+)(?:[\/\.](\d+))?$/);
+      if (match) {
+        const m = parseInt(match[1], 10);
+        const s = parseInt(match[2] || 0, 10);
+        if (!subMap.has(m)) subMap.set(m, []);
+        subMap.get(m).push({ main: m, sub: s });
+      }
+    }
+  }
+
   const items = String(kilasStr).split(/[,\n]/).map(s => s.trim()).filter(Boolean);
   const result = [];
   for (const item of items) {
@@ -319,7 +334,14 @@ function parseKilasInput(kilasStr) {
       const from = parseInt(rangeMatch[1], 10);
       const to = parseInt(rangeMatch[2], 10);
       for (let k = from; k <= to; k++) {
-        result.push({ main: k, sub: 0 });
+        if (subMap.has(k)) {
+          // Replace with specific sub-kila(s)
+          for (const subItem of subMap.get(k)) {
+            result.push(subItem);
+          }
+        } else {
+          result.push({ main: k, sub: 0 });
+        }
       }
     } else {
       const subMatch = item.match(/^(\d+)(?:[\/\.](\d+))?$/);
@@ -336,15 +358,80 @@ function startControlPanel() {
   app.use(express.json());
   app.use(express.static(path.join(__dirname, 'public')));
 
+  // Save reviewed/edited rows directly to farmers.xlsx
+  app.post('/save-excel-rows', async (req, res) => {
+    try {
+      const { rows, append = false } = req.body;
+      if (!rows || !Array.isArray(rows) || rows.length === 0) {
+        return res.status(400).json({ ok: false, message: 'Koi kila row save karne ke liye nahi mili.' });
+      }
+
+      const ExcelJS = require('exceljs');
+      const excelPath = path.join(__dirname, '..', 'form automation', 'farmers.xlsx');
+      const wb = new ExcelJS.Workbook();
+      let ws;
+
+      if (append && fs.existsSync(excelPath)) {
+        await wb.xlsx.readFile(excelPath);
+        ws = wb.worksheets[0];
+      } else {
+        ws = wb.addWorksheet('Farmers');
+        ws.addRow(['Name', 'Crop', 'SowingDate', 'Ownership', 'KhasraNo', 'KhataNo', 'FarmerName', 'Status', 'Error']);
+        ws.getColumn(1).width = 18;
+        ws.getColumn(2).width = 24;
+        ws.getColumn(3).width = 14;
+        ws.getColumn(4).width = 12;
+        ws.getColumn(5).width = 22; // 18-digit KhasraNo
+        ws.getColumn(6).width = 12; // KhataNo
+        ws.getColumn(7).width = 18; // FarmerName
+        ws.getColumn(8).width = 10; // Status
+        ws.getColumn(9).width = 25; // Error
+        ws.getColumn(5).numFmt = '@';
+        ws.getColumn(6).numFmt = '@';
+      }
+
+      for (const r of rows) {
+        const addedRow = ws.addRow([
+          (r.name || '').trim(),
+          (r.crop || '').trim(),
+          (r.sowingDate || '').trim(),
+          (r.ownership || 'Owner').trim(),
+          String(r.khasraNo || '').trim(),
+          String(r.khataNo || '').trim(),
+          (r.farmerName || r.name || '').trim(),
+          (r.status || '').trim(),
+          (r.error || '').trim(),
+        ]);
+        addedRow.getCell(5).value = String(r.khasraNo || '').trim();
+        addedRow.getCell(5).numFmt = '@';
+        addedRow.getCell(6).value = String(r.khataNo || '').trim();
+        addedRow.getCell(6).numFmt = '@';
+      }
+
+      await wb.xlsx.writeFile(excelPath);
+      state.totalRows = ws.rowCount - 1;
+      state.processedCount = 0;
+      log(`Excel Saved: ${rows.length} reviewed rows saved to farmers.xlsx`);
+
+      res.json({
+        ok: true,
+        count: rows.length,
+        message: `${rows.length} किले successfully farmers.xlsx में सेव हो गए!`,
+      });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
   // Excel Generator API (App se direct Kila aur Farmer add karna)
   app.post('/generate-excel', async (req, res) => {
     try {
-      const { name, crop, sowingDate, ownership, khataNo, muraMain, muraSub, kilasInput, append = false } = req.body;
+      const { name, crop, sowingDate, ownership, khataNo, muraMain, muraSub, kilasInput, subKilasInput, append = false } = req.body;
       if (!name || !crop || !sowingDate || !khataNo || !muraMain || !kilasInput) {
         return res.status(400).json({ ok: false, message: 'All required fields (Name, Crop, Sowing Date, Khata, Murabba, Kilas) must be filled.' });
       }
 
-      const parsedKilas = parseKilasInput(kilasInput);
+      const parsedKilas = parseKilasInput(kilasInput, subKilasInput);
       if (!parsedKilas.length) {
         return res.status(400).json({ ok: false, message: 'Koi valid kila number nahi mila. Jaise 1-25 ya 1, 2, 3/1 likhein.' });
       }
