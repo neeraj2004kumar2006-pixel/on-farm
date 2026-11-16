@@ -2381,7 +2381,7 @@
     }
 
     function startAutomation() {
-      const savedPhone = localStorage.getItem('onfarm_operator_phone');
+      const savedPhone = (window.currentOperatorUser && window.currentOperatorUser.phone) || localStorage.getItem('onfarm_operator_phone');
       if (!savedPhone || savedPhone.length !== 10) {
         openProfileModal();
         appAlert('Please link your 10-digit mobile number before starting form processing.', 'Account Setup Required', 'info');
@@ -2403,7 +2403,18 @@
       }
     }
 
-    function openRechargeModal() {
+    async function openRechargeModal() {
+      if (!window.currentOperatorUser || !window.currentOperatorUser.phone) {
+        try {
+          const res = await fetch('/status');
+          const s = await res.json();
+          if (s.user && s.user.phone) {
+            window.currentOperatorUser = s.user;
+            localStorage.setItem('onfarm_operator_phone', s.user.phone);
+            if (s.user.name) localStorage.setItem('onfarm_operator_name', s.user.name);
+          }
+        } catch {}
+      }
       const u = window.currentOperatorUser;
       const savedPhone = (u && u.phone) || localStorage.getItem('onfarm_operator_phone') || '';
       const rPhone = document.getElementById('rechargePhone');
@@ -2425,7 +2436,18 @@
       document.getElementById('rechargeModal').style.display = 'flex';
     }
 
-    function openProfileModal() {
+    async function openProfileModal() {
+      if (!window.currentOperatorUser || !window.currentOperatorUser.phone) {
+        try {
+          const res = await fetch('/status');
+          const s = await res.json();
+          if (s.user && s.user.phone) {
+            window.currentOperatorUser = s.user;
+            localStorage.setItem('onfarm_operator_phone', s.user.phone);
+            if (s.user.name) localStorage.setItem('onfarm_operator_name', s.user.name);
+          }
+        } catch {}
+      }
       const u = window.currentOperatorUser;
       const savedPhone = (u && u.phone) || localStorage.getItem('onfarm_operator_phone') || '';
       const savedName = (u && u.name) || localStorage.getItem('onfarm_operator_name') || '';
@@ -2597,7 +2619,18 @@
     }
 
     async function buySubscription() {
-      let savedPhone = localStorage.getItem('onfarm_operator_phone') || '';
+      let savedPhone = (window.currentOperatorUser && window.currentOperatorUser.phone) || localStorage.getItem('onfarm_operator_phone') || '';
+      if (!savedPhone || savedPhone === '9999999999' || savedPhone.length !== 10) {
+        try {
+          const res = await fetch('/status');
+          const s = await res.json();
+          if (s.user && s.user.phone) {
+            window.currentOperatorUser = s.user;
+            localStorage.setItem('onfarm_operator_phone', s.user.phone);
+            savedPhone = s.user.phone;
+          }
+        } catch {}
+      }
       if (!savedPhone || savedPhone === '9999999999' || savedPhone.length !== 10) {
         openProfileModal();
         appAlert('Please enter your 10-digit mobile number before purchasing the Monthly Pass.', 'Mobile Number Required', 'info');
