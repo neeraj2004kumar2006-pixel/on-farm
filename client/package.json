@@ -5,15 +5,57 @@
   "main": "electron-main.js",
   "scripts": {
     "start": "node runner.js",
-    "app": "electron electron-main.js"
+    "app": "electron electron-main.js",
+    "protect": "node build-protect.js",
+    "build:exe": "node build-protect.js && electron-builder --win nsis --x64",
+    "build:dir": "node build-protect.js && electron-builder --dir"
+  },
+  "build": {
+    "appId": "com.onfarm.app",
+    "productName": "On-Farm",
+    "copyright": "Copyright © 2026 On-Farm Technologies",
+    "directories": {
+      "output": "dist-release"
+    },
+    "win": {
+      "icon": "public/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "On-Farm",
+      "artifactName": "On-Farm-Setup-${version}.${ext}"
+    },
+    "files": [
+      "dist-protected/**/*",
+      "public/**/*",
+      "runner.js",
+      "security.js",
+      "hwid.js",
+      "electron-main.js",
+      "package.json"
+    ]
   },
   "dependencies": {
     "axios": "^1.7.7",
+    "bytenode": "^2.1.0",
     "exceljs": "^4.4.0",
     "express": "^4.21.0",
+    "javascript-obfuscator": "^5.10.1",
     "playwright": "^1.47.0"
   },
   "devDependencies": {
-    "electron": "^45.3.3"
+    "electron": "^45.3.3",
+    "electron-builder": "^26.18.0"
   }
 }

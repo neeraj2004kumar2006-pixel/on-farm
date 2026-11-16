@@ -15,9 +15,11 @@ const CLIENT_VERSION = '1.0.0';
 const PANEL_PORT = 3789;
 const CDP_PORT = 9222;
 
+const CLIENT_BASE_DIR = fs.existsSync(path.join(__dirname, 'public')) ? __dirname : path.join(__dirname, '..');
+
 // Cloud backend URL (Points to 24/7 Vercel Cloud Server)
 const CLOUD_URL = process.env.ONFARM_CLOUD_URL || 'https://on-farm.vercel.app';
-const SESSION_CACHE_FILE = path.join(__dirname, 'user-session.json');
+const SESSION_CACHE_FILE = path.join(CLIENT_BASE_DIR, 'user-session.json');
 
 // Restore cached session if available so UI never flashes ₹0
 let initialBalance = 1;
@@ -113,7 +115,7 @@ async function connectBrowser() {
     }
   }
 
-  const profileDir = path.join(__dirname, '..', 'browser-profile');
+  const profileDir = path.join(CLIENT_BASE_DIR, '..', 'browser-profile');
   let alreadyRunning = false;
   try {
     const res = await axios.get(`http://localhost:${CDP_PORT}/json/version`, { timeout: 1500 });
@@ -206,7 +208,7 @@ async function executeAutomation() {
 
     // 4. Load Excel Sheet
     const ExcelJS = require('exceljs');
-    const excelPath = path.join(__dirname, '..', 'form automation', 'farmers.xlsx');
+    const excelPath = path.join(CLIENT_BASE_DIR, '..', 'form automation', 'farmers.xlsx');
     if (!fs.existsSync(excelPath)) throw new Error(`farmers.xlsx file nahi mili: ${excelPath}`);
 
     const wb = new ExcelJS.Workbook();
@@ -267,11 +269,25 @@ async function executeAutomation() {
       const isLastRow = (i === rows.length - 1);
 
       state.currentRow = r;
-      log(`[${i + 1}/${rows.length}] Filling: ${r.Name} | Khasra: ${r.KhasraNo}`);
+      log(`[${i + 1}/${rows.length}] Authorizing: ${r.Name} | Khasra: ${r.KhasraNo}`);
+
+      // 5. Authorize & Deduct ₹1 per kila (or verify subscription) BEFORE filling form
+      const deductRes = await axios.post(`${CLOUD_URL}/api/kila/deduct`, {
+        userId: state.user.id,
+        hwid: state.hwid,
+        kilaNumber: r.KhasraNo,
+      });
+
+      if (!deductRes.data || !deductRes.data.ok || !deductRes.data.authNonce) {
+        throw new Error((deductRes.data && deductRes.data.message) || 'Balance insufficient to continue. Please recharge your wallet.');
+      }
+      state.walletBalance = deductRes.data.remaining_balance;
+
+      log(`[${i + 1}/${rows.length}] Filling: ${r.Name} | Wallet Balance: ₹${state.walletBalance}`);
 
       // Call in-memory action routine
       if (formActions.processFarmerRow) {
-        await formActions.processFarmerRow(page, r, isLastRow, log);
+        await formActions.processFarmerRow(page, r, isLastRow, log, deductRes.data.authNonce);
       } else {
         // Fallback default actions
         await formActions.selectCrop(page, r.Crop);
@@ -290,25 +306,13 @@ async function executeAutomation() {
         }
       }
 
-      // 6. Deduct ₹1 per kila or log subscription entry
-      const deductRes = await axios.post(`${CLOUD_URL}/api/kila/deduct`, {
-        userId: state.user.id,
-        hwid: state.hwid,
-        kilaNumber: r.KhasraNo,
-      });
-
-      if (!deductRes.data.ok) {
-        throw new Error(deductRes.data.message || 'Balance insufficient to continue.');
-      }
-      state.walletBalance = deductRes.data.remaining_balance;
-
       // Mark row DONE in Excel
       ws.getRow(r.rowNumber).getCell(colIndex['Status'] || 8).value = 'DONE';
       ws.getRow(r.rowNumber).getCell(colIndex['Error'] || 9).value = '';
       await wb.xlsx.writeFile(excelPath);
 
       state.processedCount++;
-      log(`Done: ${r.Name} | Wallet Balance: ₹${state.walletBalance}`);
+      log(`Done: ${r.Name} | Kila ${r.KhasraNo} recorded successfully.`);
     }
   } catch (err) {
     state.lastError = err.message;
@@ -377,7 +381,7 @@ function parseKilasInput(kilasStr, subKilasStr = '') {
 function startControlPanel() {
   const app = express();
   app.use(express.json());
-  app.use(express.static(path.join(__dirname, 'public')));
+  app.use(express.static(path.join(CLIENT_BASE_DIR, 'public')));
 
   // Save reviewed/edited rows directly to farmers.xlsx
   app.post('/save-excel-rows', async (req, res) => {
@@ -388,7 +392,7 @@ function startControlPanel() {
       }
 
       const ExcelJS = require('exceljs');
-      const excelPath = path.join(__dirname, '..', 'form automation', 'farmers.xlsx');
+      const excelPath = path.join(CLIENT_BASE_DIR, '..', 'form automation', 'farmers.xlsx');
       const wb = new ExcelJS.Workbook();
       let ws;
 
@@ -466,7 +470,7 @@ function startControlPanel() {
       }
 
       const ExcelJS = require('exceljs');
-      const excelPath = path.join(__dirname, '..', 'form automation', 'farmers.xlsx');
+      const excelPath = path.join(CLIENT_BASE_DIR, '..', 'form automation', 'farmers.xlsx');
       const wb = new ExcelJS.Workbook();
       let ws;
 
@@ -537,7 +541,7 @@ function startControlPanel() {
   app.get('/get-excel-rows', async (req, res) => {
     try {
       const ExcelJS = require('exceljs');
-      const excelPath = path.join(__dirname, '..', 'form automation', 'farmers.xlsx');
+      const excelPath = path.join(CLIENT_BASE_DIR, '..', 'form automation', 'farmers.xlsx');
       if (!fs.existsSync(excelPath)) return res.json({ ok: true, rows: [] });
 
       const wb = new ExcelJS.Workbook();
@@ -593,7 +597,7 @@ function startControlPanel() {
   app.post('/reset-excel', async (req, res) => {
     try {
       const ExcelJS = require('exceljs');
-      const excelPath = path.join(__dirname, '..', 'form automation', 'farmers.xlsx');
+      const excelPath = path.join(CLIENT_BASE_DIR, '..', 'form automation', 'farmers.xlsx');
       const wb = new ExcelJS.Workbook();
       await wb.xlsx.readFile(excelPath);
       const ws = wb.worksheets[0];

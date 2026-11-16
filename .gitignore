@@ -4,3 +4,6 @@ browser-profile/
 .env.local
 *.log
 client/out.txt
+dist-release/
+dist-protected/
+user-session.json

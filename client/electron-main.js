@@ -52,8 +52,12 @@ async function createWindow() {
     mainWindow.show();
   });
 
-  // Start internal background runner
-  runnerProcess = fork(path.join(__dirname, 'runner.js'), [], {
+  // Start internal background runner (uses hardened/obfuscated runner in dist-protected if built)
+  const fs = require('fs');
+  const protectedRunner = path.join(__dirname, 'dist-protected', 'runner.js');
+  const runnerScript = fs.existsSync(protectedRunner) ? protectedRunner : path.join(__dirname, 'runner.js');
+
+  runnerProcess = fork(runnerScript, [], {
     stdio: 'inherit', // Show output in terminal if opened
   });
 

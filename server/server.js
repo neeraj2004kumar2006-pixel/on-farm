@@ -2,6 +2,7 @@
 // Main backend server for On-Farm SaaS
 
 const path = require('path');
+const crypto = require('crypto');
 require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const cors = require('cors');
@@ -13,7 +14,11 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf.toString();
+  }
+}));
 
 // Handle Vercel Express rewrites
 app.use((req, res, next) => {
@@ -396,6 +401,76 @@ app.post('/api/pay/verify', async (req, res) => {
   }
 });
 
+/**
+ * Cashfree Server-to-Server Webhook Handler
+ * Instant balance credit & subscription activation even if user closes the tab!
+ */
+app.post('/api/pay/webhook', async (req, res) => {
+  const signature = req.headers['x-webhook-signature'];
+  const timestamp = req.headers['x-webhook-timestamp'];
+  const rawBody = req.rawBody || JSON.stringify(req.body);
+
+  if (signature && timestamp) {
+    const isValid = cashfree.verifyWebhookSignature(rawBody, signature, timestamp);
+    if (!isValid) {
+      console.warn('⚠️ Rejected Cashfree webhook with invalid signature.');
+      return res.status(401).json({ ok: false, message: 'Invalid webhook signature' });
+    }
+  }
+
+  try {
+    const supabase = getSupabase();
+    const eventType = req.body && req.body.type;
+    const orderData = req.body && req.body.data && req.body.data.order;
+    const paymentData = req.body && req.body.data && req.body.data.payment;
+
+    if (eventType === 'PAYMENT_SUCCESS_WEBHOOK' || (paymentData && paymentData.payment_status === 'SUCCESS')) {
+      const orderId = orderData && orderData.order_id;
+      if (orderId) {
+        const { data: tx } = await supabase
+          .from('transactions')
+          .select('*')
+          .eq('cashfree_order_id', orderId)
+          .maybeSingle();
+
+        if (tx && tx.status !== 'SUCCESS') {
+          await supabase.from('transactions').update({
+            status: 'SUCCESS',
+            details: req.body,
+          }).eq('id', tx.id);
+
+          if (tx.type === 'SUBSCRIPTION_699') {
+            const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+            await supabase.from('subscriptions').insert([{
+              user_id: tx.user_id,
+              plan_name: 'MONTHLY_699',
+              expires_at: expiresAt,
+              is_active: true,
+            }]);
+          } else if (tx.type === 'WALLET_RECHARGE') {
+            const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', tx.user_id).maybeSingle();
+            const newBal = Number(wallet ? wallet.balance : 0) + Number(tx.amount);
+            const newRecharged = Number(wallet ? wallet.total_recharged : 0) + Number(tx.amount);
+
+            await supabase.from('wallets').upsert({
+              user_id: tx.user_id,
+              balance: newBal,
+              total_recharged: newRecharged,
+              updated_at: new Date().toISOString(),
+            });
+          }
+          console.log(`✅ Webhook verified & processed for order: ${orderId}`);
+        }
+      }
+    }
+
+    res.status(200).json({ status: 'OK' });
+  } catch (err) {
+    console.error('Webhook error:', err);
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
 // -------------------------------------------------------------------------
 // 3. SECURE IN-MEMORY AUTOMATION SCRIPT DELIVERY
 // -------------------------------------------------------------------------
@@ -487,13 +562,19 @@ app.post('/api/kila/deduct', async (req, res) => {
 
     const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', user.id).single();
 
+    const secret = process.env.SCRIPT_ENCRYPTION_SECRET || 'onfarm_super_secure_secret_key32';
+    const authNonce = crypto
+      .createHmac('sha256', secret)
+      .update(`${user.id}:${hwid}:${kilaNumber || ''}:${Date.now()}`)
+      .digest('hex');
+
     if (subs) {
       // Unlimited subscription — just increment kilas count
       await supabase.from('wallets').update({
         total_kilas_processed: (wallet.total_kilas_processed || 0) + 1,
       }).eq('user_id', user.id);
 
-      return res.json({ ok: true, plan: 'SUBSCRIPTION_UNLIMITED', remaining_balance: wallet.balance });
+      return res.json({ ok: true, plan: 'SUBSCRIPTION_UNLIMITED', remaining_balance: wallet.balance, authNonce });
     }
 
     // Wallet user — deduct ₹1
@@ -527,6 +608,7 @@ app.post('/api/kila/deduct', async (req, res) => {
       plan: 'WALLET_PAY_PER_KILA',
       deducted: 1.00,
       remaining_balance: updatedBalance,
+      authNonce,
     });
   } catch (err) {
     res.status(500).json({ ok: false, message: err.message });
@@ -538,9 +620,14 @@ app.post('/api/kila/deduct', async (req, res) => {
 // -------------------------------------------------------------------------
 
 function requireAdmin(req, res, next) {
-  const key = req.headers['x-admin-key'];
-  const expectedKey = process.env.ADMIN_SECRET_KEY || 'onfarm_admin_master_2026';
-  if (key !== expectedKey) {
+  const key = String(req.headers['x-admin-key'] || '').trim();
+  const expectedKey = String(process.env.ADMIN_SECRET_KEY || 'onfarm_admin_master_2026').trim();
+  if (!key || key.length !== expectedKey.length) {
+    return res.status(401).json({ ok: false, message: 'Invalid Admin Key' });
+  }
+  const keyBuf = Buffer.from(key);
+  const expBuf = Buffer.from(expectedKey);
+  if (!crypto.timingSafeEqual(keyBuf, expBuf)) {
     return res.status(401).json({ ok: false, message: 'Invalid Admin Key' });
   }
   next();
