@@ -670,6 +670,38 @@
       line-height: 1.4;
     }
 
+    .form-control.input-invalid {
+      border-color: #ef4444 !important;
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+      background: #fffafa !important;
+    }
+
+    .field-warning {
+      color: #dc2626;
+      font-size: 11.5px;
+      font-weight: 600;
+      margin-top: 5px;
+      display: none;
+      align-items: center;
+      gap: 5px;
+      line-height: 1.35;
+    }
+
+    .field-warning::before {
+      content: "!";
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      background: #ef4444;
+      color: white;
+      border-radius: 50%;
+      font-size: 10px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
     .form-actions {
       display: flex;
       gap: 10px;
@@ -1121,21 +1153,21 @@
 
           <!-- Current Plan Section -->
           <div class="account-section">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <span class="section-micro-label" data-i18n="planHeading">Current Plan</span>
-              <span id="planBadge" class="plan-badge badge-inactive">INACTIVE</span>
-            </div>
+            <span class="section-micro-label" data-i18n="planHeading">Current Plan</span>
             <div class="plan-name" id="planName">Pay As You Go</div>
           </div>
 
-          <!-- 30-Day Monthly Pass Promo Card -->
-          <div class="monthly-promo-card">
+          <!-- 30-Day Monthly Pass Box -->
+          <div class="monthly-promo-card" id="monthlyPassCard">
             <div class="promo-header">
-              <span class="promo-badge">30-DAY PASS</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="promo-badge">30-DAY PASS</span>
+                <span id="planBadge" class="plan-badge badge-inactive">INACTIVE</span>
+              </div>
               <span class="promo-price">₹699</span>
             </div>
-            <div class="promo-desc">Unlimited form applications with zero per-entry deductions.</div>
-            <button data-i18n="btnBuyPass" class="btn-upgrade" onclick="buySubscription()">Monthly Pass (₹699)</button>
+            <div class="promo-desc" id="promoDesc">Unlimited form applications with zero per-entry deductions.</div>
+            <button data-i18n="btnBuyPass" class="btn-upgrade" id="btnBuyPass" onclick="buySubscription()">Monthly Pass (₹699)</button>
           </div>
         </div>
       </div>
@@ -1194,12 +1226,14 @@
             <div class="form-group">
               <label data-i18n="lblFarmerName">Farmer Name</label>
               <input type="text" id="genName" class="form-control" data-i18n-ph="phFarmerName"
-                placeholder="Enter farmer name" value="">
+                placeholder="Enter farmer name" value="" oninput="validateFarmerName(this)">
+              <div id="warnName" class="field-warning"></div>
             </div>
             <div class="form-group">
               <label data-i18n="lblKhataNo">Khata Number</label>
               <input type="text" id="genKhata" class="form-control" data-i18n-ph="phKhataNo" placeholder="e.g. 61"
-                value="">
+                value="" oninput="validateKhata(this)">
+              <div id="warnKhata" class="field-warning"></div>
             </div>
           </div>
 
@@ -1221,7 +1255,8 @@
             <div class="form-group">
               <label data-i18n="lblSowingDate">Sowing Date (DD/MM/YYYY)</label>
               <input type="text" id="genDate" class="form-control" data-i18n-ph="phSowingDate" placeholder="DD/MM/YYYY"
-                maxlength="10" oninput="formatSowingDate(this)" value="">
+                maxlength="10" oninput="formatSowingDate(this); validateDate(this)" value="">
+              <div id="warnDate" class="field-warning"></div>
             </div>
           </div>
 
@@ -1236,8 +1271,9 @@
             <div class="form-group">
               <label data-i18n="lblMurabba">Murabba Number (e.g. 67/58)</label>
               <input type="text" id="genMurabba" class="form-control" data-i18n-ph="phMurabba"
-                placeholder="e.g. 67/58 or 207/6" value="">
+                placeholder="e.g. 67/58 or 207/6" value="" oninput="validateMurabba(this)">
               <div class="help-hint" data-i18n="hintMurabba">Enter in single box (e.g. 67/58 or 207/6)</div>
+              <div id="warnMurabba" class="field-warning"></div>
             </div>
           </div>
 
@@ -1245,15 +1281,17 @@
             <div class="form-group">
               <label data-i18n="lblKilas">Kila Numbers</label>
               <input type="text" id="genKilas" class="form-control" data-i18n-ph="phKilas"
-                placeholder="e.g. 1-25 or 1, 2, 4, 7-12" value="">
+                placeholder="e.g. 1-25 or 1, 2, 4, 7-12" value="" oninput="validateKilas(this)">
               <div class="help-hint" data-i18n="hintKilas">Enter 1-25 to include all kilas in the murabba</div>
+              <div id="warnKilas" class="field-warning"></div>
             </div>
             <div class="form-group">
               <label data-i18n="lblSubKilas">Divided Kilas (with /1, /2)</label>
               <input type="text" id="genSubKilas" class="form-control" data-i18n-ph="phSubKilas"
-                placeholder="e.g. 1/1, 10/1, 11/1 (if any)" value="">
+                placeholder="e.g. 1/1, 10/1, 11/1 (if any)" value="" oninput="validateSubKilas(this)">
               <div class="help-hint" data-i18n="hintSubKilas">Enter kilas having /1 or /2 to partition them
                 automatically</div>
+              <div id="warnSubKilas" class="field-warning"></div>
             </div>
           </div>
 
@@ -1700,8 +1738,201 @@
       else input.value = v;
     }
 
+    function validateDate(input) {
+      const warn = document.getElementById('warnDate');
+      const val = input.value.trim();
+      if (!val) {
+        warn.style.display = 'none';
+        input.classList.remove('input-invalid');
+        return true;
+      }
+      if (val.length === 10) {
+        const parts = val.split('/');
+        if (parts.length === 3) {
+          const d = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10);
+          const y = parseInt(parts[2], 10);
+          if (d < 1 || d > 31 || m < 1 || m > 12 || y < 2000 || y > 2100) {
+            warn.textContent = 'Invalid date. Please enter valid DD/MM/YYYY.';
+            warn.style.display = 'flex';
+            input.classList.add('input-invalid');
+            return false;
+          }
+        }
+      }
+      warn.style.display = 'none';
+      input.classList.remove('input-invalid');
+      return true;
+    }
+
+    function validateFarmerName(input) {
+      const warn = document.getElementById('warnName');
+      const val = input.value;
+      if (!val) {
+        warn.style.display = 'none';
+        input.classList.remove('input-invalid');
+        return true;
+      }
+      if (/\d/.test(val)) {
+        warn.textContent = 'Numbers are not allowed in Farmer Name.';
+        warn.style.display = 'flex';
+        input.classList.add('input-invalid');
+        return false;
+      }
+      if (/[!@#$%^&*()_+={}\[\]:;"'<>?\/\\|~`]/.test(val)) {
+        warn.textContent = 'Special characters are not allowed in Farmer Name.';
+        warn.style.display = 'flex';
+        input.classList.add('input-invalid');
+        return false;
+      }
+      warn.style.display = 'none';
+      input.classList.remove('input-invalid');
+      return true;
+    }
+
+    function validateKhata(input) {
+      const warn = document.getElementById('warnKhata');
+      const val = input.value.trim();
+      if (!val) {
+        warn.style.display = 'none';
+        input.classList.remove('input-invalid');
+        return true;
+      }
+      if (/[a-zA-Z]/.test(val)) {
+        warn.textContent = 'Letters are not allowed. Khata number must be numeric (e.g. 61).';
+        warn.style.display = 'flex';
+        input.classList.add('input-invalid');
+        return false;
+      }
+      if (!/^[\d\s\/\-,]+$/.test(val)) {
+        warn.textContent = 'Invalid characters. Khata number must be numeric (e.g. 61 or 61/1).';
+        warn.style.display = 'flex';
+        input.classList.add('input-invalid');
+        return false;
+      }
+      warn.style.display = 'none';
+      input.classList.remove('input-invalid');
+      return true;
+    }
+
+    function validateMurabba(input) {
+      const warn = document.getElementById('warnMurabba');
+      const val = input.value.trim();
+      if (!val) {
+        warn.style.display = 'none';
+        input.classList.remove('input-invalid');
+        return true;
+      }
+      if (/[a-zA-Z]/.test(val)) {
+        warn.textContent = 'Letters are not allowed. Murabba must be numbers (e.g. 67 or 67/58).';
+        warn.style.display = 'flex';
+        input.classList.add('input-invalid');
+        return false;
+      }
+      if (!/^[\d\s\/\.]+$/.test(val)) {
+        warn.textContent = 'Invalid format. Use numbers with optional slash (e.g. 67 or 67/58).';
+        warn.style.display = 'flex';
+        input.classList.add('input-invalid');
+        return false;
+      }
+      warn.style.display = 'none';
+      input.classList.remove('input-invalid');
+      return true;
+    }
+
+    function validateKilas(input) {
+      const warn = document.getElementById('warnKilas');
+      const val = input.value.trim();
+      if (!val) {
+        warn.style.display = 'none';
+        input.classList.remove('input-invalid');
+        return true;
+      }
+      if (/[a-zA-Z]/.test(val) && !/\bto\b/i.test(val)) {
+        warn.textContent = 'Letters are not allowed in Kila numbers. Use format: 1-25 or 1, 2, 5.';
+        warn.style.display = 'flex';
+        input.classList.add('input-invalid');
+        return false;
+      }
+      const seen = new Set();
+      const duplicates = new Set();
+      const items = val.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+      for (const item of items) {
+        const rm = item.match(/^(\d+)\s*(?:-|to)\s*(\d+)$/i);
+        if (rm) {
+          const start = parseInt(rm[1], 10);
+          const end = parseInt(rm[2], 10);
+          const min = Math.min(start, end);
+          const max = Math.max(start, end);
+          for (let k = min; k <= max; k++) {
+            if (seen.has(k)) duplicates.add(k);
+            else seen.add(k);
+          }
+        } else {
+          const p = parseKilaStr(item);
+          if (p.main > 0) {
+            const key = p.sub ? `${p.main}/${p.sub}` : `${p.main}`;
+            if (seen.has(key)) duplicates.add(key);
+            else seen.add(key);
+          }
+        }
+      }
+      if (duplicates.size > 0) {
+        warn.textContent = `Duplicate kila detected: ${Array.from(duplicates).join(', ')}. Duplicates are not allowed.`;
+        warn.style.display = 'flex';
+        input.classList.add('input-invalid');
+        return false;
+      }
+      warn.style.display = 'none';
+      input.classList.remove('input-invalid');
+      return true;
+    }
+
+    function validateSubKilas(input) {
+      const warn = document.getElementById('warnSubKilas');
+      const val = input.value.trim();
+      if (!val) {
+        warn.style.display = 'none';
+        input.classList.remove('input-invalid');
+        return true;
+      }
+      if (/[a-zA-Z]/.test(val)) {
+        warn.textContent = 'Letters are not allowed in Divided Kilas (e.g. 1/1, 10/1).';
+        warn.style.display = 'flex';
+        input.classList.add('input-invalid');
+        return false;
+      }
+      const seen = new Set();
+      const duplicates = new Set();
+      const items = val.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+      for (const item of items) {
+        const p = parseKilaStr(item);
+        if (p.main > 0) {
+          const key = p.sub ? `${p.main}/${p.sub}` : `${p.main}`;
+          if (seen.has(key)) duplicates.add(key);
+          else seen.add(key);
+        }
+      }
+      if (duplicates.size > 0) {
+        warn.textContent = `Duplicate divided kila: ${Array.from(duplicates).join(', ')}.`;
+        warn.style.display = 'flex';
+        input.classList.add('input-invalid');
+        return false;
+      }
+      warn.style.display = 'none';
+      input.classList.remove('input-invalid');
+      return true;
+    }
+
     function clearFormInputs() {
-      ['genName', 'genKhata', 'genDate', 'genMurabba', 'genKilas', 'genSubKilas'].forEach(id => document.getElementById(id).value = '');
+      ['genName', 'genKhata', 'genDate', 'genMurabba', 'genKilas', 'genSubKilas'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { el.value = ''; el.classList.remove('input-invalid'); }
+      });
+      ['warnName', 'warnKhata', 'warnMurabba', 'warnKilas', 'warnSubKilas', 'warnDate'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+      });
     }
 
     function switchView(view, btn) {
@@ -1755,6 +1986,27 @@
         updateTextIfDiff('planBadge', isSub ? 'ACTIVE' : 'INACTIVE');
         updateClassIfDiff('planBadge', 'plan-badge ' + (isSub ? 'badge-active' : 'badge-inactive'));
 
+        const btnPass = document.getElementById('btnBuyPass');
+        if (btnPass) {
+          if (isSub) {
+            if (btnPass.textContent !== 'Pass Active') {
+              btnPass.textContent = 'Pass Active';
+              btnPass.style.background = '#dcfce7';
+              btnPass.style.color = '#15803d';
+              btnPass.style.border = '1px solid #86efac';
+              btnPass.style.cursor = 'default';
+            }
+          } else {
+            if (btnPass.textContent !== 'Monthly Pass (₹699)') {
+              btnPass.textContent = 'Monthly Pass (₹699)';
+              btnPass.style.background = '#00ff99';
+              btnPass.style.color = '#052e16';
+              btnPass.style.border = 'none';
+              btnPass.style.cursor = 'pointer';
+            }
+          }
+        }
+
         const dotClass = 'status-dot ' + (s.isRunning ? 'dot-running' : (s.lastError ? 'dot-error' : 'dot-stopped'));
         updateClassIfDiff('statusDot', dotClass);
         updateTextIfDiff('statusText', s.isRunning ? 'Processing' : (s.lastError ? 'Stopped / Error' : 'Ready'));
@@ -1803,51 +2055,153 @@
     }
 
     function addKilasToReview() {
-      const name = document.getElementById('genName').value.trim();
-      const khata = document.getElementById('genKhata').value.trim();
-      const crop = document.getElementById('genCrop').value.trim();
-      const sowingDate = document.getElementById('genDate').value.trim();
-      const ownership = document.getElementById('genOwnership').value.trim();
-      const murabbaVal = document.getElementById('genMurabba').value.trim();
-      const { main: muraMain, sub: muraSub } = parseMurabba(murabbaVal);
-      const kilasInput = document.getElementById('genKilas').value.trim();
-      const subKilasInput = document.getElementById('genSubKilas').value.trim();
+      const nameInput = document.getElementById('genName');
+      const khataInput = document.getElementById('genKhata');
+      const cropInput = document.getElementById('genCrop');
+      const dateInput = document.getElementById('genDate');
+      const ownInput = document.getElementById('genOwnership');
+      const muraInput = document.getElementById('genMurabba');
+      const kilasInput = document.getElementById('genKilas');
+      const subKilasInput = document.getElementById('genSubKilas');
 
-      if (!name || !khata || !muraMain || !kilasInput) {
+      const name = nameInput.value.trim();
+      const khata = khataInput.value.trim();
+      const crop = cropInput.value.trim();
+      const sowingDate = dateInput.value.trim();
+      const ownership = ownInput.value.trim();
+      const murabbaVal = muraInput.value.trim();
+      const { main: muraMain, sub: muraSub } = parseMurabba(murabbaVal);
+      const kInputVal = kilasInput.value.trim();
+      const subKInputVal = subKilasInput.value.trim();
+
+      if (!name || !khata || !muraMain || !kInputVal) {
         appAlert('Please enter Farmer Name, Khata Number, Murabba and Kila numbers.', 'Missing Details', 'warning');
         return;
       }
 
+      if (/\d/.test(name)) {
+        appAlert('Numbers are not allowed in Farmer Name. Please enter a valid name.', 'Invalid Farmer Name', 'warning');
+        nameInput.focus();
+        return;
+      }
+
+      if (/[a-zA-Z]/.test(khata)) {
+        appAlert('Letters are not allowed in Khata Number. Please enter numbers only.', 'Invalid Khata Number', 'warning');
+        khataInput.focus();
+        return;
+      }
+
+      if (muraMain <= 0) {
+        appAlert('Please enter a valid Murabba number (e.g. 67 or 67/58).', 'Invalid Murabba', 'warning');
+        muraInput.focus();
+        return;
+      }
+
       const subMap = new Map();
-      if (subKilasInput) {
-        subKilasInput.split(/[,\n]/).map(s => s.trim()).filter(Boolean).forEach(item => {
+      if (subKInputVal) {
+        subKInputVal.split(/[,\n]/).map(s => s.trim()).filter(Boolean).forEach(item => {
           const p = parseKilaStr(item);
-          if (p.main > 0) { if (!subMap.has(p.main)) subMap.set(p.main, []); subMap.get(p.main).push(p); }
+          if (p.main > 0) {
+            if (!subMap.has(p.main)) subMap.set(p.main, []);
+            const exists = subMap.get(p.main).some(x => x.sub === p.sub);
+            if (!exists) subMap.get(p.main).push(p);
+          }
         });
       }
 
-      kilasInput.split(/[,\n]/).map(s => s.trim()).filter(Boolean).forEach(item => {
+      const newRows = [];
+      const inputSeenKilas = new Set();
+      const inputDuplicateKilas = new Set();
+
+      const existingKhasras = new Set(stagedRows.map(r => r.khasraNo));
+      const alreadyInListKilas = [];
+
+      kInputVal.split(/[,\n]/).map(s => s.trim()).filter(Boolean).forEach(item => {
         const rm = item.match(/^(\d+)\s*(?:-|to)\s*(\d+)$/i);
         if (rm) {
-          for (let k = parseInt(rm[1], 10); k <= parseInt(rm[2], 10); k++) {
+          const start = parseInt(rm[1], 10);
+          const end = parseInt(rm[2], 10);
+          const min = Math.min(start, end);
+          const max = Math.max(start, end);
+          for (let k = min; k <= max; k++) {
+            if (inputSeenKilas.has(k)) {
+              inputDuplicateKilas.add(k);
+              continue;
+            }
+            inputSeenKilas.add(k);
+
             if (subMap.has(k)) {
               subMap.get(k).forEach(si => {
-                stagedRows.push({ kilaStr: si.sub ? `${si.main}/${si.sub}` : `${si.main}`, muraMain, muraSub, khasraNo: makeKhasraJS(muraMain, muraSub, si.main, si.sub), name, khataNo: khata, crop, sowingDate, ownership, farmerName: name, status: '', error: '' });
+                const kh = makeKhasraJS(muraMain, muraSub, si.main, si.sub);
+                const kStr = si.sub ? `${si.main}/${si.sub}` : `${si.main}`;
+                if (existingKhasras.has(kh)) {
+                  alreadyInListKilas.push(kStr);
+                } else {
+                  existingKhasras.add(kh);
+                  newRows.push({ kilaStr: kStr, muraMain, muraSub, khasraNo: kh, name, khataNo: khata, crop, sowingDate, ownership, farmerName: name, status: '', error: '' });
+                }
               });
             } else {
-              stagedRows.push({ kilaStr: String(k), muraMain, muraSub, khasraNo: makeKhasraJS(muraMain, muraSub, k, 0), name, khataNo: khata, crop, sowingDate, ownership, farmerName: name, status: '', error: '' });
+              const kh = makeKhasraJS(muraMain, muraSub, k, 0);
+              const kStr = String(k);
+              if (existingKhasras.has(kh)) {
+                alreadyInListKilas.push(kStr);
+              } else {
+                existingKhasras.add(kh);
+                newRows.push({ kilaStr: kStr, muraMain, muraSub, khasraNo: kh, name, khataNo: khata, crop, sowingDate, ownership, farmerName: name, status: '', error: '' });
+              }
             }
           }
         } else {
           const p = parseKilaStr(item);
-          if (p.main > 0) stagedRows.push({ kilaStr: p.sub ? `${p.main}/${p.sub}` : `${p.main}`, muraMain, muraSub, khasraNo: makeKhasraJS(muraMain, muraSub, p.main, p.sub), name, khataNo: khata, crop, sowingDate, ownership, farmerName: name, status: '', error: '' });
+          if (p.main > 0) {
+            const kKey = p.sub ? `${p.main}/${p.sub}` : `${p.main}`;
+            if (inputSeenKilas.has(kKey)) {
+              inputDuplicateKilas.add(kKey);
+              return;
+            }
+            inputSeenKilas.add(kKey);
+
+            const kh = makeKhasraJS(muraMain, muraSub, p.main, p.sub);
+            if (existingKhasras.has(kh)) {
+              alreadyInListKilas.push(kKey);
+            } else {
+              existingKhasras.add(kh);
+              newRows.push({ kilaStr: kKey, muraMain, muraSub, khasraNo: kh, name, khataNo: khata, crop, sowingDate, ownership, farmerName: name, status: '', error: '' });
+            }
+          }
         }
       });
 
+      if (newRows.length === 0) {
+        if (alreadyInListKilas.length > 0) {
+          appAlert(`Kila number(s) [${alreadyInListKilas.join(', ')}] are already present in the list. Duplicate entries cannot be added.`, 'Duplicate Detected', 'warning');
+        } else if (inputDuplicateKilas.size > 0) {
+          appAlert(`Duplicate kila number(s) [${Array.from(inputDuplicateKilas).join(', ')}] entered. Duplicate kilas are not permitted.`, 'Duplicate Detected', 'warning');
+        } else {
+          appAlert('No valid kila numbers to add.', 'Invalid Input', 'warning');
+        }
+        return;
+      }
+
+      stagedRows.push(...newRows);
       renderStagedTable();
       document.getElementById('saveAlert').style.display = 'none';
-      document.getElementById('genKilas').value = '';
-      document.getElementById('genSubKilas').value = '';
+      kilasInput.value = '';
+      subKilasInput.value = '';
+      const wK = document.getElementById('warnKilas');
+      if (wK) wK.style.display = 'none';
+      const wS = document.getElementById('warnSubKilas');
+      if (wS) wS.style.display = 'none';
+      kilasInput.classList.remove('input-invalid');
+      subKilasInput.classList.remove('input-invalid');
+
+      if (alreadyInListKilas.length > 0 || inputDuplicateKilas.size > 0) {
+        const msgs = [];
+        if (inputDuplicateKilas.size > 0) msgs.push(`Filtered out duplicates: ${Array.from(inputDuplicateKilas).join(', ')}`);
+        if (alreadyInListKilas.length > 0) msgs.push(`Skipped kilas already in list: ${alreadyInListKilas.join(', ')}`);
+        appAlert(`Added ${newRows.length} record(s).\n\n${msgs.join('\n')}`, 'Duplicates Handled', 'info');
+      }
     }
 
     function renderStagedTable() {
