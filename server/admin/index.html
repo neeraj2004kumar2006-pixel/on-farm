@@ -389,6 +389,9 @@ module.exports = {
               <button class="btn ${u.is_blocked ? 'btn-primary' : 'btn-danger'}" style="padding:4px 10px; font-size:0.8rem;" onclick="toggleBlock('${u.id}', ${!u.is_blocked})">
                 ${u.is_blocked ? 'Unblock' : 'Block User'}
               </button>
+              <button class="btn btn-secondary" style="padding:4px 10px; font-size:0.8rem; margin-left:6px; color:#f87171; border-color: rgba(239,68,68,0.3);" onclick="deleteUser('${u.id}', '${u.phone}')">
+                Delete
+              </button>
             </td>
           </tr>
         `;
@@ -421,6 +424,19 @@ module.exports = {
         body: JSON.stringify({ userId })
       });
       fetchUsers();
+    }
+
+    async function deleteUser(userId, phone) {
+      if (!confirm(`Are you sure you want to permanently delete user +91 ${phone}? This cannot be undone.`)) return;
+      const res = await fetch(`${getBackendUrl()}/api/admin/user/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
+        body: JSON.stringify({ userId })
+      });
+      const data = await res.json();
+      alert(data.message || 'User deleted.');
+      fetchUsers();
+      fetchStats();
     }
 
     async function grantSub(userId) {

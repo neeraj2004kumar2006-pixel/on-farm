@@ -101,6 +101,21 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const supabase = getSupabase();
 
+    // Check if this computer (HWID) is already registered to a DIFFERENT phone number
+    const { data: existingHwidUsers } = await supabase
+      .from('users')
+      .select('id, phone, name')
+      .eq('hwid', hwid);
+
+    const otherUserOnThisDevice = (existingHwidUsers || []).find(u => u.phone !== cleanPhone);
+    if (otherUserOnThisDevice) {
+      return res.status(403).json({
+        ok: false,
+        code: 'HWID_ALREADY_BOUND',
+        message: `This computer is permanently locked to mobile +91 ${otherUserOnThisDevice.phone}. Ek PC par doosra operator account register nahi ho sakta. Device badalne ke liye Admin se Device Reset karwayein.`,
+      });
+    }
+
     // Check if user exists
     let { data: user, error } = await supabase
       .from('users')
@@ -111,14 +126,14 @@ app.post('/api/auth/login', async (req, res) => {
     if (error) throw error;
 
     if (!user) {
-      // Auto-register new user
+      // Auto-register new user — permanently binds HWID to this device!
       const { data: newUser, error: createErr } = await supabase
         .from('users')
         .insert([{
           phone: cleanPhone,
-          name: name || `Farmer_${cleanPhone.slice(-4)}`,
+          name: name || `Operator_${cleanPhone.slice(-4)}`,
           email: email || '',
-          hwid: hwid, // First login binds HWID to this device!
+          hwid: hwid, // First login permanently binds HWID to this device!
         }])
         .select('*, wallets(*), subscriptions(*)')
         .single();
@@ -532,6 +547,23 @@ app.post('/api/admin/user/reset-hwid', requireAdmin, async (req, res) => {
     const supabase = getSupabase();
     await supabase.from('users').update({ hwid: null }).eq('id', userId);
     res.json({ ok: true, message: 'HWID reset successfully. User can now bind a new PC.' });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+/**
+ * Admin: Permanently Delete User
+ */
+app.post('/api/admin/user/delete', requireAdmin, async (req, res) => {
+  const { userId } = req.body;
+  try {
+    const supabase = getSupabase();
+    await supabase.from('wallets').delete().eq('user_id', userId);
+    await supabase.from('subscriptions').delete().eq('user_id', userId);
+    await supabase.from('transactions').delete().eq('user_id', userId);
+    await supabase.from('users').delete().eq('id', userId);
+    res.json({ ok: true, message: 'User deleted successfully.' });
   } catch (err) {
     res.status(500).json({ ok: false, message: err.message });
   }

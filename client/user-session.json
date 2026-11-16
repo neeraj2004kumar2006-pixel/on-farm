@@ -1,5 +1,10 @@
 {
-  "walletBalance": 0,
-  "user": null,
+  "walletBalance": 3,
+  "user": {
+    "id": "e920ee7f-de17-4015-8fc3-834cb915b3df",
+    "name": "Neeraj Poonia",
+    "phone": "7740892754",
+    "hwid": "7faf642defa3c1d80c58c443993c0e10"
+  },
   "subscription": null
 }

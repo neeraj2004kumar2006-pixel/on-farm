@@ -620,7 +620,16 @@ function startControlPanel() {
       if (!cleanPhone || cleanPhone.length !== 10) {
         return res.status(400).json({ ok: false, message: 'Please enter a valid 10-digit mobile number' });
       }
-      const cleanName = String(name || '').trim() || `Operator_${cleanPhone.slice(-4)}`;
+
+      // Hard permanent lock: If this PC is already bound to an operator, forbid changing to any other number
+      if (state.user && state.user.phone && state.user.phone !== cleanPhone) {
+        return res.status(403).json({
+          ok: false,
+          message: `This computer is permanently locked to +91 ${state.user.phone}. Operator mobile number cannot be changed from this PC. Please contact Admin for device transfer.`
+        });
+      }
+
+      const cleanName = String(name || '').trim() || (state.user && state.user.name) || `Operator_${cleanPhone.slice(-4)}`;
 
       const loginRes = await axios.post(`${CLOUD_URL}/api/auth/login`, {
         phone: cleanPhone,
@@ -645,20 +654,20 @@ function startControlPanel() {
         return res.status(400).json({ ok: false, message: loginRes.data ? loginRes.data.message : 'Registration failed' });
       }
     } catch (err) {
-      return res.status(500).json({ ok: false, message: err.response ? err.response.data.message : err.message });
+      return res.status(500).json({ ok: false, message: err.response && err.response.data ? err.response.data.message : err.message });
     }
   });
 
   app.post('/create-payment', async (req, res) => {
     try {
-      const { type, amount, phone, name } = req.body;
+      const { type, amount } = req.body;
 
-      // If user supplied a phone number, bind/sync it
-      const cleanPhone = String(phone || (state.user && state.user.phone) || '').replace(/\D/g, '').slice(-10);
-      const cleanName = String(name || (state.user && state.user.name) || '').trim() || `Operator_${cleanPhone.slice(-4)}`;
+      // Always enforce the locked operator phone on this PC
+      const cleanPhone = (state.user && state.user.phone) || String(req.body.phone || '').replace(/\D/g, '').slice(-10);
+      const cleanName = (state.user && state.user.name) || `Operator_${cleanPhone.slice(-4)}`;
 
       if (!cleanPhone || cleanPhone.length !== 10) {
-        return res.status(400).json({ ok: false, message: 'Please enter a valid 10-digit mobile number.' });
+        return res.status(400).json({ ok: false, message: 'Please link your 10-digit mobile number before making a payment.' });
       }
 
       if (!state.user || state.user.phone !== cleanPhone) {
@@ -679,7 +688,7 @@ function startControlPanel() {
             }, null, 2));
           } catch {}
         } else {
-          return res.status(400).json({ ok: false, message: 'User account verification failed.' });
+          return res.status(400).json({ ok: false, message: loginRes.data ? loginRes.data.message : 'User account verification failed.' });
         }
       }
 

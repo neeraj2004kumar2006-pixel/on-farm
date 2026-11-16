@@ -1449,23 +1449,40 @@
 
   <!-- ═══════════ OPERATOR PROFILE MODAL ═══════════ -->
   <div id="profileModal" class="modal-overlay">
-    <div class="modal-card" style="max-width: 420px; text-align: left;">
-      <div class="modal-title" style="text-align: center;">Operator Account Setup</div>
-      <div class="modal-desc" style="text-align: center; margin-bottom: 18px;">
-        Enter your mobile number to link your license, wallet balance and monthly pass to this computer.
+    <div class="modal-card" style="max-width: 440px; text-align: left;">
+      <div style="text-align: center; margin-bottom: 14px;">
+        <div id="profileLockBadge" style="display: none; align-items: center; gap: 6px; background: #f0fdf4; border: 1px solid #86efac; color: #15803d; padding: 4px 12px; border-radius: 20px; font-size: 11.5px; font-weight: 700; margin-bottom: 10px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          Hardware Device Locked
+        </div>
+        <div class="modal-title" id="profileModalTitle">Operator Account Setup</div>
+        <div class="modal-desc" id="profileModalDesc" style="margin-bottom: 0;">
+          Enter your mobile number to link your license, wallet balance and monthly pass to this computer.
+        </div>
       </div>
+
       <div class="form-group" style="margin-bottom: 14px;">
         <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 5px; display: block;">10-Digit Mobile Number *</label>
         <input type="tel" id="profilePhoneInput" class="form-control" placeholder="e.g. 9812345678" maxlength="10">
         <div id="warnProfilePhone" class="field-warning"></div>
       </div>
-      <div class="form-group" style="margin-bottom: 20px;">
-        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 5px; display: block;">Operator / Shop Name (Optional)</label>
+
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 5px; display: block;">Operator / Shop Name</label>
         <input type="text" id="profileNameInput" class="form-control" placeholder="e.g. CSC Center / Operator Name">
       </div>
+
+      <div id="profileLockNotice" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; font-size: 12px; color: #64748b; line-height: 1.5; margin-bottom: 18px;">
+        <div style="font-weight: 700; color: #334155; margin-bottom: 3px; display: flex; align-items: center; gap: 5px;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+          Device Locked & Secured
+        </div>
+        This computer is permanently linked to this mobile number. License, wallet and submissions are tied to this PC's Hardware ID. To transfer to another PC, contact Administrator.
+      </div>
+
       <div class="modal-footer">
-        <button class="btn btn-light" onclick="closeModal('profileModal')">Cancel</button>
-        <button class="btn btn-primary" id="saveProfileBtn" onclick="saveOperatorProfile()">Save & Link Account</button>
+        <button class="btn btn-light" id="profileCancelBtn" onclick="closeModal('profileModal')">Cancel</button>
+        <button class="btn btn-primary" id="saveProfileBtn" onclick="saveOperatorProfile()">Register & Lock to this PC</button>
       </div>
     </div>
   </div>
@@ -2383,19 +2400,85 @@
     function openRechargeModal() {
       const savedPhone = localStorage.getItem('onfarm_operator_phone') || '';
       const rPhone = document.getElementById('rechargePhone');
-      if (rPhone) rPhone.value = (savedPhone && savedPhone !== '9999999999') ? savedPhone : '';
+      if (rPhone) {
+        if (savedPhone && savedPhone !== '9999999999') {
+          rPhone.value = savedPhone;
+          rPhone.readOnly = true;
+          rPhone.style.background = '#f8fafc';
+          rPhone.style.color = '#475569';
+          rPhone.style.cursor = 'not-allowed';
+        } else {
+          rPhone.value = '';
+          rPhone.readOnly = false;
+          rPhone.style.background = 'white';
+          rPhone.style.color = 'inherit';
+          rPhone.style.cursor = 'text';
+        }
+      }
       document.getElementById('rechargeModal').style.display = 'flex';
     }
 
     function openProfileModal() {
       const savedPhone = localStorage.getItem('onfarm_operator_phone') || '';
       const savedName = localStorage.getItem('onfarm_operator_name') || '';
+      const isLocked = Boolean(savedPhone && savedPhone !== '9999999999' && savedPhone.length === 10);
+
       const pIn = document.getElementById('profilePhoneInput');
       const nIn = document.getElementById('profileNameInput');
-      if (pIn) pIn.value = (savedPhone && savedPhone !== '9999999999') ? savedPhone : '';
-      if (nIn) nIn.value = savedName;
+      const title = document.getElementById('profileModalTitle');
+      const desc = document.getElementById('profileModalDesc');
+      const badge = document.getElementById('profileLockBadge');
+      const lockNotice = document.getElementById('profileLockNotice');
+      const saveBtn = document.getElementById('saveProfileBtn');
+      const cancelBtn = document.getElementById('profileCancelBtn');
       const warn = document.getElementById('warnProfilePhone');
       if (warn) warn.style.display = 'none';
+
+      if (isLocked) {
+        if (title) title.textContent = 'Registered Operator Account';
+        if (desc) desc.textContent = 'This computer is permanently locked to this operator profile.';
+        if (badge) badge.style.display = 'inline-flex';
+        if (lockNotice) lockNotice.style.display = 'block';
+        if (saveBtn) saveBtn.style.display = 'none';
+        if (cancelBtn) cancelBtn.textContent = 'Close';
+
+        if (pIn) {
+          pIn.value = savedPhone;
+          pIn.readOnly = true;
+          pIn.style.background = '#f8fafc';
+          pIn.style.cursor = 'not-allowed';
+        }
+        if (nIn) {
+          nIn.value = savedName || 'Operator';
+          nIn.readOnly = true;
+          nIn.style.background = '#f8fafc';
+          nIn.style.cursor = 'not-allowed';
+        }
+      } else {
+        if (title) title.textContent = 'Operator Account Registration';
+        if (desc) desc.textContent = 'Enter your 10-digit mobile number to permanently link this computer with your On-Farm license & wallet.';
+        if (badge) badge.style.display = 'none';
+        if (lockNotice) lockNotice.style.display = 'none';
+        if (saveBtn) {
+          saveBtn.style.display = 'inline-flex';
+          saveBtn.textContent = 'Register & Lock to this PC';
+        }
+        if (cancelBtn) cancelBtn.textContent = 'Cancel';
+
+        if (pIn) {
+          pIn.value = '';
+          pIn.readOnly = false;
+          pIn.style.background = 'white';
+          pIn.style.cursor = 'text';
+        }
+        if (nIn) {
+          nIn.value = '';
+          nIn.readOnly = false;
+          nIn.style.background = 'white';
+          nIn.style.cursor = 'text';
+        }
+      }
+
       document.getElementById('profileModal').style.display = 'flex';
     }
 
@@ -2415,10 +2498,19 @@
         return;
       }
 
+      const ok = await showAppDialog({
+        title: 'Confirm Hardware Device Lock',
+        message: `Are you sure you want to permanently lock this computer to mobile +91 ${phone}? Once registered, this computer cannot be used with any other number without Administrator approval.`,
+        type: 'warning',
+        confirmText: 'Confirm & Lock to this PC',
+        cancelText: 'Cancel'
+      });
+      if (!ok) return;
+
       const btn = document.getElementById('saveProfileBtn');
       if (btn) {
         btn.disabled = true;
-        btn.textContent = 'Saving...';
+        btn.textContent = 'Registering...';
       }
 
       try {
@@ -2433,7 +2525,7 @@
           localStorage.setItem('onfarm_operator_name', name);
           closeModal('profileModal');
           checkStatus();
-          appAlert(`Account linked to +91 ${phone}!`, 'Account Linked', 'success');
+          appAlert(`Device successfully registered and locked to +91 ${phone}!`, 'Device Locked', 'success');
         } else {
           appAlert(data.message || 'Failed to link account.', 'Account Error', 'danger');
         }
@@ -2442,7 +2534,7 @@
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.textContent = 'Save & Link Account';
+          btn.textContent = 'Register & Lock to this PC';
         }
       }
     }
