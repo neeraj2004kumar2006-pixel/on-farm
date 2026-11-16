@@ -574,16 +574,31 @@ app.post('/api/admin/user/delete', requireAdmin, async (req, res) => {
  */
 app.post('/api/admin/user/adjust-wallet', requireAdmin, async (req, res) => {
   const { userId, amountDelta } = req.body; // e.g. +100 or -50
+  if (!userId || amountDelta === undefined || isNaN(Number(amountDelta))) {
+    return res.status(400).json({ ok: false, message: 'userId and numeric amountDelta are required' });
+  }
   try {
     const supabase = getSupabase();
-    const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', userId).single();
+    const { data: wallet, error: wErr } = await supabase.from('wallets').select('*').eq('user_id', userId).maybeSingle();
+    if (wErr) throw wErr;
+
     const current = Number(wallet ? wallet.balance : 0);
     const updated = Math.max(0, current + Number(amountDelta));
 
-    await supabase.from('wallets').update({
-      balance: updated,
-      updated_at: new Date().toISOString(),
-    }).eq('user_id', userId);
+    if (!wallet) {
+      await supabase.from('wallets').insert([{
+        user_id: userId,
+        balance: updated,
+        total_recharged: Math.max(0, Number(amountDelta)),
+        total_kilas_processed: 0,
+      }]);
+    } else {
+      await supabase.from('wallets').update({
+        balance: updated,
+        total_recharged: Number(amountDelta) > 0 ? (Number(wallet.total_recharged || 0) + Number(amountDelta)) : wallet.total_recharged,
+        updated_at: new Date().toISOString(),
+      }).eq('user_id', userId);
+    }
 
     res.json({ ok: true, message: `Wallet updated: ₹${updated}`, balance: updated });
   } catch (err) {
