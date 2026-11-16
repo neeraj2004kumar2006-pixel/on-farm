@@ -62,8 +62,41 @@
     }
 
     .container {
-      max-width: 880px;
+      max-width: 1240px;
       margin: 0 auto;
+    }
+
+    /* ── DASHBOARD 2-COLUMN GRID ── */
+    .dashboard-grid {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .sidebar-col {
+      width: 320px;
+      flex-shrink: 0;
+    }
+
+    .main-col {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .sidebar-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    @media (max-width: 940px) {
+      .dashboard-grid {
+        flex-direction: column;
+      }
+      .sidebar-col {
+        width: 100%;
+      }
     }
 
     /* ── TOP ACCENT BAR ── */
@@ -569,7 +602,7 @@
       font-family: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
       font-size: 12px;
       padding: 14px 16px;
-      height: 170px;
+      height: 240px;
       overflow-y: auto;
       white-space: pre-wrap;
       line-height: 1.6;
@@ -977,36 +1010,42 @@
       <code id="hwidDisplay" style="display: none;"></code>
     </div>
 
-    <!-- ═══════════ LICENSE & WALLET HERO ═══════════ -->
-    <div class="license-card">
-      <div class="license-top">
-        <div class="plan-meta">
-          <span class="plan-label" data-i18n="planHeading">Current Plan</span>
-          <span class="plan-name" id="planName">Pay As You Go</span>
+    <!-- ═══════════ MAIN 2-COLUMN DASHBOARD ═══════════ -->
+    <div class="dashboard-grid">
+
+      <!-- LEFT COLUMN: Plan, Monthly Pass, Balance -->
+      <div class="sidebar-col">
+        <div class="license-card">
+          <div class="license-top">
+            <div class="plan-meta">
+              <span class="plan-label" data-i18n="planHeading">Current Plan</span>
+              <span class="plan-name" id="planName">Pay As You Go</span>
+            </div>
+            <div id="planBadge" class="plan-badge">ACTIVE</div>
+          </div>
+
+          <div class="license-divider"></div>
+
+          <div class="bal-group">
+            <span class="bal-label" data-i18n="walletHeading">Available Balance</span>
+            <span class="bal-value" id="walletBal">₹1.00</span>
+          </div>
+
+          <div class="sidebar-actions">
+            <button data-i18n="btnBuyPass" class="btn-monthly-pass" style="width:100%; justify-content:center; padding:10px 14px;" onclick="buySubscription()">Monthly Pass (₹699)</button>
+            <button data-i18n="btnRecharge" class="btn-topup" style="width:100%; justify-content:center; padding:9px 14px;" onclick="openRechargeModal()">+ Add Balance</button>
+          </div>
         </div>
-        <div id="planBadge" class="plan-badge">ACTIVE</div>
       </div>
 
-      <div class="license-divider"></div>
-
-      <div class="license-bottom">
-        <div class="bal-group">
-          <span class="bal-label" data-i18n="walletHeading">Available Balance</span>
-          <span class="bal-value" id="walletBal">₹1.00</span>
+      <!-- RIGHT COLUMN: The 3 Tabs & Active Content -->
+      <div class="main-col">
+        <!-- ═══════════ TABS ═══════════ -->
+        <div class="tabs-nav">
+          <button data-i18n="tabRunner" class="tab-btn active" onclick="switchView('runner', this)">Application Processing</button>
+          <button data-i18n="tabGenerator" class="tab-btn" onclick="switchView('generator', this)">Land & Farmer Entry</button>
+          <button data-i18n="tabPreview" class="tab-btn" onclick="switchView('preview', this)">Saved Records</button>
         </div>
-        <div class="license-actions">
-          <button data-i18n="btnRecharge" class="btn-topup" onclick="openRechargeModal()">+ Add Balance</button>
-          <button data-i18n="btnBuyPass" class="btn-monthly-pass" onclick="buySubscription()">Monthly Pass (₹699)</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ═══════════ TABS ═══════════ -->
-    <div class="tabs-nav">
-      <button data-i18n="tabRunner" class="tab-btn active" onclick="switchView('runner', this)">Application Processing</button>
-      <button data-i18n="tabGenerator" class="tab-btn" onclick="switchView('generator', this)">Land & Farmer Entry</button>
-      <button data-i18n="tabPreview" class="tab-btn" onclick="switchView('preview', this)">Saved Records</button>
-    </div>
 
     <!-- ═══════════ TAB 1: APPLICATION PROCESSING ═══════════ -->
     <div id="viewRunner" class="card">
@@ -1177,6 +1216,9 @@
         </table>
       </div>
     </div>
+
+      </div><!-- /.main-col -->
+    </div><!-- /.dashboard-grid -->
 
   </div>
 
