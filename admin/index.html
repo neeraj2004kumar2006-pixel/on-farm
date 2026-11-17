@@ -1,785 +1,431 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>On-Farm | Master Super Admin Portal</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #090d16;
-      --card-bg: rgba(18, 24, 38, 0.85);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --text: #f1f5f9;
-      --text-muted: #94a3b8;
-      --primary: #10b981;
-      --primary-hover: #059669;
-      --accent: #3b82f6;
-      --danger: #ef4444;
-      --danger-hover: #dc2626;
-      --warning: #f59e0b;
-      --purple: #8b5cf6;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>On-Farm Admin</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh;font-size:14px}
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
-    body { background-color: var(--bg); color: var(--text); padding-bottom: 60px; min-height: 100vh; }
-    
-    /* Session Login Gate Overlay */
-    #adminLoginGate {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(9, 13, 22, 0.96);
-      backdrop-filter: blur(12px);
-      z-index: 9999;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .gate-box {
-      background: #111827;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 16px;
-      padding: 32px;
-      max-width: 440px;
-      width: 100%;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
-      text-align: center;
-    }
-    .gate-logo {
-      width: 52px;
-      height: 52px;
-      background: linear-gradient(135deg, #10b981, #059669);
-      border-radius: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 18px;
-      font-size: 24px;
-      box-shadow: 0 0 24px rgba(16, 185, 129, 0.35);
-    }
-    .gate-title { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 6px; }
-    .gate-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 22px; line-height: 1.5; }
-    .gate-input {
-      width: 100%;
-      padding: 13px 16px;
-      background: #1e293b;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 10px;
-      color: #fff;
-      font-size: 15px;
-      outline: none;
-      margin-bottom: 16px;
-      font-family: 'JetBrains Mono', monospace;
-      letter-spacing: 1px;
-    }
-    .gate-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
-    .gate-btn {
-      width: 100%;
-      padding: 13px;
-      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      border: none;
-      border-radius: 10px;
-      color: #fff;
-      font-weight: 700;
-      font-size: 14.5px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .gate-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4); }
-    .gate-err { color: #f87171; font-size: 12.5px; margin-top: 10px; min-height: 18px; font-weight: 600; }
+/* ── LOGIN GATE ── */
+#gate{display:none;position:fixed;inset:0;background:#0f1117;z-index:999;align-items:center;justify-content:center}
+.gate-box{background:#1a1f2e;border:1px solid #2d3748;border-radius:12px;padding:36px;width:380px;text-align:center}
+.gate-logo{font-size:32px;margin-bottom:12px}
+.gate-box h2{font-size:18px;font-weight:700;margin-bottom:6px}
+.gate-box p{font-size:13px;color:#718096;margin-bottom:24px;line-height:1.5}
+.gate-box input{width:100%;padding:12px 14px;background:#0f1117;border:1px solid #2d3748;border-radius:8px;color:#fff;font-size:14px;outline:none;margin-bottom:12px}
+.gate-box input:focus{border-color:#38a169}
+.gate-box button{width:100%;padding:12px;background:#38a169;border:none;border-radius:8px;color:#fff;font-weight:700;font-size:14px;cursor:pointer}
+.gate-box button:hover{background:#2f855a}
+#gateErr{color:#fc8181;font-size:12px;margin-top:8px;min-height:16px}
 
-    /* Top Nav */
-    .top-nav {
-      background: rgba(18, 24, 38, 0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--card-border);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      padding: 14px 28px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .brand { display: flex; align-items: center; gap: 12px; }
-    .brand-icon {
-      width: 36px; height: 36px; background: linear-gradient(135deg, #10b981, #059669);
-      border-radius: 10px; display: flex; align-items: center; justify-content: center;
-      font-weight: 800; font-size: 18px; color: #fff;
-    }
-    .brand-text h1 { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
-    .brand-text p { font-size: 11px; color: var(--text-muted); }
-    .nav-actions { display: flex; align-items: center; gap: 12px; }
-    .status-pill {
-      display: flex; align-items: center; gap: 7px;
-      padding: 6px 12px; background: rgba(255, 255, 255, 0.04);
-      border: 1px solid var(--card-border); border-radius: 20px;
-      font-size: 12px; font-weight: 600; color: var(--text-muted);
-    }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
-    .session-pill {
-      display: flex; align-items: center; gap: 6px;
-      padding: 6px 12px; background: rgba(59, 130, 246, 0.12);
-      border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 20px;
-      font-size: 12px; font-weight: 700; color: #60a5fa;
-    }
-    .btn-logout {
-      padding: 6px 14px; background: rgba(239, 68, 68, 0.12);
-      border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 20px;
-      font-size: 12px; font-weight: 700; color: #f87171; cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn-logout:hover { background: rgba(239, 68, 68, 0.25); color: #fff; }
+/* ── TOPBAR ── */
+.topbar{background:#1a1f2e;border-bottom:1px solid #2d3748;padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.topbar-brand{display:flex;align-items:center;gap:10px}
+.topbar-brand .logo{width:32px;height:32px;background:#38a169;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.topbar-brand h1{font-size:15px;font-weight:700}
+.topbar-brand span{font-size:12px;color:#718096;margin-left:4px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.chip{display:flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid #2d3748;background:#0f1117;color:#a0aec0}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:#48bb78}
+.chip.timer{color:#90cdf4;border-color:#2b4c7e;background:#1a2744}
+.btn-out{padding:5px 14px;background:transparent;border:1px solid #4a5568;border-radius:20px;color:#a0aec0;font-size:12px;font-weight:600;cursor:pointer}
+.btn-out:hover{border-color:#e53e3e;color:#fc8181}
 
-    /* Layout Container */
-    .container { max-width: 1360px; margin: 24px auto; padding: 0 24px; display: flex; flex-direction: column; gap: 24px; }
+/* ── LAYOUT ── */
+.wrap{max-width:1300px;margin:0 auto;padding:24px 24px}
 
-    /* 6 Stats Grid */
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
-    .stat-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 14px;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      position: relative;
-      overflow: hidden;
-      transition: transform 0.2s, border-color 0.2s;
-    }
-    .stat-card:hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.18); }
-    .stat-card::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
-      background: var(--stat-accent, var(--primary)); opacity: 0.8;
-    }
-    .stat-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-    .stat-val { font-size: 26px; font-weight: 800; color: #fff; font-family: 'JetBrains Mono', monospace; }
-    .stat-sub { font-size: 11.5px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+/* ── STATS ROW ── */
+.stats-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:24px}
+.stat{background:#1a1f2e;border:1px solid #2d3748;border-radius:10px;padding:18px 16px}
+.stat .label{font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+.stat .val{font-size:28px;font-weight:800;color:#fff;line-height:1}
+.stat .sub{font-size:11px;color:#718096;margin-top:6px}
 
-    /* Main Grid */
-    .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
-    @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
+/* ── SECTION HEADER ── */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.sec-title{font-size:15px;font-weight:700;color:#fff}
 
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 16px;
-      padding: 22px;
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-    .card-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-    .card-title { font-size: 16px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+/* ── TWO COL ── */
+.two-col{display:grid;grid-template-columns:1fr 380px;gap:20px}
+@media(max-width:1050px){.two-col{grid-template-columns:1fr}.stats-row{grid-template-columns:repeat(3,1fr)}}
 
-    /* Search & Filter Bar */
-    .filter-bar { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 480px; }
-    .search-input {
-      flex: 1; padding: 9px 14px; background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 8px; color: #fff; font-size: 13px; outline: none;
-    }
-    .search-input:focus { border-color: var(--primary); }
-    .filter-select {
-      padding: 9px 12px; background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 8px; color: #cbd5e1; font-size: 13px; outline: none; cursor: pointer;
-    }
+/* ── TABLE CARD ── */
+.card{background:#1a1f2e;border:1px solid #2d3748;border-radius:10px;padding:20px}
+.filter-bar{display:flex;gap:10px}
+.filter-bar input,.filter-bar select{padding:8px 12px;background:#0f1117;border:1px solid #2d3748;border-radius:7px;color:#e2e8f0;font-size:13px;outline:none}
+.filter-bar input{flex:1}
+.filter-bar input:focus,.filter-bar select:focus{border-color:#38a169}
+table{width:100%;border-collapse:collapse;margin-top:16px;font-size:13px}
+th{text-align:left;padding:10px 12px;color:#718096;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #2d3748}
+td{padding:12px;border-bottom:1px solid #1e2535;vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,.02)}
+.user-name{font-weight:600;color:#fff}
+.user-phone{font-size:12px;color:#a0aec0}
+.hwid-code{font-family:monospace;font-size:11px;color:#90cdf4}
+.bal{font-weight:700;color:#f6e05e}
+.badge{display:inline-block;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:700}
+.badge-pass{background:#1c3a2a;color:#48bb78}
+.badge-payg{background:#1e2535;color:#718096}
+.badge-block{background:#3a1a1a;color:#fc8181}
+.actions{display:flex;gap:5px;justify-content:flex-end;flex-wrap:nowrap}
+.btn{padding:5px 10px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid transparent;white-space:nowrap}
+.btn-pass{background:#1c3a2a;color:#48bb78;border-color:#2f6b4a}
+.btn-pass:hover{background:#38a169;color:#fff}
+.btn-hwid{background:#1a2744;color:#90cdf4;border-color:#2b4c7e}
+.btn-hwid:hover{background:#3182ce;color:#fff}
+.btn-blk{background:#2a2010;color:#ecc94b;border-color:#5a4a00}
+.btn-blk:hover{background:#d69e2e;color:#000}
+.btn-del{background:#2a1a1a;color:#fc8181;border-color:#5a1f1f}
+.btn-del:hover{background:#e53e3e;color:#fff}
 
-    /* Table */
-    .table-responsive { width: 100%; overflow-x: auto; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.05); }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
-    th { background: rgba(15, 23, 42, 0.8); padding: 12px 14px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; border-bottom: 1px solid var(--card-border); }
-    td { padding: 13px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); vertical-align: middle; }
-    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+/* ── RIGHT PANEL ── */
+.right-panel{display:flex;flex-direction:column;gap:16px}
+.panel-box{background:#1a1f2e;border:1px solid #2d3748;border-radius:10px;padding:18px}
+.panel-title{font-size:14px;font-weight:700;color:#fff;margin-bottom:4px}
+.panel-desc{font-size:12px;color:#718096;line-height:1.5;margin-bottom:14px}
+.form-row{margin-bottom:12px}
+.form-row label{display:block;font-size:11px;font-weight:600;color:#718096;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.form-row input,.form-row textarea{width:100%;padding:9px 11px;background:#0f1117;border:1px solid #2d3748;border-radius:7px;color:#e2e8f0;font-size:13px;outline:none;font-family:inherit}
+.form-row input:focus,.form-row textarea:focus{border-color:#38a169}
+.form-row textarea{resize:vertical;min-height:100px;font-family:monospace;font-size:12px}
+.btn-submit{width:100%;padding:11px;background:#38a169;border:none;border-radius:7px;color:#fff;font-weight:700;font-size:13px;cursor:pointer}
+.btn-submit:hover{background:#2f855a}
+.btn-save{width:100%;padding:9px;background:#2d3748;border:none;border-radius:7px;color:#a0aec0;font-weight:600;font-size:12px;cursor:pointer;margin-top:4px}
+.btn-save:hover{background:#4a5568;color:#fff}
 
-    .badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
-    .badge-pass { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
-    .badge-payg { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
-    .badge-blocked { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
-
-    .btn-action {
-      padding: 6px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600;
-      border: 1px solid transparent; cursor: pointer; transition: all 0.15s; margin-right: 4px;
-    }
-    .btn-grant { background: rgba(16, 185, 129, 0.12); color: #34d399; border-color: rgba(16, 185, 129, 0.25); }
-    .btn-grant:hover { background: #10b981; color: #fff; }
-    .btn-reset { background: rgba(59, 130, 246, 0.12); color: #60a5fa; border-color: rgba(59, 130, 246, 0.25); }
-    .btn-reset:hover { background: #3b82f6; color: #fff; }
-    .btn-block { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border-color: rgba(245, 158, 11, 0.25); }
-    .btn-block:hover { background: #f59e0b; color: #000; }
-    .btn-del { background: rgba(239, 68, 68, 0.12); color: #f87171; border-color: rgba(239, 68, 68, 0.25); }
-    .btn-del:hover { background: #ef4444; color: #fff; }
-
-    /* Right Column Widgets */
-    .widget-box { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
-    .widget-title { font-size: 13.5px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; }
-    .widget-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-group label { font-size: 11.5px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
-    .form-control {
-      padding: 10px 12px; background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 8px; color: #fff; font-size: 13px; outline: none; font-family: inherit;
-    }
-    .form-control:focus { border-color: var(--primary); }
-    textarea.form-control { resize: vertical; min-height: 110px; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
-    .btn-submit {
-      padding: 11px; background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-      border: none; border-radius: 8px; color: #fff; font-weight: 700; font-size: 13px; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;
-    }
-    .btn-submit:hover { opacity: 0.92; transform: translateY(-1px); }
-
-    /* Info Callouts */
-    .callout {
-      padding: 12px 14px; border-radius: 8px; font-size: 12px; line-height: 1.5;
-      display: flex; gap: 10px; align-items: flex-start;
-    }
-    .callout-info { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #93c5fd; }
-    .callout-purple { background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.25); color: #c4b5fd; }
-  </style>
+.empty{text-align:center;padding:36px 0;color:#4a5568;font-size:13px}
+</style>
 </head>
 <body>
 
-  <!-- ══════════ MASTER ADMIN SESSION GATE (1-HOUR COOLDOWN) ══════════ -->
-  <div id="adminLoginGate">
-    <div class="gate-box">
-      <div class="gate-logo">🛡️</div>
-      <h2 class="gate-title">Super Admin Security Gate</h2>
-      <p class="gate-sub">Enter master password to authenticate. Your session will remain unlocked for 1 hour without reprompting.</p>
-      <input type="password" id="gateKeyInput" class="gate-input" placeholder="Enter Master Admin Password" autofocus>
-      <button class="gate-btn" id="gateLoginBtn" onclick="handleGateLogin()">Unlock Admin Panel</button>
-      <div class="gate-err" id="gateErrMsg"></div>
+<!-- LOGIN GATE -->
+<div id="gate">
+  <div class="gate-box">
+    <div class="gate-logo">🌱</div>
+    <h2>On-Farm Admin</h2>
+    <p>Enter master password. Session stays active for 1 hour without re-login.</p>
+    <input type="password" id="gateInput" placeholder="Master Password" autocomplete="off">
+    <button onclick="doLogin()">Unlock Dashboard</button>
+    <div id="gateErr"></div>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="logo">🌱</div>
+    <h1>On-Farm Admin</h1>
+    <span>Super Console</span>
+  </div>
+  <div class="topbar-right">
+    <div class="chip"><div class="dot" id="sdot"></div><span id="stxt">Connecting...</span></div>
+    <div class="chip timer">⏱ <span id="timer">60m 00s</span></div>
+    <button class="btn-out" onclick="doLogout()">Log Out</button>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="wrap">
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat">
+      <div class="label">Total Operators</div>
+      <div class="val" id="sUsers">—</div>
+      <div class="sub">Registered accounts</div>
+    </div>
+    <div class="stat">
+      <div class="label">Active Passes</div>
+      <div class="val" id="sSubs" style="color:#48bb78">—</div>
+      <div class="sub">30-Day Pass active</div>
+    </div>
+    <div class="stat">
+      <div class="label">Wallet Balance</div>
+      <div class="val" id="sWallet" style="color:#f6e05e">—</div>
+      <div class="sub">Total in user wallets</div>
+    </div>
+    <div class="stat">
+      <div class="label">Direct Recharges</div>
+      <div class="val" id="sRecharge" style="color:#90cdf4">—</div>
+      <div class="sub">Cashfree / UPI deposits</div>
+    </div>
+    <div class="stat">
+      <div class="label">Referral Rewards</div>
+      <div class="val" id="sRef" style="color:#d6bcfa">—</div>
+      <div class="sub">₹25 × <span id="sRefCount">0</span> passes</div>
+    </div>
+    <div class="stat">
+      <div class="label">Total Funds</div>
+      <div class="val" id="sCombined">—</div>
+      <div class="sub">Recharges + Referrals</div>
     </div>
   </div>
 
-  <!-- ══════════ TOP NAV ══════════ -->
-  <header class="top-nav">
-    <div class="brand">
-      <div class="brand-icon">🌱</div>
-      <div class="brand-text">
-        <h1>On-Farm Pro | Super Admin Console</h1>
-        <p>Live Operator Control & Automated Settlement Hub</p>
-      </div>
-    </div>
-    <div class="nav-actions">
-      <div class="status-pill">
-        <div class="status-dot" id="statusDot"></div>
-        <span id="serverStatusText">Connecting...</span>
-      </div>
-      <div class="session-pill" id="sessionTimerPill" title="Sliding 1-Hour Session Cooldown">
-        ⏱️ <span id="sessionTimerText">Session: 60m 00s</span>
-      </div>
-      <button class="btn-logout" onclick="adminLogout()">Log Out</button>
-    </div>
-  </header>
+  <!-- MAIN TWO-COL -->
+  <div class="two-col">
 
-  <!-- ══════════ MAIN CONTENT ══════════ -->
-  <div class="container">
-
-    <!-- 6 METRICS STATS GRID -->
-    <div class="stats-grid">
-      <!-- 1. Total Registered Operators -->
-      <div class="stat-card" style="--stat-accent: #3b82f6;">
-        <span class="stat-label">Total Operators</span>
-        <span class="stat-val" id="statUsers">0</span>
-        <span class="stat-sub">👥 Registered CSC installations</span>
-      </div>
-
-      <!-- 2. Active 30-Day Passes -->
-      <div class="stat-card" style="--stat-accent: #10b981;">
-        <span class="stat-label">Active 30-Day Passes</span>
-        <span class="stat-val" id="statSubs" style="color: #34d399;">0</span>
-        <span class="stat-sub">⚡ Unlimited processing active</span>
-      </div>
-
-      <!-- 3. Current Balance in User Wallets -->
-      <div class="stat-card" style="--stat-accent: #f59e0b;">
-        <span class="stat-label">Available in Wallets</span>
-        <span class="stat-val" id="statWallet" style="color: #fbbf24;">₹0</span>
-        <span class="stat-sub">💰 Total active balance in user accounts</span>
-      </div>
-
-      <!-- 4. Direct Recharge Deposits -->
-      <div class="stat-card" style="--stat-accent: #06b6d4;">
-        <span class="stat-label">Direct Recharges</span>
-        <span class="stat-val" id="statRecharge" style="color: #67e8f9;">₹0</span>
-        <span class="stat-sub">💳 Cashfree & UPI operator deposits</span>
-      </div>
-
-      <!-- 5. Total Referral Rewards Awarded -->
-      <div class="stat-card" style="--stat-accent: #8b5cf6;">
-        <span class="stat-label">Referral Rewards</span>
-        <span class="stat-val" id="statReferral" style="color: #c4b5fd;">₹0</span>
-        <span class="stat-sub">🎁 ₹25 per 30-Day Monthly Pass (<span id="statRefPasses">0</span> passes)</span>
-      </div>
-
-      <!-- 6. Total Platform Funds -->
-      <div class="stat-card" style="--stat-accent: #ec4899;">
-        <span class="stat-label">Combined Platform Funds</span>
-        <span class="stat-val" id="statCombined" style="color: #f472b6;">₹0</span>
-        <span class="stat-sub">🌐 Recharges + Referral incentives volume</span>
-      </div>
-    </div>
-
-    <!-- MAIN TWO-COLUMN SPLIT -->
-    <div class="main-grid">
-
-      <!-- LEFT COLUMN: OPERATORS LIST -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">
-            <span>👤</span> Registered Operators & Subscriptions
-          </div>
-          <div class="filter-bar">
-            <input type="text" id="searchInput" class="search-input" placeholder="Search phone or name..." oninput="filterUsers()">
-            <select id="statusFilter" class="filter-select" onchange="filterUsers()">
-              <option value="ALL">All Status</option>
-              <option value="PASS">Monthly Pass Active</option>
-              <option value="PAYG">Pay As You Go</option>
-              <option value="BLOCKED">Blocked</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="table-responsive">
-          <table>
-            <thead>
-              <tr>
-                <th>Operator</th>
-                <th>Hardware ID</th>
-                <th>Wallet</th>
-                <th>Plan Status</th>
-                <th>Expires</th>
-                <th style="text-align: right;">Quick Actions</th>
-              </tr>
-            </thead>
-            <tbody id="userTableBody">
-              <tr>
-                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">
-                  Loading registered operators...
-                </td>
-              </tr>
-            </tbody>
-          </table>
+    <!-- LEFT: USERS TABLE -->
+    <div class="card">
+      <div class="sec-header">
+        <div class="sec-title">Operators</div>
+        <div class="filter-bar">
+          <input type="text" id="search" placeholder="Search phone or name..." oninput="filter()">
+          <select id="sf" onchange="filter()">
+            <option value="">All</option>
+            <option value="pass">Pass Active</option>
+            <option value="payg">Pay As You Go</option>
+            <option value="blocked">Blocked</option>
+          </select>
         </div>
       </div>
-
-      <!-- RIGHT COLUMN: AUTOMATION PUSH & SETTINGS -->
-      <div style="display: flex; flex-direction: column; gap: 20px;">
-
-        <!-- 1-CLICK REMOTE UPDATE PUSH -->
-        <div class="widget-box">
-          <div class="widget-title">
-            <span>🚀</span> 1-Click Remote Update Push
-          </div>
-          <p class="widget-desc">
-            Instantly deploy patched Playwright automation code straight into operators' client RAM without requiring manual installer re-download.
-          </p>
-          <div class="callout callout-info">
-            <span>ℹ️</span>
-            <div><strong>How it works:</strong> Plain JS is encrypted via AES-256 on the cloud. When operators click "Start Processing", the client downloads the payload, decrypts it in memory, and executes.</div>
-          </div>
-          <div class="form-group">
-            <label>Script Version Tag</label>
-            <input type="text" id="pushVersion" class="form-control" placeholder="e.g. 1.0.5">
-          </div>
-          <div class="form-group">
-            <label>Release Notes / Change Summary</label>
-            <input type="text" id="pushDesc" class="form-control" placeholder="e.g. Fixed PMFBY crop dropdown timeout">
-          </div>
-          <div class="form-group">
-            <label>Automation Source (Plain JS)</label>
-            <textarea id="pushCode" class="form-control" placeholder="module.exports = async function runAutomation(...) { ... };"></textarea>
-          </div>
-          <button class="btn-submit" onclick="publishUpdate()">
-            <span>🔒</span> Encrypt & Push Cloud Update
-          </button>
-        </div>
-
-        <!-- CASHFREE GATEWAY CONFIGURATION EXPLANATION -->
-        <div class="widget-box">
-          <div class="widget-title">
-            <span>💳</span> Payment Gateway Configuration
-          </div>
-          <p class="widget-desc">
-            On-Farm uses Cashfree Payments API for UPI, QR codes, and NetBanking auto-credit.
-          </p>
-          <div class="callout callout-purple">
-            <span>⚙️</span>
-            <div>
-              <strong>Current Gateway Status:</strong> Production Webhooks enabled. When an operator pays ₹699 (Monthly Pass) or wallet recharge, Cashfree notifies <code>/api/payment/webhook</code> to auto-credit the operator instantly and automatically awards the ₹25 referral reward to the referrer.
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Cloud Backend Target</label>
-            <input type="text" id="cfgBackendUrl" class="form-control" value="https://on-farm.vercel.app">
-          </div>
-          <button class="btn-submit" style="background: rgba(255,255,255,0.08); color: #cbd5e1;" onclick="saveBackendSetting()">
-            💾 Save Backend URL
-          </button>
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-  <!-- JAVASCRIPT LOGIC -->
-  <script>
-    const MASTER_KEY_FALLBACK = 'Npneeraj@2754';
-    const SESSION_DURATION_MS = 60 * 60 * 1000; // 1 Hour Session Cooldown
-
-    let allUsersData = [];
-    let sessionTimerInterval = null;
-
-    // --- SESSION COOLDOWN MANAGEMENT ---
-    function checkAdminSession() {
-      const savedKey = localStorage.getItem('onfarm_admin_key');
-      const sessionExpiry = parseInt(localStorage.getItem('onfarm_admin_session_expiry') || '0', 10);
-      const now = Date.now();
-
-      if (savedKey && sessionExpiry > now) {
-        // Valid active session within 1-hour cooldown!
-        document.getElementById('adminLoginGate').style.display = 'none';
-        startSessionCountdown();
-        initDashboard();
-      } else {
-        // Expired or not logged in: Show gate
-        document.getElementById('adminLoginGate').style.display = 'flex';
-        document.getElementById('gateKeyInput').value = '';
-        document.getElementById('gateErrMsg').textContent = '';
-        setTimeout(() => document.getElementById('gateKeyInput').focus(), 100);
-      }
-    }
-
-    async function handleGateLogin() {
-      const input = document.getElementById('gateKeyInput');
-      const errEl = document.getElementById('gateErrMsg');
-      const enteredKey = (input.value || '').trim();
-
-      if (!enteredKey) {
-        errEl.textContent = 'Please enter master admin password.';
-        return;
-      }
-
-      errEl.textContent = 'Verifying master authentication...';
-
-      try {
-        const backend = getBackendUrl();
-        const res = await fetch(`${backend}/api/admin/stats`, {
-          headers: { 'x-admin-key': enteredKey }
-        });
-        const d = await res.json();
-
-        if (res.status === 200 && d.ok) {
-          // Success! Save session for 1 full hour
-          const expiry = Date.now() + SESSION_DURATION_MS;
-          localStorage.setItem('onfarm_admin_key', enteredKey);
-          localStorage.setItem('onfarm_admin_session_expiry', expiry.toString());
-
-          document.getElementById('adminLoginGate').style.display = 'none';
-          startSessionCountdown();
-          initDashboard();
-        } else {
-          errEl.textContent = d.message || 'Incorrect master password. Access denied.';
-        }
-      } catch (e) {
-        // Fallback check against known master key if offline
-        if (enteredKey === MASTER_KEY_FALLBACK) {
-          const expiry = Date.now() + SESSION_DURATION_MS;
-          localStorage.setItem('onfarm_admin_key', enteredKey);
-          localStorage.setItem('onfarm_admin_session_expiry', expiry.toString());
-          document.getElementById('adminLoginGate').style.display = 'none';
-          startSessionCountdown();
-          initDashboard();
-        } else {
-          errEl.textContent = 'Auth verification failed. Check connection.';
-        }
-      }
-    }
-
-    // Allow Enter key to trigger login
-    document.getElementById('gateKeyInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') handleGateLogin();
-    });
-
-    // Refresh sliding activity timer on admin action
-    function touchAdminSession() {
-      const savedKey = localStorage.getItem('onfarm_admin_key');
-      if (savedKey) {
-        const currentExpiry = parseInt(localStorage.getItem('onfarm_admin_session_expiry') || '0', 10);
-        if (currentExpiry > Date.now()) {
-          // Extend session
-          const newExpiry = Date.now() + SESSION_DURATION_MS;
-          localStorage.setItem('onfarm_admin_session_expiry', newExpiry.toString());
-        }
-      }
-    }
-    window.addEventListener('click', touchAdminSession);
-    window.addEventListener('keydown', touchAdminSession);
-
-    function startSessionCountdown() {
-      if (sessionTimerInterval) clearInterval(sessionTimerInterval);
-      sessionTimerInterval = setInterval(() => {
-        const expiry = parseInt(localStorage.getItem('onfarm_admin_session_expiry') || '0', 10);
-        const remaining = expiry - Date.now();
-        const pillText = document.getElementById('sessionTimerText');
-
-        if (remaining <= 0) {
-          clearInterval(sessionTimerInterval);
-          pillText.textContent = 'Session Expired';
-          adminLogout();
-        } else {
-          const mins = Math.floor(remaining / 60000);
-          const secs = Math.floor((remaining % 60000) / 1000);
-          pillText.textContent = `Session: ${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
-        }
-      }, 1000);
-    }
-
-    function adminLogout() {
-      localStorage.removeItem('onfarm_admin_key');
-      localStorage.removeItem('onfarm_admin_session_expiry');
-      if (sessionTimerInterval) clearInterval(sessionTimerInterval);
-      document.getElementById('adminLoginGate').style.display = 'flex';
-      document.getElementById('gateKeyInput').value = '';
-      document.getElementById('gateErrMsg').textContent = 'You have logged out.';
-    }
-
-    function getAdminKey() {
-      return localStorage.getItem('onfarm_admin_key') || MASTER_KEY_FALLBACK;
-    }
-
-    function getBackendUrl() {
-      return localStorage.getItem('onfarm_admin_backend') || 'https://on-farm.vercel.app';
-    }
-
-    function saveBackendSetting() {
-      const val = document.getElementById('cfgBackendUrl').value.trim();
-      if (val) {
-        localStorage.setItem('onfarm_admin_backend', val);
-        alert('Backend URL saved.');
-        initDashboard();
-      }
-    }
-
-    // --- DASHBOARD DATA & STATS ---
-    async function initDashboard() {
-      document.getElementById('cfgBackendUrl').value = getBackendUrl();
-      await fetchStats();
-      await fetchUsers();
-    }
-
-    async function fetchStats() {
-      try {
-        const backend = getBackendUrl();
-        const res = await fetch(`${backend}/api/admin/stats`, {
-          headers: { 'x-admin-key': getAdminKey() }
-        });
-        const data = await res.json();
-        if (data.ok && data.stats) {
-          const s = data.stats;
-          document.getElementById('statUsers').textContent = s.total_users || 0;
-          document.getElementById('statSubs').textContent = s.active_subscriptions || 0;
-          document.getElementById('statWallet').textContent = '₹' + (s.total_wallet_money || 0);
-          document.getElementById('statRecharge').textContent = '₹' + (s.total_recharge_money || 0);
-          document.getElementById('statReferral').textContent = '₹' + (s.total_referral_money || 0);
-          document.getElementById('statCombined').textContent = '₹' + (s.total_combined_funds || 0);
-          document.getElementById('statRefPasses').textContent = s.total_referral_passes || 0;
-
-          document.getElementById('statusDot').style.background = '#22c55e';
-          document.getElementById('serverStatusText').textContent = 'Cloud Backend Online';
-        } else {
-          document.getElementById('statusDot').style.background = '#dc2626';
-          document.getElementById('serverStatusText').textContent = data.message || 'Auth Failed';
-        }
-      } catch (err) {
-        document.getElementById('statusDot').style.background = '#dc2626';
-        document.getElementById('serverStatusText').textContent = 'Backend Offline';
-      }
-    }
-
-    async function fetchUsers() {
-      try {
-        const res = await fetch(`${getBackendUrl()}/api/admin/users`, {
-          headers: { 'x-admin-key': getAdminKey() }
-        });
-        const data = await res.json();
-        if (data.ok) {
-          allUsersData = data.users || [];
-          filterUsers();
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    function filterUsers() {
-      const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
-      const statusFilter = document.getElementById('statusFilter').value;
-
-      const filtered = allUsersData.filter(u => {
-        const matchQuery = !q || (u.phone && u.phone.includes(q)) || (u.name && u.name.toLowerCase().includes(q));
-        if (!matchQuery) return false;
-
-        const isSub = Boolean(u.subscription && u.subscription.is_active);
-        const isBlocked = Boolean(u.is_blocked);
-
-        if (statusFilter === 'PASS') return isSub;
-        if (statusFilter === 'PAYG') return !isSub;
-        if (statusFilter === 'BLOCKED') return isBlocked;
-        return true;
-      });
-
-      renderUsers(filtered);
-    }
-
-    function renderUsers(users) {
-      const tbody = document.getElementById('userTableBody');
-      if (!users.length) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">No matching operators found.</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = users.map(u => {
-        const isSub = u.subscription && u.subscription.is_active;
-        const bal = u.wallet ? u.wallet.balance : 0;
-        const hwidShort = u.hwid ? (u.hwid.slice(0, 8) + '...' + u.hwid.slice(-6)) : '<span style="color:#64748b;">Not Bound</span>';
-        const expDate = isSub ? new Date(u.subscription.expires_at).toLocaleDateString('en-IN') : '—';
-
-        let badgeHtml = isSub 
-          ? '<span class="badge badge-pass">30-DAY PASS</span>' 
-          : '<span class="badge badge-payg">PAY AS YOU GO</span>';
-        if (u.is_blocked) {
-          badgeHtml = '<span class="badge badge-blocked">BLOCKED</span>';
-        }
-
-        return `
+      <table>
+        <thead>
           <tr>
-            <td>
-              <div style="font-weight: 700; color: #fff;">📱 +91 ${u.phone}</div>
-              <div style="font-size: 11px; color: var(--text-muted);">${u.name || 'Unnamed Operator'}</div>
-            </td>
-            <td>
-              <code style="font-family:'JetBrains Mono', monospace; font-size:11px; color:#cbd5e1;">${hwidShort}</code>
-            </td>
-            <td>
-              <strong style="color: #fbbf24; font-family:'JetBrains Mono', monospace;">₹${bal}</strong>
-            </td>
-            <td>${badgeHtml}</td>
-            <td style="font-size: 12px; color: var(--text-muted);">${expDate}</td>
-            <td style="text-align: right; white-space: nowrap;">
-              <button class="btn-action btn-grant" title="Grant 30-Day Monthly Pass" onclick="grantSub('${u.id}', '${u.phone}')">⚡ Pass</button>
-              <button class="btn-action btn-reset" title="Reset HWID Lock" onclick="resetHwid('${u.id}', '${u.phone}')">🔄 HWID</button>
-              <button class="btn-action btn-block" title="Toggle Block" onclick="toggleBlock('${u.id}', ${!u.is_blocked})">${u.is_blocked ? 'Unblock' : 'Block'}</button>
-              <button class="btn-action btn-del" title="Permanently Delete User" onclick="deleteUser('${u.id}', '${u.phone}')">🗑️</button>
-            </td>
+            <th>Operator</th>
+            <th>Hardware ID</th>
+            <th>Wallet</th>
+            <th>Plan</th>
+            <th>Expires</th>
+            <th style="text-align:right">Actions</th>
           </tr>
-        `;
-      }).join('');
-    }
+        </thead>
+        <tbody id="tbody"><tr><td colspan="6"><div class="empty">Loading...</div></td></tr></tbody>
+      </table>
+    </div>
 
-    // --- ACTION HANDLERS ---
-    async function grantSub(userId, phone) {
-      const days = prompt(`Grant Unlimited Monthly Pass to +91 ${phone} for how many days?`, '30');
-      if (!days) return;
+    <!-- RIGHT PANEL -->
+    <div class="right-panel">
 
-      const ref = prompt(`Referrer phone number (Optional - Enter 10-digit number to award ₹25 referral bonus):`, '');
+      <!-- GRANT PASS -->
+      <div class="panel-box">
+        <div class="panel-title">🚀 Remote Update Push</div>
+        <div class="panel-desc">Encrypt &amp; deploy automation JS to all operators instantly — no reinstall needed.</div>
+        <div class="form-row">
+          <label>Version</label>
+          <input type="text" id="pVer" placeholder="e.g. 1.0.5">
+        </div>
+        <div class="form-row">
+          <label>Change Note</label>
+          <input type="text" id="pDesc" placeholder="e.g. Fixed PMFBY crop dropdown">
+        </div>
+        <div class="form-row">
+          <label>Automation JS Code</label>
+          <textarea id="pCode" placeholder="module.exports = async function runAutomation(...) { ... };"></textarea>
+        </div>
+        <button class="btn-submit" onclick="pushUpdate()">🔒 Encrypt &amp; Push</button>
+      </div>
 
-      try {
-        const res = await fetch(`${getBackendUrl()}/api/admin/user/grant-subscription`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
-          body: JSON.stringify({ userId, days: parseInt(days, 10), referrerPhone: ref || undefined })
-        });
-        const d = await res.json();
-        alert(d.message || (d.ok ? 'Subscription granted!' : 'Failed'));
-        fetchStats();
-        fetchUsers();
-      } catch (err) {
-        alert('Request failed: ' + err.message);
-      }
-    }
+      <!-- GATEWAY -->
+      <div class="panel-box">
+        <div class="panel-title">💳 Payment Gateway</div>
+        <div class="panel-desc">Cashfree production webhook active. On payment success → auto-credits wallet + ₹25 referral bonus instantly.</div>
+        <div class="form-row">
+          <label>Cloud Backend URL</label>
+          <input type="text" id="backUrl" value="https://on-farm.vercel.app">
+        </div>
+        <button class="btn-save" onclick="saveUrl()">Save URL</button>
+      </div>
 
-    async function resetHwid(userId, phone) {
-      if (!confirm(`Reset Hardware Lock for +91 ${phone}? This allows operator to re-bind on a new PC.`)) return;
-      try {
-        const res = await fetch(`${getBackendUrl()}/api/admin/user/reset-hwid`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
-          body: JSON.stringify({ userId })
-        });
-        const d = await res.json();
-        alert(d.message || 'HWID reset successful.');
-        fetchUsers();
-      } catch (err) { alert(err.message); }
-    }
+    </div>
+  </div>
+</div>
 
-    async function toggleBlock(userId, block) {
-      try {
-        const res = await fetch(`${getBackendUrl()}/api/admin/user/block`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
-          body: JSON.stringify({ userId, isBlocked: block })
-        });
-        const d = await res.json();
-        alert(d.message || 'Status updated.');
-        fetchUsers();
-      } catch (err) { alert(err.message); }
-    }
+<script>
+const KEY='Npneeraj@2754', SESSION_MS=36e5;
+let users=[], refreshInterval=null;
 
-    async function deleteUser(userId, phone) {
-      if (!confirm(`Permanently delete +91 ${phone}? This removes all wallets, passes, and cleans up any linked referral bonuses.`)) return;
-      try {
-        const res = await fetch(`${getBackendUrl()}/api/admin/user/delete`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
-          body: JSON.stringify({ userId })
-        });
-        const d = await res.json();
-        alert(d.message || 'User deleted.');
-        fetchStats();
-        fetchUsers();
-      } catch (err) { alert(err.message); }
-    }
+// SESSION
+function getExpiry(){return parseInt(localStorage.getItem('of_exp')||'0',10)}
+function setSession(k){localStorage.setItem('of_key',k);localStorage.setItem('of_exp',Date.now()+SESSION_MS)}
+function getKey(){return localStorage.getItem('of_key')||KEY}
+function getUrl(){return localStorage.getItem('of_url')||'https://on-farm.vercel.app'}
 
-    // --- 1-CLICK REMOTE UPDATE PUSH ---
-    async function publishUpdate() {
-      const version = document.getElementById('pushVersion').value.trim();
-      const description = document.getElementById('pushDesc').value.trim();
-      const plainCode = document.getElementById('pushCode').value.trim();
+function boot(){
+  const exp=getExpiry();
+  if(localStorage.getItem('of_key')&&exp>Date.now()){
+    document.getElementById('gate').style.display='none';
+    startTimer();startDash();
+  }else{
+    document.getElementById('gate').style.display='flex';
+    setTimeout(()=>document.getElementById('gateInput').focus(),50);
+  }
+}
 
-      if (!version || !plainCode) {
-        alert('Please enter both Script Version (e.g. 1.0.5) and Plain JavaScript Code.');
-        return;
-      }
+async function doLogin(){
+  const inp=document.getElementById('gateInput');
+  const err=document.getElementById('gateErr');
+  const k=(inp.value||'').trim();
+  if(!k){err.textContent='Enter password';return}
+  err.textContent='Verifying...';
+  try{
+    const r=await fetch(getUrl()+'/api/admin/stats',{headers:{'x-admin-key':k}});
+    const d=await r.json();
+    if(r.ok&&d.ok){setSession(k);document.getElementById('gate').style.display='none';startTimer();startDash();}
+    else{err.textContent=d.message||'Wrong password';}
+  }catch{
+    if(k===KEY){setSession(k);document.getElementById('gate').style.display='none';startTimer();startDash();}
+    else{err.textContent='Connection failed. Check internet.';}
+  }
+}
 
-      if (!confirm(`Deploy Encrypted Script v${version} to all online operators?`)) return;
+function doLogout(){
+  localStorage.removeItem('of_key');localStorage.removeItem('of_exp');
+  if(refreshInterval)clearInterval(refreshInterval);
+  document.getElementById('gate').style.display='flex';
+  document.getElementById('gateInput').value='';
+  document.getElementById('gateErr').textContent='Logged out.';
+}
 
-      try {
-        const res = await fetch(`${getBackendUrl()}/api/admin/publish-script`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
-          body: JSON.stringify({ version, description, plainCode })
-        });
-        const d = await res.json();
-        if (d.ok) {
-          alert(`Update v${version} published successfully! Encrypted payload is live.`);
-          document.getElementById('pushCode').value = '';
-        } else {
-          alert('Publish failed: ' + (d.message || 'Unknown error'));
-        }
-      } catch (err) {
-        alert('Publish request error: ' + err.message);
-      }
-    }
+// Extend session on activity
+let _t=null;
+document.addEventListener('click',()=>{if(getExpiry()>Date.now()){localStorage.setItem('of_exp',Date.now()+SESSION_MS)}});
+document.addEventListener('keydown',()=>{if(getExpiry()>Date.now()){localStorage.setItem('of_exp',Date.now()+SESSION_MS)}});
 
-    // Start verification on page load
-    window.onload = checkAdminSession;
-  </script>
+// Enter key
+document.getElementById('gateInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+
+// TIMER
+let timerIv=null;
+function startTimer(){
+  if(timerIv)clearInterval(timerIv);
+  timerIv=setInterval(()=>{
+    const rem=getExpiry()-Date.now();
+    if(rem<=0){clearInterval(timerIv);doLogout();return}
+    const m=Math.floor(rem/60000),s=Math.floor((rem%60000)/1000);
+    document.getElementById('timer').textContent=m+'m '+(s<10?'0':'')+s+'s';
+  },1000);
+}
+
+// DASHBOARD
+function startDash(){
+  document.getElementById('backUrl').value=getUrl();
+  load();
+  if(refreshInterval)clearInterval(refreshInterval);
+  refreshInterval=setInterval(load,30000);
+}
+
+async function load(){
+  await Promise.all([loadStats(),loadUsers()]);
+}
+
+async function loadStats(){
+  try{
+    const r=await fetch(getUrl()+'/api/admin/stats',{headers:{'x-admin-key':getKey()}});
+    const d=await r.json();
+    if(d.ok&&d.stats){
+      const s=d.stats;
+      set('sUsers',s.total_users||0);
+      set('sSubs',s.active_subscriptions||0);
+      set('sWallet','₹'+(s.total_wallet_money||0));
+      set('sRecharge','₹'+(s.total_recharge_money||0));
+      set('sRef','₹'+(s.total_referral_money||0));
+      set('sCombined','₹'+(s.total_combined_funds||0));
+      set('sRefCount',s.total_referral_passes||0);
+      dot(1);
+    }else dot(0,d.message);
+  }catch{dot(0,'Offline')}
+}
+
+async function loadUsers(){
+  try{
+    const r=await fetch(getUrl()+'/api/admin/users',{headers:{'x-admin-key':getKey()}});
+    const d=await r.json();
+    if(d.ok){users=d.users||[];filter();}
+  }catch{}
+}
+
+function filter(){
+  const q=(document.getElementById('search').value||'').toLowerCase().trim();
+  const sf=document.getElementById('sf').value;
+  const list=users.filter(u=>{
+    if(q&&!u.phone.includes(q)&&!(u.name||'').toLowerCase().includes(q))return false;
+    const sub=!!(u.subscription&&u.subscription.is_active);
+    if(sf==='pass')return sub;
+    if(sf==='payg')return !sub&&!u.is_blocked;
+    if(sf==='blocked')return u.is_blocked;
+    return true;
+  });
+  renderUsers(list);
+}
+
+function renderUsers(list){
+  const tb=document.getElementById('tbody');
+  if(!list.length){tb.innerHTML='<tr><td colspan="6"><div class="empty">No operators found</div></td></tr>';return}
+  tb.innerHTML=list.map(u=>{
+    const sub=!!(u.subscription&&u.subscription.is_active);
+    const bal=u.wallet?u.wallet.balance:0;
+    const hw=u.hwid?(u.hwid.slice(0,8)+'...'+u.hwid.slice(-5)):'<span style="color:#4a5568">Not bound</span>';
+    const exp=sub?new Date(u.subscription.expires_at).toLocaleDateString('en-IN'):'—';
+    const badge=u.is_blocked
+      ?'<span class="badge badge-block">BLOCKED</span>'
+      :sub?'<span class="badge badge-pass">30-DAY PASS</span>'
+          :'<span class="badge badge-payg">PAY AS YOU GO</span>';
+    const blkTxt=u.is_blocked?'Unblock':'Block';
+    return`<tr>
+      <td><div class="user-name">${u.name||'—'}</div><div class="user-phone">+91 ${u.phone}</div></td>
+      <td><span class="hwid-code">${hw}</span></td>
+      <td><span class="bal">₹${bal}</span></td>
+      <td>${badge}</td>
+      <td style="font-size:12px;color:#718096">${exp}</td>
+      <td>
+        <div class="actions">
+          <button class="btn btn-pass" onclick="grantPass('${u.id}','${u.phone}')">Pass</button>
+          <button class="btn btn-hwid" onclick="resetHwid('${u.id}','${u.phone}')">HWID</button>
+          <button class="btn btn-blk" onclick="toggleBlock('${u.id}',${!u.is_blocked})">${blkTxt}</button>
+          <button class="btn btn-del" onclick="delUser('${u.id}','${u.phone}')">Del</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ACTIONS
+async function grantPass(id,ph){
+  const days=prompt('Days for Monthly Pass (default 30):','30');
+  if(!days)return;
+  const ref=prompt('Referrer mobile (optional, 10-digit):','');
+  const r=await fetch(getUrl()+'/api/admin/user/grant-subscription',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':getKey()},body:JSON.stringify({userId:id,days:+days,referrerPhone:ref||undefined})});
+  const d=await r.json();alert(d.message||(d.ok?'Done':'Failed'));load();
+}
+async function resetHwid(id,ph){
+  if(!confirm('Reset HWID for +91 '+ph+'?'))return;
+  const r=await fetch(getUrl()+'/api/admin/user/reset-hwid',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':getKey()},body:JSON.stringify({userId:id})});
+  const d=await r.json();alert(d.message||'Done');loadUsers();
+}
+async function toggleBlock(id,val){
+  const r=await fetch(getUrl()+'/api/admin/user/block',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':getKey()},body:JSON.stringify({userId:id,isBlocked:val})});
+  const d=await r.json();alert(d.message||'Done');loadUsers();
+}
+async function delUser(id,ph){
+  if(!confirm('DELETE +91 '+ph+' permanently?'))return;
+  const r=await fetch(getUrl()+'/api/admin/user/delete',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':getKey()},body:JSON.stringify({userId:id})});
+  const d=await r.json();alert(d.message||'Done');load();
+}
+async function pushUpdate(){
+  const v=document.getElementById('pVer').value.trim();
+  const code=document.getElementById('pCode').value.trim();
+  if(!v||!code){alert('Version aur Code dono bharo');return}
+  if(!confirm('v'+v+' push karna hai?'))return;
+  const r=await fetch(getUrl()+'/api/admin/publish-script',{method:'POST',headers:{'Content-Type':'application/json','x-admin-key':getKey()},body:JSON.stringify({version:v,description:document.getElementById('pDesc').value.trim(),plainCode:code})});
+  const d=await r.json();
+  if(d.ok){alert('v'+v+' live ho gaya!');document.getElementById('pCode').value='';}
+  else alert('Failed: '+(d.message||'Error'));
+}
+function saveUrl(){
+  const v=document.getElementById('backUrl').value.trim();
+  if(v){localStorage.setItem('of_url',v);alert('Saved');startDash();}
+}
+
+// HELPERS
+function set(id,val){const el=document.getElementById(id);if(el)el.textContent=val}
+function dot(ok,msg){
+  document.getElementById('sdot').style.background=ok?'#48bb78':'#fc8181';
+  document.getElementById('stxt').textContent=ok?'Backend Online':(msg||'Offline');
+}
+
+boot();
+</script>
 </body>
 </html>
