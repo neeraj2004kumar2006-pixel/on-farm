@@ -60,6 +60,22 @@ function log(msg) {
 // -------------------------------------------------------------------------
 // 1. MANDATORY INTERNET CHECK & AUTO-UPDATE CHECK
 // -------------------------------------------------------------------------
+async function callCloudWithRetry(fn, actionName = 'Cloud request', maxAttempts = 3) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      const isNetError = !err.response || err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT' || err.code === 'ENOTFOUND' || (err.message && err.message.includes('Network Error'));
+      if (isNetError && attempt < maxAttempts) {
+        log(`Network blip on ${actionName}. Retrying automatically (${attempt}/${maxAttempts})...`);
+        await new Promise(res => setTimeout(res, 1500));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 async function checkCloudConnectivity() {
   try {
     const res = await axios.get(`${CLOUD_URL}/api/health`, { timeout: 4000 });
@@ -272,12 +288,12 @@ async function executeAutomation() {
       state.currentRow = r;
       log(`[${i + 1}/${rows.length}] Authorizing: ${r.Name} | Khasra: ${r.KhasraNo}`);
 
-      // 5. Authorize & Deduct ₹1 per kila (or verify subscription) BEFORE filling form
-      const deductRes = await axios.post(`${CLOUD_URL}/api/kila/deduct`, {
+      // 5. Authorize & Deduct ₹1 per kila (or verify subscription) BEFORE filling form with smart retry
+      const deductRes = await callCloudWithRetry(() => axios.post(`${CLOUD_URL}/api/kila/deduct`, {
         userId: state.user.id,
         hwid: state.hwid,
         kilaNumber: r.KhasraNo,
-      });
+      }, { timeout: 9000 }), `Kila authorization (${r.KhasraNo})`);
 
       if (!deductRes.data || !deductRes.data.ok || !deductRes.data.authNonce) {
         throw new Error((deductRes.data && deductRes.data.message) || 'Balance insufficient to continue. Please recharge your wallet.');

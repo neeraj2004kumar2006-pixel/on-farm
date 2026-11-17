@@ -1548,6 +1548,14 @@
               <div class="form-section-title" data-i18n="previewHeading" style="margin-bottom:0;">Saved Records Summary</div>
             </div>
             <div style="display: flex; gap: 8px;">
+              <button class="btn btn-light btn-sm" style="display:inline-flex; align-items:center; gap:5px;" onclick="printFarmerSlip()" title="Print farmer receipt slip">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                  <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                Print Slip
+              </button>
               <button data-i18n="btnResetExcel" class="btn btn-light btn-sm" style="display:inline-flex; align-items:center; gap:5px;" onclick="resetExcelStatus()">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
@@ -1560,6 +1568,18 @@
                 </svg>
                 Refresh
               </button>
+            </div>
+          </div>
+
+          <div id="tab3StatsStrip" style="display: flex; gap: 10px; margin-bottom: 12px; font-size: 11.5px; font-weight: 700; flex-wrap: wrap;">
+            <div style="background: #f8fafc; border: 1px solid var(--border); padding: 4px 10px; border-radius: 6px; color: var(--text);">
+              Total Records: <span id="statTotalRec" style="color: #2563eb;">0</span>
+            </div>
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 4px 10px; border-radius: 6px; color: #15803d;">
+              Completed: <span id="statDoneRec" style="color: #16a34a;">0</span>
+            </div>
+            <div style="background: #fefce8; border: 1px solid #fef08a; padding: 4px 10px; border-radius: 6px; color: #854d0e;">
+              Ready / Pending: <span id="statPendingRec" style="color: #ca8a04;">0</span>
             </div>
           </div>
 
@@ -2537,6 +2557,18 @@
         const data = await res.json();
         const tbody = document.getElementById('previewTableBody');
         const t = I18N[currentLang] || I18N.en;
+
+        const total = data.rows ? data.rows.length : 0;
+        const done = data.rows ? data.rows.filter(r => (r.status || '').toUpperCase() === 'DONE').length : 0;
+        const pending = total - done;
+
+        const totEl = document.getElementById('statTotalRec');
+        const doneEl = document.getElementById('statDoneRec');
+        const pendEl = document.getElementById('statPendingRec');
+        if (totEl) totEl.textContent = total;
+        if (doneEl) doneEl.textContent = done;
+        if (pendEl) pendEl.textContent = pending;
+
         if (!data.rows || !data.rows.length) {
           tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:28px; font-size:13px;">${t.emptyPrevMsg}</td></tr>`;
           return;
@@ -2582,6 +2614,132 @@
         }).join('');
       } catch (e) {
         console.error('Error loading excel rows:', e);
+      }
+    }
+
+    async function printFarmerSlip() {
+      try {
+        const res = await fetch('/get-excel-rows');
+        const data = await res.json();
+        const rows = data.rows || [];
+        if (!rows.length) {
+          appAlert('No saved records found to print. Please generate and save farmer entries first.', 'No Records Found', 'info');
+          return;
+        }
+
+        const first = rows[0] || {};
+        const farmerName = first.name || 'Farmer';
+        const crop = first.crop || 'Crop';
+        const sowingDate = first.date || '—';
+        const khata = first.khata || '—';
+        const operatorUser = window.currentOperatorUser || {};
+        const operatorPhone = operatorUser.phone ? `+91 ${operatorUser.phone}` : 'Active CSC Operator';
+        const operatorName = operatorUser.name || 'CSC Digital Seva Center';
+        const printDate = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+
+        const printWin = window.open('', '_blank', 'width=800,height=900');
+        if (!printWin) {
+          appAlert('Please allow popups to open and print the acknowledgment slip.', 'Popup Blocked', 'warning');
+          return;
+        }
+
+        const tableRowsHtml = rows.map((r, i) => `
+          <tr>
+            <td style="text-align: center; border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px;">${i + 1}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 12px; font-weight: 600;">${r.name || farmerName}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px;">${r.crop || crop}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px;">${r.khata || khata}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px; font-family: monospace; letter-spacing: 0.5px;">${r.khasra}</td>
+            <td style="text-align: center; border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px; font-weight: 700; color: ${r.status === 'DONE' ? '#15803d' : '#854d0e'};">${r.status || 'READY'}</td>
+          </tr>
+        `).join('');
+
+        printWin.document.write(\`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>PMFBY Application Receipt - \${farmerName}</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 24px; color: #1e293b; max-width: 750px; margin: 0 auto; }
+              .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 18px; }
+              .header h2 { margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 0.5px; }
+              .header p { margin: 4px 0 0; font-size: 12px; color: #64748b; font-weight: 600; }
+              .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 18px; font-size: 12px; }
+              .meta-item { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed #e2e8f0; }
+              .meta-label { color: #64748b; font-weight: 600; }
+              .meta-val { font-weight: 700; color: #0f172a; }
+              table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+              th { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; text-align: left; }
+              .footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 30px; padding-top: 18px; border-top: 1px solid #e2e8f0; }
+              .stamp-box { border: 1.5px dashed #94a3b8; border-radius: 6px; padding: 18px 26px; text-align: center; font-size: 11px; color: #64748b; font-weight: 600; }
+              @media print {
+                body { padding: 0; }
+                .no-print { display: none; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h2>Pradhan Mantri Fasal Bima Yojana (PMFBY)</h2>
+              <p>Farmer Application Acknowledgement & Verification Slip</p>
+            </div>
+
+            <div class="meta-grid">
+              <div>
+                <div class="meta-item"><span class="meta-label">Farmer Name:</span><span class="meta-val">\${farmerName}</span></div>
+                <div class="meta-item"><span class="meta-label">Crop Name:</span><span class="meta-val">\${crop}</span></div>
+                <div class="meta-item"><span class="meta-label">Khata Number:</span><span class="meta-val">\${khata}</span></div>
+              </div>
+              <div>
+                <div class="meta-item"><span class="meta-label">CSC Center:</span><span class="meta-val">\${operatorName}</span></div>
+                <div class="meta-item"><span class="meta-label">Operator Contact:</span><span class="meta-val">\${operatorPhone}</span></div>
+                <div class="meta-item"><span class="meta-label">Print Date:</span><span class="meta-val">\${printDate}</span></div>
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 35px; text-align: center;">#</th>
+                  <th>Farmer Name</th>
+                  <th>Crop</th>
+                  <th>Khata</th>
+                  <th>Khasra Number (18-Digit)</th>
+                  <th style="width: 80px; text-align: center;">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                \${tableRowsHtml}
+              </tbody>
+            </table>
+
+            <div style="font-size: 12px; margin-bottom: 20px;">
+              <strong>Total Records:</strong> \${rows.length} Kilas | 
+              <strong>Completed:</strong> \${rows.filter(r => r.status === 'DONE').length} | 
+              <strong>Ready/Pending:</strong> \${rows.filter(r => r.status !== 'DONE').length}
+            </div>
+
+            <div class="footer">
+              <div style="font-size: 11px; color: #64748b; line-height: 1.4;">
+                • Auto-generated acknowledgement receipt via On-Farm.<br>
+                • Keep this slip for your crop insurance records and verification.
+              </div>
+              <div class="stamp-box">
+                CSC Center Seal & Signature
+              </div>
+            </div>
+
+            <script>
+              window.onload = function() {
+                window.print();
+              };
+            <\/script>
+          </body>
+          </html>
+        \`);
+        printWin.document.close();
+      } catch (err) {
+        appAlert('Failed to generate slip: ' + err.message, 'Print Error', 'error');
       }
     }
 

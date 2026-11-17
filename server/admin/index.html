@@ -377,13 +377,42 @@
       <span class="badge">Master Admin</span>
       <span>On-Farm Control Center</span>
     </div>
-    <div class="server-status">
-      <div id="statusDot" class="status-dot"></div>
-      <span id="serverStatusText">Connecting to Cloud Backend...</span>
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <div class="server-status">
+        <div id="statusDot" class="status-dot"></div>
+        <span id="serverStatusText">Connecting to Cloud Backend...</span>
+      </div>
+      <button id="adminLogoutBtn" class="btn btn-secondary" onclick="adminLogout()" style="display: none; padding: 4px 12px; font-size: 0.8rem; border-color: #ef4444; color: #f87171;">
+        🔒 Lock / Logout
+      </button>
     </div>
   </header>
 
-  <div class="main">
+  <!-- Master Admin Authentication Gate (Screen 1: Locked by default) -->
+  <div id="adminLoginGate" style="min-height: 75vh; display: flex; align-items: center; justify-content: center; padding: 24px;">
+    <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 36px; max-width: 440px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center;">
+      <div style="width: 54px; height: 54px; background: rgba(34, 197, 94, 0.12); border: 1.5px solid #22c55e; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </div>
+      <h2 style="font-size: 1.35rem; font-weight: 800; color: #fff; margin-bottom: 8px;">Master Admin Gate</h2>
+      <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 24px; line-height: 1.5;">Enter the Master Administrator Password to access the On-Farm Control Center.</p>
+      <form onsubmit="handleAdminLogin(event)">
+        <div style="margin-bottom: 18px; text-align: left;">
+          <label style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.05em;">Master Password / PIN</label>
+          <input type="password" id="loginAdminKey" class="form-input" placeholder="Enter master password" autocomplete="current-password" required style="width: 100%; font-size: 1rem; padding: 12px 14px;">
+        </div>
+        <div id="loginErrorMsg" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 16px;"></div>
+        <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; font-weight: 700;">
+          Unlock Dashboard
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div id="adminDashboardContent" class="main" style="display: none;">
     <!-- Top Stats -->
     <div class="stats-grid">
       <div class="stat-card">
@@ -497,7 +526,7 @@ module.exports = {
         </div>
         <div class="form-group">
           <label>Admin Secret Key</label>
-          <input type="password" id="adminKey" class="form-input" value="onfarm_admin_master_2026">
+          <input type="password" id="adminKey" class="form-input" placeholder="Enter new secret key to update">
         </div>
         <button class="btn btn-primary" onclick="saveSettings()">Save & Reconnect</button>
       </div>
@@ -523,6 +552,7 @@ module.exports = {
   <script>
     let currentUsers = [];
     let selectedUserId = null;
+    let statsInterval = null;
 
     function getBackendUrl() {
       // If hosted on a website/domain, always prefer current origin
@@ -542,21 +572,114 @@ module.exports = {
       }
       return 'https://on-farm.vercel.app';
     }
+
     function getAdminKey() {
-      const saved = localStorage.getItem('onfarm_admin_key');
-      if (saved && saved.trim()) return saved.trim();
-      return 'onfarm_admin_master_2026';
+      const sessionKey = sessionStorage.getItem('onfarm_admin_key');
+      if (sessionKey && sessionKey.trim()) return sessionKey.trim();
+      const localKey = localStorage.getItem('onfarm_admin_key');
+      if (localKey && localKey.trim()) return localKey.trim();
+      return '';
+    }
+
+    async function handleAdminLogin(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('loginAdminKey');
+      const key = (input ? input.value : '').trim();
+      const errBox = document.getElementById('loginErrorMsg');
+      const btn = document.getElementById('loginSubmitBtn');
+      if (!key) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Verifying...';
+      errBox.style.display = 'none';
+
+      try {
+        const backend = getBackendUrl();
+        const res = await fetch(`${backend}/api/admin/stats`, {
+          headers: { 'x-admin-key': key }
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          sessionStorage.setItem('onfarm_admin_key', key);
+          document.getElementById('adminLoginGate').style.display = 'none';
+          document.getElementById('adminDashboardContent').style.display = 'block';
+          document.getElementById('adminLogoutBtn').style.display = 'inline-block';
+          
+          updateStatsUI(data.stats);
+          fetchUsers();
+          if (statsInterval) clearInterval(statsInterval);
+          statsInterval = setInterval(fetchStats, 6000);
+          showToast('Welcome, Administrator!', 'success');
+        } else {
+          errBox.textContent = data.message || 'Access Denied: Incorrect Master Password.';
+          errBox.style.display = 'block';
+        }
+      } catch (err) {
+        errBox.textContent = 'Connection Error: ' + err.message;
+        errBox.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Unlock Dashboard';
+      }
+    }
+
+    function adminLogout() {
+      sessionStorage.removeItem('onfarm_admin_key');
+      localStorage.removeItem('onfarm_admin_key');
+      if (statsInterval) clearInterval(statsInterval);
+      window.location.reload();
+    }
+
+    async function checkAuthOnLoad() {
+      const key = getAdminKey();
+      if (!key) {
+        document.getElementById('adminLoginGate').style.display = 'flex';
+        document.getElementById('adminDashboardContent').style.display = 'none';
+        document.getElementById('adminLogoutBtn').style.display = 'none';
+        return;
+      }
+      try {
+        const backend = getBackendUrl();
+        const res = await fetch(`${backend}/api/admin/stats`, {
+          headers: { 'x-admin-key': key }
+        });
+        const data = await res.json();
+        if (res.ok && data.ok) {
+          document.getElementById('adminLoginGate').style.display = 'none';
+          document.getElementById('adminDashboardContent').style.display = 'block';
+          document.getElementById('adminLogoutBtn').style.display = 'inline-block';
+          updateStatsUI(data.stats);
+          fetchUsers();
+          if (statsInterval) clearInterval(statsInterval);
+          statsInterval = setInterval(fetchStats, 6000);
+        } else {
+          sessionStorage.removeItem('onfarm_admin_key');
+          localStorage.removeItem('onfarm_admin_key');
+          document.getElementById('adminLoginGate').style.display = 'flex';
+          document.getElementById('adminDashboardContent').style.display = 'none';
+          document.getElementById('adminLogoutBtn').style.display = 'none';
+        }
+      } catch (e) {
+        document.getElementById('adminLoginGate').style.display = 'flex';
+        document.getElementById('adminDashboardContent').style.display = 'none';
+        document.getElementById('adminLogoutBtn').style.display = 'none';
+      }
+    }
+
+    function updateStatsUI(stats) {
+      if (!stats) return;
+      document.getElementById('statUsers').textContent = stats.total_users;
+      document.getElementById('statSubs').textContent = stats.active_subscriptions;
+      document.getElementById('statWallet').textContent = '₹' + stats.total_wallet_money;
+      document.getElementById('statKilas').textContent = stats.total_kilas_processed;
+      document.getElementById('statusDot').style.background = '#22c55e';
+      document.getElementById('serverStatusText').textContent = 'Cloud Backend Online';
     }
 
     function resetSettings() {
       localStorage.removeItem('onfarm_backend_url');
       localStorage.removeItem('onfarm_admin_key');
-      const bInput = document.getElementById('backendUrl');
-      const kInput = document.getElementById('adminKey');
-      if (bInput) bInput.value = getBackendUrl();
-      if (kInput) kInput.value = 'onfarm_admin_master_2026';
-      fetchStats();
-      fetchUsers();
+      adminLogout();
     }
 
     function switchTab(tab) {
@@ -573,14 +696,13 @@ module.exports = {
         const res = await fetch(`${backend}/api/admin/stats`, {
           headers: { 'x-admin-key': getAdminKey() }
         });
+        if (res.status === 401) {
+          adminLogout();
+          return;
+        }
         const data = await res.json();
         if (data.ok) {
-          document.getElementById('statUsers').textContent = data.stats.total_users;
-          document.getElementById('statSubs').textContent = data.stats.active_subscriptions;
-          document.getElementById('statWallet').textContent = '₹' + data.stats.total_wallet_money;
-          document.getElementById('statKilas').textContent = data.stats.total_kilas_processed;
-          document.getElementById('statusDot').style.background = '#22c55e';
-          document.getElementById('serverStatusText').textContent = 'Cloud Backend Online';
+          updateStatsUI(data.stats);
         } else {
           document.getElementById('statusDot').style.background = '#dc2626';
           document.getElementById('serverStatusText').textContent = data.message || 'Auth Failed';
@@ -596,6 +718,10 @@ module.exports = {
         const res = await fetch(`${getBackendUrl()}/api/admin/users`, {
           headers: { 'x-admin-key': getAdminKey() }
         });
+        if (res.status === 401) {
+          adminLogout();
+          return;
+        }
         const data = await res.json();
         if (data.ok) {
           currentUsers = data.users || [];
@@ -841,12 +967,9 @@ module.exports = {
       alert('Settings saved!');
     }
 
-    document.getElementById('backendUrl').value = getBackendUrl();
-    document.getElementById('adminKey').value = getAdminKey();
-
-    fetchStats();
-    fetchUsers();
-    setInterval(fetchStats, 5000);
+    const bInput = document.getElementById('backendUrl');
+    if (bInput) bInput.value = getBackendUrl();
+    checkAuthOnLoad();
   </script>
 </body>
 
