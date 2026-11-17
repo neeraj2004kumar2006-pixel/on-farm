@@ -45,7 +45,13 @@ async function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      devTools: false,
     },
+  });
+
+  // Security: Prevent inspecting element or opening DevTools
+  mainWindow.webContents.on('devtools-opened', () => {
+    mainWindow.webContents.closeDevTools();
   });
 
   mainWindow.once('ready-to-show', () => {
