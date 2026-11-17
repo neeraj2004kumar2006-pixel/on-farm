@@ -1534,6 +1534,16 @@
             <span>Passes Sold: <strong id="referralPassCount">0</strong></span>
             <span>Earned: <strong id="referralEarned">₹0</strong></span>
           </div>
+
+          <!-- Referred Operators List -->
+          <div id="referredUsersContainer" style="margin-top: 8px; display: none; background: #fdf4ff; border: 1px solid #f0abfc; border-radius: 6px; padding: 6px 8px; font-size: 11px;">
+            <div style="font-weight: 700; color: #86198f; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+              <span>Referred Friends</span>
+              <span id="referredTotalCount" style="background:#fae8ff; color:#a21caf; padding:1px 6px; border-radius:10px; font-size:10px; font-weight:800;">0</span>
+            </div>
+            <div id="referredUsersList" style="max-height: 85px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2925,15 +2935,16 @@
       }
     }
 
-    // Mark "Enter Code" button as permanently used (one-time only)
-    function markReferralLinked() {
+    // Mark "Enter Code" button as permanently used (strictly one-time only)
+    function markReferralLinked(referrerPhone) {
       const btn = document.getElementById('btnEnterReferral');
       if (btn) {
-        btn.textContent = '✓ Code Linked';
+        btn.textContent = referrerPhone ? ('✓ Linked (+91 ' + referrerPhone + ')') : '✓ Code Linked';
         btn.disabled = true;
-        btn.style.opacity = '0.5';
+        btn.style.opacity = '0.6';
         btn.style.cursor = 'not-allowed';
         btn.onclick = null;
+        btn.title = 'A referral code has already been linked to this account.';
       }
     }
 
@@ -2942,8 +2953,8 @@
       try {
         const res = await fetch('/referral-status');
         const data = await res.json();
-        if (data.linked) {
-          markReferralLinked();
+        if (data && data.linked) {
+          markReferralLinked(data.referrerPhone);
         }
       } catch { /* silent – don't block UI */ }
     }
@@ -2957,6 +2968,26 @@
           const earnedEl = document.getElementById('referralEarned');
           if (passCountEl) passCountEl.textContent = data.successfulCount || 0;
           if (earnedEl) earnedEl.textContent = '₹' + (data.totalEarned || 0);
+
+          // Render list of referred operators
+          const refBox = document.getElementById('referredUsersContainer');
+          const refList = document.getElementById('referredUsersList');
+          const refTotal = document.getElementById('referredTotalCount');
+          if (refBox && refList) {
+            const list = data.referredUsers || [];
+            if (list.length > 0) {
+              refBox.style.display = 'block';
+              if (refTotal) refTotal.textContent = list.length;
+              refList.innerHTML = list.map(u => 
+                '<div style="display:flex; justify-content:space-between; align-items:center; padding:3px 0; border-bottom:1px dashed #f5d0fe;">' +
+                  '<span style="font-weight:700; color:#475569;">📱 +91 ' + u.phone + '</span>' +
+                  '<span style="font-weight:700; color:' + (u.rewarded ? '#15803d' : '#b45309') + '; font-size:10px;">' + u.status + '</span>' +
+                '</div>'
+              ).join('');
+            } else {
+              refBox.style.display = 'none';
+            }
+          }
         }
       } catch {}
     }
@@ -3008,10 +3039,17 @@
             amtText = '-₹' + amount.toFixed(2);
             amtColor = '#dc2626';
           } else if (type === 'WALLET_RECHARGE') {
-            badgeHtml = '<span class="history-badge history-badge-credit">Recharge</span>';
-            descText = details.orderId ? ('Order #' + String(details.orderId).slice(-8)) : (details.note || 'Wallet Balance Top-up');
-            amtText = '+₹' + amount.toFixed(2);
-            amtColor = '#16a34a';
+            if (details.is_referral || details.type === 'REFERRAL_BONUS') {
+              badgeHtml = '<span class="history-badge history-badge-referral">🎁 Referral Reward</span>';
+              descText = details.note || ('₹25 Referral reward for friend\'s Monthly Pass' + (details.referred_phone ? ' (+91 ' + details.referred_phone + ')' : '!'));
+              amtText = '+₹' + amount.toFixed(2);
+              amtColor = '#9333ea';
+            } else {
+              badgeHtml = '<span class="history-badge history-badge-credit">Recharge</span>';
+              descText = details.orderId ? ('Order #' + String(details.orderId).slice(-8)) : (details.note || 'Wallet Balance Top-up');
+              amtText = '+₹' + amount.toFixed(2);
+              amtColor = '#16a34a';
+            }
           } else if (type === 'REFERRAL_BONUS') {
             badgeHtml = '<span class="history-badge history-badge-referral">🎁 Referral Reward</span>';
             descText = details.note || '₹25 Referral reward for friend\'s Monthly Pass!';

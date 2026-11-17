@@ -865,6 +865,9 @@ function startControlPanel() {
         return res.status(400).json({ ok: false, message: 'Please enter a valid 10-digit mobile number' });
       }
 
+      // Sync latest cloud status first (in case admin recently reset device in admin panel)
+      await syncUserBalance();
+
       // Hard permanent lock: If this PC is already bound to an operator, forbid changing to any other number
       if (state.user && state.user.phone && state.user.phone !== cleanPhone) {
         return res.status(403).json({

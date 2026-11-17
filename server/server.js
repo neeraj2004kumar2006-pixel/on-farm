@@ -219,25 +219,25 @@ app.post('/api/auth/login', async (req, res) => {
         if (cleanRef && cleanRef.length === 10 && cleanRef !== cleanPhone) {
           const { data: referrer } = await supabase
             .from('users')
-            .select('id, phone, hwid')
+            .select('id, phone')
             .eq('phone', cleanRef)
             .maybeSingle();
 
-          // Rule: Cannot refer user on the same hardware PC
-          if (referrer && referrer.id !== newUser.id && (!referrer.hwid || referrer.hwid !== hwid)) {
-            await supabase.from('transactions').insert([{
-              user_id: newUser.id,
-              amount: 0,
-              type: 'REFERRAL_LINKED',
-              status: 'PENDING',
-              details: {
+          if (referrer && referrer.id !== newUser.id) {
+            await supabase.from('app_config').upsert({
+              key: 'ref_link_' + newUser.id,
+              value: {
+                referred_user_id: newUser.id,
+                referred_phone: newUser.phone,
                 referrer_user_id: referrer.id,
                 referrer_phone: referrer.phone,
-                bonus_amount: 25,
-                rewarded: false,
                 linked_at: new Date().toISOString(),
+                rewarded: false,
+                bonus_amount: 25.00,
               },
-            }]);
+              updated_at: new Date().toISOString()
+            });
+            console.log(`🔗 Referral linked at registration: +91 ${newUser.phone} -> +91 ${referrer.phone}`);
           }
         }
       }
@@ -376,63 +376,81 @@ app.post('/api/pay/create-order', async (req, res) => {
 /**
  * Grants ₹25 referral credit to the referrer if this user was referred and hasn't claimed yet
  */
+/**
+ * Check and Grant ₹25 Referral Reward when user activates/buys 30-Day Monthly Pass
+ * Stored securely in app_config & credited to referrer's wallet
+ */
 async function grantReferralBonusIfEligible(userId, supabase) {
   try {
-    const { data: refTx } = await supabase
-      .from('transactions')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('type', 'REFERRAL_LINKED')
+    // 1. Fetch referral link from app_config
+    const { data: configRow } = await supabase
+      .from('app_config')
+      .select('value')
+      .eq('key', 'ref_link_' + userId)
       .maybeSingle();
 
-    if (!refTx || !refTx.details || refTx.details.rewarded) {
-      return; // Not referred, or reward already granted
+    if (!configRow || !configRow.value) {
+      return false; // Not referred
     }
 
-    const referrerUserId = refTx.details.referrer_user_id;
-    if (!referrerUserId) return;
+    const ref = configRow.value;
+    if (ref.rewarded) {
+      return false; // Already rewarded! Strictly one-time only!
+    }
 
+    const referrerUserId = ref.referrer_user_id;
+    if (!referrerUserId) return false;
+
+    // 2. Fetch referrer's wallet
     const { data: referrerWallet } = await supabase
       .from('wallets')
       .select('*')
       .eq('user_id', referrerUserId)
       .maybeSingle();
 
-    if (referrerWallet) {
-      const rewardAmount = 25.00;
-      const updatedBalance = Number(referrerWallet.balance || 0) + rewardAmount;
+    const rewardAmount = 25.00;
+    const currentBal = Number(referrerWallet ? referrerWallet.balance : 0);
+    const updatedBalance = currentBal + rewardAmount;
+    const updatedRecharged = Number(referrerWallet ? referrerWallet.total_recharged : 0) + rewardAmount;
 
-      await supabase.from('wallets').update({
-        balance: updatedBalance,
-        updated_at: new Date().toISOString(),
-      }).eq('user_id', referrerUserId);
+    // 3. Credit referrer's wallet
+    await supabase.from('wallets').upsert({
+      user_id: referrerUserId,
+      balance: updatedBalance,
+      total_recharged: updatedRecharged,
+      updated_at: new Date().toISOString(),
+    });
 
-      // Record credit in referrer's transactions
-      await supabase.from('transactions').insert([{
-        user_id: referrerUserId,
-        amount: rewardAmount,
+    // 4. Record credit in referrer's transactions using valid schema types
+    await supabase.from('transactions').insert([{
+      user_id: referrerUserId,
+      amount: rewardAmount,
+      type: 'WALLET_RECHARGE',
+      status: 'SUCCESS',
+      details: {
+        is_referral: true,
         type: 'REFERRAL_BONUS',
-        status: 'SUCCESS',
-        details: {
-          referred_user_id: userId,
-          note: '₹25 referral reward for Monthly Pass purchase',
-        },
-      }]);
+        referred_user_id: userId,
+        referred_phone: ref.referred_phone,
+        note: `₹25 Referral reward for Monthly Pass (+91 ${ref.referred_phone})`,
+      },
+    }]);
 
-      // Mark referral linked as completed & rewarded
-      await supabase.from('transactions').update({
-        status: 'COMPLETED',
-        details: {
-          ...refTx.details,
-          rewarded: true,
-          rewarded_at: new Date().toISOString(),
-        },
-      }).eq('id', refTx.id);
+    // 5. Mark referral link as permanently rewarded
+    await supabase.from('app_config').update({
+      value: {
+        ...ref,
+        rewarded: true,
+        rewarded_at: new Date().toISOString(),
+      },
+      updated_at: new Date().toISOString(),
+    }).eq('key', 'ref_link_' + userId);
 
-      console.log(`🎁 Referral bonus ₹25 granted to user ${referrerUserId} for user ${userId} monthly pass!`);
-    }
+    console.log(`🎁 Referral bonus ₹25 successfully credited to +91 ${ref.referrer_phone} for +91 ${ref.referred_phone}!`);
+    return true;
   } catch (err) {
     console.error('grantReferralBonusIfEligible error:', err);
+    return false;
   }
 }
 
@@ -738,34 +756,48 @@ app.get('/api/user/transactions', async (req, res) => {
 });
 
 /**
- * Fetch User Referral Stats (Referral Code, Total Earned, Count)
+ * Fetch User Referral Stats (Referral Code, Total Earned, Count, Referred Users List)
  */
 app.get('/api/user/referral-stats', async (req, res) => {
   try {
-    const { userId, hwid } = req.query;
+    const { userId } = req.query;
     if (!userId) return res.status(400).json({ ok: false, message: 'userId is required' });
     const supabase = getSupabase();
 
-    const { data: user } = await supabase.from('users').select('id, phone, hwid').eq('id', userId).single();
-    if (!user || (hwid && user.hwid && user.hwid !== hwid)) {
-      return res.status(403).json({ ok: false, message: 'Invalid device credentials' });
+    const { data: user } = await supabase.from('users').select('id, phone').eq('id', userId).single();
+    if (!user) {
+      return res.status(404).json({ ok: false, message: 'User not found' });
     }
 
-    // Find all referral bonus transactions awarded to this user
-    const { data: bonuses } = await supabase
-      .from('transactions')
-      .select('amount, type, status, created_at, details')
-      .eq('user_id', user.id)
-      .eq('type', 'REFERRAL_BONUS');
+    // Find all referral links where this user is the referrer
+    const { data: allLinks } = await supabase
+      .from('app_config')
+      .select('value')
+      .like('key', 'ref_link_%');
 
-    const totalEarned = (bonuses || []).reduce((sum, b) => sum + Number(b.amount || 0), 0);
-    const successfulCount = (bonuses || []).length;
+    const myReferrals = (allLinks || [])
+      .map(r => r.value)
+      .filter(v => v && (v.referrer_user_id === user.id || v.referrer_phone === user.phone));
+
+    const successfulCount = myReferrals.filter(r => r.rewarded).length;
+    const totalEarned = successfulCount * 25.00;
+
+    // List of referred operators to display in user UI
+    const referredUsers = myReferrals.map(r => ({
+      phone: r.referred_phone,
+      linked_at: r.linked_at,
+      rewarded: !!r.rewarded,
+      rewarded_at: r.rewarded_at,
+      status: r.rewarded ? 'Monthly Pass Active (+₹25)' : 'Registered (Pass Pending)',
+    }));
 
     res.json({
       ok: true,
       referralCode: user.phone,
       totalEarned,
       successfulCount,
+      totalReferred: myReferrals.length,
+      referredUsers,
     });
   } catch (err) {
     res.status(500).json({ ok: false, message: err.message });
@@ -773,23 +805,25 @@ app.get('/api/user/referral-stats', async (req, res) => {
 });
 
 /**
- * Check if a user has already linked a referral code (one-time only)
+ * Check if a user has already linked a referral code (strictly one-time only)
  */
 app.get('/api/user/referral-status', async (req, res) => {
   try {
-    const { userId, hwid } = req.query;
+    const { userId } = req.query;
     if (!userId) return res.status(400).json({ ok: false, message: 'userId is required' });
     const supabase = getSupabase();
-    const { data: user } = await supabase.from('users').select('id, hwid').eq('id', userId).single();
-    if (!user || (hwid && user.hwid && user.hwid !== hwid)) {
-      return res.status(403).json({ ok: false, message: 'Invalid credentials' });
-    }
-    const { data: existing } = await supabase
-      .from('transactions').select('id, details, created_at').eq('user_id', userId).eq('type', 'REFERRAL_LINKED').maybeSingle();
+
+    const { data: linkRow } = await supabase
+      .from('app_config')
+      .select('value')
+      .eq('key', 'ref_link_' + userId)
+      .maybeSingle();
+
     res.json({
       ok: true,
-      linked: !!existing,
-      referrerPhone: existing && existing.details ? existing.details.referrer_phone : null,
+      linked: !!(linkRow && linkRow.value),
+      referrerPhone: linkRow && linkRow.value ? linkRow.value.referrer_phone : null,
+      rewarded: linkRow && linkRow.value ? !!linkRow.value.rewarded : false,
     });
   } catch (err) {
     res.status(500).json({ ok: false, message: err.message });
@@ -797,30 +831,32 @@ app.get('/api/user/referral-status', async (req, res) => {
 });
 
 /**
- * Link a Referrer Code to an Existing Account
+ * Link a Referrer Code to an Existing Account (One-Time Only)
  */
 app.post('/api/user/link-referral', async (req, res) => {
   try {
-    const { userId, hwid, referralCode } = req.body;
-    if (!userId || !hwid || !referralCode) {
-      return res.status(400).json({ ok: false, message: 'Missing required parameters' });
+    const { userId, referralCode } = req.body;
+    if (!userId || !referralCode) {
+      return res.status(400).json({ ok: false, message: 'userId and referralCode are required' });
     }
     const supabase = getSupabase();
-    const { data: user } = await supabase.from('users').select('id, phone, hwid').eq('id', userId).single();
-    if (!user || user.hwid !== hwid) {
-      return res.status(403).json({ ok: false, message: 'Invalid device credentials' });
+    const { data: user } = await supabase.from('users').select('id, phone').eq('id', userId).single();
+    if (!user) {
+      return res.status(404).json({ ok: false, message: 'User not found' });
     }
 
-    // Check if user already linked a referral
-    const { data: existingRef } = await supabase
-      .from('transactions')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('type', 'REFERRAL_LINKED')
+    // Check if user already linked a referral code
+    const { data: existingLink } = await supabase
+      .from('app_config')
+      .select('value')
+      .eq('key', 'ref_link_' + user.id)
       .maybeSingle();
 
-    if (existingRef) {
-      return res.status(400).json({ ok: false, message: 'A referral code has already been linked to your account.' });
+    if (existingLink && existingLink.value) {
+      return res.status(400).json({
+        ok: false,
+        message: `A referral code has already been linked to your account (+91 ${existingLink.value.referrer_phone}).`,
+      });
     }
 
     const cleanRef = String(referralCode).replace(/\D/g, '').slice(-10);
@@ -831,27 +867,41 @@ app.post('/api/user/link-referral', async (req, res) => {
       return res.status(400).json({ ok: false, message: 'You cannot refer your own mobile number.' });
     }
 
-    const { data: referrer } = await supabase.from('users').select('id, phone, hwid').eq('phone', cleanRef).maybeSingle();
+    const { data: referrer } = await supabase.from('users').select('id, phone').eq('phone', cleanRef).maybeSingle();
     if (!referrer) {
       return res.status(404).json({ ok: false, message: 'No registered operator found with this referral number.' });
     }
-    if (referrer.hwid && referrer.hwid === hwid) {
-      return res.status(403).json({ ok: false, message: 'Referral code cannot be used on the same computer.' });
+    if (referrer.id === user.id) {
+      return res.status(400).json({ ok: false, message: 'You cannot use your own referral code.' });
     }
 
-    await supabase.from('transactions').insert([{
-      user_id: user.id,
-      amount: 0,
-      type: 'REFERRAL_LINKED',
-      status: 'PENDING',
-      details: {
+    // Save referral link securely in app_config
+    await supabase.from('app_config').upsert({
+      key: 'ref_link_' + user.id,
+      value: {
+        referred_user_id: user.id,
+        referred_phone: user.phone,
         referrer_user_id: referrer.id,
         referrer_phone: referrer.phone,
-        bonus_amount: 25,
-        rewarded: false,
         linked_at: new Date().toISOString(),
+        rewarded: false,
+        bonus_amount: 25.00,
       },
-    }]);
+      updated_at: new Date().toISOString(),
+    });
+
+    // If user already has an active 30-day subscription, immediately award the ₹25 bonus!
+    const { data: activeSub } = await supabase
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .gt('expires_at', new Date().toISOString())
+      .maybeSingle();
+
+    if (activeSub) {
+      await grantReferralBonusIfEligible(user.id, supabase);
+    }
 
     res.json({ ok: true, message: `Successfully linked referral to +91 ${referrer.phone}!` });
   } catch (err) {
@@ -926,7 +976,7 @@ function requireAdmin(req, res, next) {
     });
 
     /**
-     * Admin Users List
+     * Admin Users List (Extended with Wallets, Subscriptions & Referral Info)
      */
     app.get('/api/admin/users', requireAdmin, async (req, res) => {
       try {
@@ -937,7 +987,27 @@ function requireAdmin(req, res, next) {
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        res.json({ ok: true, users });
+
+        // Fetch referral links from app_config to show in admin dashboard
+        const { data: allLinks } = await supabase
+          .from('app_config')
+          .select('key, value')
+          .like('key', 'ref_link_%');
+
+        const linkMap = {};
+        (allLinks || []).forEach(r => {
+          if (r.key && r.value) {
+            const uid = r.key.replace('ref_link_', '');
+            linkMap[uid] = r.value;
+          }
+        });
+
+        const usersWithRef = (users || []).map(u => ({
+          ...u,
+          referralInfo: linkMap[u.id] || null,
+        }));
+
+        res.json({ ok: true, users: usersWithRef });
       } catch (err) {
         res.status(500).json({ ok: false, message: err.message });
       }
@@ -1040,29 +1110,30 @@ function requireAdmin(req, res, next) {
           is_active: true,
         }]);
 
-        // If admin provides a referrer phone and no referral is linked yet, link it now
+        // If admin provides a referrer phone and no referral is linked yet, link it now via app_config
         if (referrerPhone) {
           const cleanRef = String(referrerPhone).replace(/\D/g, '').slice(-10);
           if (cleanRef.length === 10) {
-            const { data: existingRef } = await supabase
-              .from('transactions').select('id').eq('user_id', userId).eq('type', 'REFERRAL_LINKED').maybeSingle();
-            if (!existingRef) {
+            const { data: user } = await supabase.from('users').select('id, phone').eq('id', userId).single();
+            const { data: existingLink } = await supabase
+              .from('app_config').select('value').eq('key', 'ref_link_' + userId).maybeSingle();
+            if (!existingLink || !existingLink.value) {
               const { data: referrer } = await supabase.from('users').select('id, phone').eq('phone', cleanRef).maybeSingle();
-              if (referrer && referrer.id !== userId) {
-                await supabase.from('transactions').insert([{
-                  user_id: userId,
-                  amount: 0,
-                  type: 'REFERRAL_LINKED',
-                  status: 'PENDING',
-                  details: {
+              if (referrer && referrer.id !== userId && user) {
+                await supabase.from('app_config').upsert({
+                  key: 'ref_link_' + userId,
+                  value: {
+                    referred_user_id: userId,
+                    referred_phone: user.phone,
                     referrer_user_id: referrer.id,
                     referrer_phone: referrer.phone,
-                    bonus_amount: 25,
+                    bonus_amount: 25.00,
                     rewarded: false,
                     linked_at: new Date().toISOString(),
                     linked_by: 'admin',
                   },
-                }]);
+                  updated_at: new Date().toISOString()
+                });
               }
             }
           }

@@ -748,7 +748,10 @@ module.exports = {
         return `
           <tr id="user-row-${u.id}">
             <td><strong>${u.name || 'Unnamed'}</strong></td>
-            <td>${u.phone}</td>
+            <td>
+              ${u.phone}
+              ${u.referralInfo ? `<div style="font-size:0.75rem; color:#8b5cf6; margin-top:2px;">Ref: +91 ${u.referralInfo.referrer_phone} ${u.referralInfo.rewarded ? '<span style="color:#22c55e;">(Rewarded)</span>' : '<span style="color:#f59e0b;">(Pending)</span>'}</div>` : ''}
+            </td>
             <td>
               ${hwidStatus}
               ${u.hwid ? `<button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem; margin-left:6px;" onclick="resetHwid('${u.id}', '${u.phone}')">Reset Device</button>` : ''}
@@ -759,7 +762,7 @@ module.exports = {
             </td>
             <td>
               ${planText}
-              <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem; margin-left:6px;" onclick="grantSub('${u.id}', '${u.phone}')">+30 Days</button>
+              <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem; margin-left:6px;" onclick="grantSub('${u.id}', '${u.phone}', '${u.referralInfo ? u.referralInfo.referrer_phone : ''}')">+30 Days</button>
             </td>
             <td>
               ${u.is_blocked ? '<span class="chip chip-red">BLOCKED</span>' : '<span class="chip chip-green">ACTIVE</span>'}
@@ -867,18 +870,31 @@ module.exports = {
       }
     }
 
-    async function grantSub(userId, phone) {
-      if (!confirm(`Grant 30-Day Unlimited Subscription Pass to +91 ${phone}?`)) return;
+    async function grantSub(userId, phone, knownReferrer = '') {
+      let referrerPhone = knownReferrer;
+      if (referrerPhone) {
+        if (!confirm(`Grant 30-Day Unlimited Pass to +91 ${phone}?\n\nReferred by: +91 ${referrerPhone} (₹25 reward will be granted to referrer automatically).`)) return;
+      } else {
+        const input = prompt(`Grant 30-Day Unlimited Pass to +91 ${phone}?\n\nIf this user was referred by another operator, enter the REFERRER's 10-digit mobile number below (or leave blank):`);
+        if (input === null) return;
+        referrerPhone = (input || '').replace(/\D/g, '');
+      }
+
       showToast(`Activating 30-day pass for +91 ${phone}...`);
       try {
+        const body = { userId, days: 30 };
+        if (referrerPhone && referrerPhone.length === 10) {
+          body.referrerPhone = referrerPhone;
+        }
         const res = await fetch(`${getBackendUrl()}/api/admin/user/grant-subscription`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
-          body: JSON.stringify({ userId, days: 30 })
+          body: JSON.stringify(body)
         });
         const data = await res.json();
         if (data.ok) {
-          showToast(`30-Day Unlimited Pass activated for +91 ${phone}!`);
+          const refNote = body.referrerPhone ? ` (₹25 referral bonus sent to +91 ${body.referrerPhone})` : '';
+          showToast(`30-Day Pass activated for +91 ${phone}!${refNote}`);
           fetchUsers();
           fetchStats();
         } else {
