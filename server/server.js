@@ -1,83 +1,85 @@
 // server/server.js
-// Main backend server for On-Farm SaaS
+// On-Farm Production Backend Service (Serverless on Vercel)
+// Hardened with two-phase reservation ledger, atomic RPCs, strict webhook verification, and sanitized public config
 
-const path = require('path');
-const crypto = require('crypto');
-require('dotenv').config({ path: path.join(__dirname, '.env') });
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const cashfree = require('./cashfree');
-const { encryptScript, decryptScript } = require('./security');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Security Middlewares
+app.use(helmet({
+  contentSecurityPolicy: false,
+}));
 app.use(cors());
+
+// Capture raw body for Cashfree webhook signature verification
 app.use(express.json({
   verify: (req, res, buf) => {
-    req.rawBody = buf.toString();
-  }
+    req.rawBody = buf;
+  },
+  limit: '2mb',
 }));
 
-// Handle Vercel Express rewrites
-app.use((req, res, next) => {
-  const forwardedPath = req.headers['x-matched-path'] || req.headers['x-invoke-path'];
-  if (forwardedPath && req.url === '/server.js') {
-    req.url = forwardedPath;
-  }
-  next();
-});
-app.all('/server.js', (req, res, next) => {
-  const forwardedPath = req.headers['x-matched-path'] || req.headers['x-invoke-path'] || '/api/health';
-  req.url = forwardedPath;
-  app.handle(req, res, next);
-});
-
-// Serve Admin Dashboard
+// Serve static Super Admin Console
 app.use('/admin', express.static(path.join(__dirname, 'admin')));
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'admin', 'index.html'));
 });
 app.get('/', (req, res) => {
-  res.redirect('/admin');
+  res.sendFile(path.join(__dirname, 'admin', 'index.html'));
 });
 
-// Initialize Supabase Client
+// Singleton Supabase Client (Reuses keep-alive connections on warm serverless instances)
+let supabaseClient = null;
 function getSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error('Supabase configuration missing in .env (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY required)');
+  if (!supabaseClient) {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!url || !key) {
+      throw new Error('Supabase credentials missing in server environment variables.');
+    }
+    supabaseClient = createClient(url, key, {
+      auth: { persistSession: false },
+    });
   }
-  return createClient(url, key, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  return supabaseClient;
 }
 
 // -------------------------------------------------------------------------
-// 1. PUBLIC & RUNNER CLIENT ENDPOINTS
+// 1. PUBLIC HEALTH & CONFIGURATION ENDPOINTS
 // -------------------------------------------------------------------------
 
-/**
- * Health Check (Used for mandatory "Bina Internet Kahi Na Chale" check)
- */
 app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
     status: 'ONLINE',
-    server_time: new Date().toISOString(),
+    timestamp: new Date().toISOString(),
     service: 'On-Farm Cloud License Server',
   });
 });
 
 /**
- * Version Gate & Remote Config
+ * Version Gate & Remote Config (Safe Public Config ONLY)
+ * Strips out sensitive keys like ref_link_* to prevent user UUID/phone leaks
  */
 app.get('/api/config', async (req, res) => {
   try {
     const supabase = getSupabase();
-    const { data, error } = await supabase.from('app_config').select('key, value');
+    const ALLOWED_CONFIG_KEYS = ['version_gate', 'pricing_plans', 'announcements'];
+    const { data, error } = await supabase
+      .from('app_config')
+      .select('key, value')
+      .in('key', ALLOWED_CONFIG_KEYS);
+
     if (error) throw error;
 
     const configMap = {};
@@ -93,8 +95,7 @@ app.get('/api/config', async (req, res) => {
 });
 
 /**
- * Device HWID Status Check
- * Automatically recognizes if this physical computer is already bound to an operator
+ * Device Status (HWID Single Source of Truth)
  */
 app.post('/api/auth/device-status', async (req, res) => {
   const { hwid } = req.body;
@@ -106,7 +107,7 @@ app.post('/api/auth/device-status', async (req, res) => {
     const supabase = getSupabase();
     const { data: user, error } = await supabase
       .from('users')
-      .select('*, wallets(*), subscriptions(*)')
+      .select('id, name, phone, hwid, is_blocked')
       .eq('hwid', hwid)
       .maybeSingle();
 
@@ -132,6 +133,7 @@ app.post('/api/auth/device-status', async (req, res) => {
       .eq('is_active', true)
       .gt('expires_at', new Date().toISOString())
       .order('expires_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     res.json({
@@ -169,6 +171,9 @@ app.post('/api/auth/login', async (req, res) => {
   }
 
   const cleanPhone = String(phone).replace(/\D/g, '').slice(-10);
+  if (cleanPhone.length !== 10) {
+    return res.status(400).json({ ok: false, message: 'Please enter a valid 10-digit mobile number' });
+  }
 
   try {
     const supabase = getSupabase();
@@ -191,7 +196,7 @@ app.post('/api/auth/login', async (req, res) => {
     // Check if user exists
     let { data: user, error } = await supabase
       .from('users')
-      .select('*, wallets(*), subscriptions(*)')
+      .select('*')
       .eq('phone', cleanPhone)
       .maybeSingle();
 
@@ -203,41 +208,29 @@ app.post('/api/auth/login', async (req, res) => {
         .from('users')
         .insert([{
           phone: cleanPhone,
-          name: name || `Operator_${cleanPhone.slice(-4)}`,
+          name: name || `Operator ${cleanPhone.slice(-4)}`,
           email: email || '',
-          hwid: hwid, // First login permanently binds HWID to this device!
+          hwid,
+          is_blocked: false,
         }])
-        .select('*, wallets(*), subscriptions(*)')
+        .select('*')
         .single();
 
       if (createErr) throw createErr;
       user = newUser;
 
-      // Handle referral code linking upon new registration
+      // Handle referral code linking if provided
       if (referralCode) {
         const cleanRef = String(referralCode).replace(/\D/g, '').slice(-10);
-        if (cleanRef && cleanRef.length === 10 && cleanRef !== cleanPhone) {
-          const { data: referrer } = await supabase
-            .from('users')
-            .select('id, phone')
-            .eq('phone', cleanRef)
-            .maybeSingle();
-
-          if (referrer && referrer.id !== newUser.id) {
-            await supabase.from('app_config').upsert({
-              key: 'ref_link_' + newUser.id,
-              value: {
-                referred_user_id: newUser.id,
-                referred_phone: newUser.phone,
-                referrer_user_id: referrer.id,
-                referrer_phone: referrer.phone,
-                linked_at: new Date().toISOString(),
-                rewarded: false,
-                bonus_amount: 25.00,
-              },
-              updated_at: new Date().toISOString()
-            });
-            console.log(`🔗 Referral linked at registration: +91 ${newUser.phone} -> +91 ${referrer.phone}`);
+        if (cleanRef.length === 10 && cleanRef !== cleanPhone) {
+          const { data: referrer } = await supabase.from('users').select('id, phone').eq('phone', cleanRef).maybeSingle();
+          if (referrer && referrer.id !== user.id) {
+            // Save in referrals table
+            await supabase.from('referrals').insert([{
+              referred_user_id: user.id,
+              referrer_user_id: referrer.id,
+              bonus: 25.00,
+            }]).catch(() => {});
           }
         }
       }
@@ -253,7 +246,6 @@ app.post('/api/auth/login', async (req, res) => {
 
       // Enforce HWID Device Lock
       if (!user.hwid) {
-        // First device binding
         await supabase.from('users').update({ hwid, last_active_at: new Date() }).eq('id', user.id);
         user.hwid = hwid;
       } else if (user.hwid !== hwid) {
@@ -276,6 +268,7 @@ app.post('/api/auth/login', async (req, res) => {
       .eq('is_active', true)
       .gt('expires_at', new Date().toISOString())
       .order('expires_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     const hasActiveSubscription = !!subs;
@@ -299,7 +292,9 @@ app.post('/api/auth/login', async (req, res) => {
         expires_at: subs.expires_at,
         is_active: true,
       } : null,
-      can_execute: hasActiveSubscription || walletBalance >= 1.00,
+      message: hasActiveSubscription
+        ? 'Login successful. Active 30-Day Monthly Pass verified.'
+        : `Login successful. Available Wallet Balance: ₹${walletBalance}`,
     });
   } catch (err) {
     res.status(500).json({ ok: false, message: err.message });
@@ -311,8 +306,7 @@ app.post('/api/auth/login', async (req, res) => {
 // -------------------------------------------------------------------------
 
 /**
- * Creates a Cashfree payment order
- * type: 'SUBSCRIPTION_699' | 'WALLET_RECHARGE'
+ * Creates a Cashfree payment order with strict amount bounds
  */
 app.post('/api/pay/create-order', async (req, res) => {
   const { userId, type, customAmount, returnUrl } = req.body;
@@ -324,7 +318,9 @@ app.post('/api/pay/create-order', async (req, res) => {
   let orderNote = 'On-Farm 30-Day Unlimited Subscription Pass';
 
   if (type === 'WALLET_RECHARGE') {
-    amount = Math.max(1.00, Number(customAmount || 1.00));
+    // Strictly cap recharge bounds: Min ₹1, Max ₹10,000
+    const rawAmt = Number(customAmount || 10.00);
+    amount = Math.min(10000.00, Math.max(1.00, Math.round(rawAmt * 100) / 100));
     orderNote = `On-Farm Wallet Recharge: ₹${amount}`;
   }
 
@@ -374,112 +370,39 @@ app.post('/api/pay/create-order', async (req, res) => {
 });
 
 /**
- * Grants ₹25 referral credit to the referrer if this user was referred and hasn't claimed yet
- */
-/**
- * Check and Grant ₹25 Referral Reward when user activates/buys 30-Day Monthly Pass
- * Stored securely in app_config & credited to referrer's wallet
- */
-async function grantReferralBonusIfEligible(userId, supabase) {
-  try {
-    // 1. Fetch referral link from app_config
-    const { data: configRow } = await supabase
-      .from('app_config')
-      .select('value')
-      .eq('key', 'ref_link_' + userId)
-      .maybeSingle();
-
-    if (!configRow || !configRow.value) {
-      return false; // Not referred
-    }
-
-    const ref = configRow.value;
-    if (ref.rewarded) {
-      return false; // Already rewarded! Strictly one-time only!
-    }
-
-    const referrerUserId = ref.referrer_user_id;
-    if (!referrerUserId) return false;
-
-    // 2. Fetch referrer's wallet
-    const { data: referrerWallet } = await supabase
-      .from('wallets')
-      .select('*')
-      .eq('user_id', referrerUserId)
-      .maybeSingle();
-
-    const rewardAmount = 25.00;
-    const currentBal = Number(referrerWallet ? referrerWallet.balance : 0);
-    const updatedBalance = currentBal + rewardAmount;
-    const updatedRecharged = Number(referrerWallet ? referrerWallet.total_recharged : 0) + rewardAmount;
-
-    // 3. Credit referrer's wallet
-    await supabase.from('wallets').upsert({
-      user_id: referrerUserId,
-      balance: updatedBalance,
-      total_recharged: updatedRecharged,
-      updated_at: new Date().toISOString(),
-    });
-
-    // 4. Record credit in referrer's transactions using valid schema types
-    await supabase.from('transactions').insert([{
-      user_id: referrerUserId,
-      amount: rewardAmount,
-      type: 'WALLET_RECHARGE',
-      status: 'SUCCESS',
-      details: {
-        is_referral: true,
-        type: 'REFERRAL_BONUS',
-        referred_user_id: userId,
-        referred_phone: ref.referred_phone,
-        note: `₹25 Referral reward for Monthly Pass (+91 ${ref.referred_phone})`,
-      },
-    }]);
-
-    // 5. Mark referral link as permanently rewarded
-    await supabase.from('app_config').update({
-      value: {
-        ...ref,
-        rewarded: true,
-        rewarded_at: new Date().toISOString(),
-      },
-      updated_at: new Date().toISOString(),
-    }).eq('key', 'ref_link_' + userId);
-
-    console.log(`🎁 Referral bonus ₹25 successfully credited to +91 ${ref.referrer_phone} for +91 ${ref.referred_phone}!`);
-    return true;
-  } catch (err) {
-    console.error('grantReferralBonusIfEligible error:', err);
-    return false;
-  }
-}
-
-/**
- * Verifies payment order status with Cashfree and updates user balance/subscription
+ * Verifies payment order status with Cashfree atomically
  */
 app.post('/api/pay/verify', async (req, res) => {
   const { orderId } = req.body;
-  if (!orderId) return res.status(400).json({ ok: false, message: 'orderId is required' });
+  if (!orderId) {
+    return res.status(400).json({ ok: false, message: 'orderId is required' });
+  }
 
   try {
     const supabase = getSupabase();
     const orderData = await cashfree.getOrderStatus(orderId);
 
     if (orderData.order_status === 'PAID') {
-      const { data: tx, error: txErr } = await supabase
+      // Atomic apply via Postgres function
+      const { data: applyRes, error: applyErr } = await supabase.rpc('apply_cashfree_payment', {
+        p_order_id: orderId,
+        p_payload: orderData,
+      });
+
+      if (!applyErr && applyRes && applyRes.ok) {
+        return res.json({ ok: true, status: 'PAID', message: 'Payment successfully verified!' });
+      }
+
+      // Safe fallback if RPC not yet migrated
+      const { data: tx } = await supabase
         .from('transactions')
         .select('*')
         .eq('cashfree_order_id', orderId)
-        .single();
+        .maybeSingle();
 
-      if (txErr || !tx) throw new Error('Transaction record not found');
-
-      if (tx.status !== 'SUCCESS') {
-        // Mark transaction as SUCCESS
+      if (tx && tx.status !== 'SUCCESS') {
         await supabase.from('transactions').update({ status: 'SUCCESS' }).eq('id', tx.id);
-
         if (tx.type === 'SUBSCRIPTION_699') {
-          // Activate 30-day subscription
           const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
           await supabase.from('subscriptions').insert([{
             user_id: tx.user_id,
@@ -489,20 +412,16 @@ app.post('/api/pay/verify', async (req, res) => {
           }]);
           await grantReferralBonusIfEligible(tx.user_id, supabase);
         } else if (tx.type === 'WALLET_RECHARGE') {
-          // Increment wallet balance
-          const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', tx.user_id).single();
+          const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', tx.user_id).maybeSingle();
           const newBal = Number(wallet ? wallet.balance : 0) + Number(tx.amount);
-          const newRecharged = Number(wallet ? wallet.total_recharged : 0) + Number(tx.amount);
-
           await supabase.from('wallets').upsert({
             user_id: tx.user_id,
             balance: newBal,
-            total_recharged: newRecharged,
+            total_recharged: Number(wallet ? wallet.total_recharged : 0) + Number(tx.amount),
             updated_at: new Date().toISOString(),
           });
         }
       }
-
       return res.json({ ok: true, status: 'PAID', message: 'Payment successfully verified!' });
     }
 
@@ -514,19 +433,23 @@ app.post('/api/pay/verify', async (req, res) => {
 
 /**
  * Cashfree Server-to-Server Webhook Handler
- * Instant balance credit & subscription activation even if user closes the tab!
+ * Strictly enforces signature verification (Returns 401 if missing or invalid)
  */
 app.post('/api/pay/webhook', async (req, res) => {
   const signature = req.headers['x-webhook-signature'];
   const timestamp = req.headers['x-webhook-timestamp'];
   const rawBody = req.rawBody || JSON.stringify(req.body);
 
-  if (signature && timestamp) {
-    const isValid = cashfree.verifyWebhookSignature(rawBody, signature, timestamp);
-    if (!isValid) {
-      console.warn('⚠️ Rejected Cashfree webhook with invalid signature.');
-      return res.status(401).json({ ok: false, message: 'Invalid webhook signature' });
-    }
+  // Mandatory signature check: fail closed!
+  if (!signature || !timestamp) {
+    console.warn('⚠️ Rejected Cashfree webhook: missing signature headers.');
+    return res.status(401).json({ ok: false, message: 'Missing webhook signature headers' });
+  }
+
+  const isValid = cashfree.verifyWebhookSignature(rawBody, signature, timestamp);
+  if (!isValid) {
+    console.warn('⚠️ Rejected Cashfree webhook: invalid signature.');
+    return res.status(401).json({ ok: false, message: 'Invalid webhook signature' });
   }
 
   try {
@@ -538,41 +461,11 @@ app.post('/api/pay/webhook', async (req, res) => {
     if (eventType === 'PAYMENT_SUCCESS_WEBHOOK' || (paymentData && paymentData.payment_status === 'SUCCESS')) {
       const orderId = orderData && orderData.order_id;
       if (orderId) {
-        const { data: tx } = await supabase
-          .from('transactions')
-          .select('*')
-          .eq('cashfree_order_id', orderId)
-          .maybeSingle();
-
-        if (tx && tx.status !== 'SUCCESS') {
-          await supabase.from('transactions').update({
-            status: 'SUCCESS',
-            details: req.body,
-          }).eq('id', tx.id);
-
-          if (tx.type === 'SUBSCRIPTION_699') {
-            const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-            await supabase.from('subscriptions').insert([{
-              user_id: tx.user_id,
-              plan_name: 'MONTHLY_699',
-              expires_at: expiresAt,
-              is_active: true,
-            }]);
-            await grantReferralBonusIfEligible(tx.user_id, supabase);
-          } else if (tx.type === 'WALLET_RECHARGE') {
-            const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', tx.user_id).maybeSingle();
-            const newBal = Number(wallet ? wallet.balance : 0) + Number(tx.amount);
-            const newRecharged = Number(wallet ? wallet.total_recharged : 0) + Number(tx.amount);
-
-            await supabase.from('wallets').upsert({
-              user_id: tx.user_id,
-              balance: newBal,
-              total_recharged: newRecharged,
-              updated_at: new Date().toISOString(),
-            });
-          }
-          console.log(`✅ Webhook verified & processed for order: ${orderId}`);
-        }
+        // Atomic apply via Postgres function
+        await supabase.rpc('apply_cashfree_payment', {
+          p_order_id: orderId,
+          p_payload: req.body,
+        });
       }
     }
 
@@ -584,7 +477,7 @@ app.post('/api/pay/webhook', async (req, res) => {
 });
 
 // -------------------------------------------------------------------------
-// 3. SECURE IN-MEMORY AUTOMATION SCRIPT DELIVERY
+// 3. SECURE AUTOMATION SCRIPT DELIVERY & KILA TWO-PHASE LEDGER
 // -------------------------------------------------------------------------
 
 /**
@@ -598,53 +491,53 @@ app.post('/api/script/fetch-payload', async (req, res) => {
 
   try {
     const supabase = getSupabase();
-
-    // Verify User and HWID
     const { data: user, error: userErr } = await supabase.from('users').select('*').eq('id', userId).single();
     if (userErr || !user) throw new Error('User not found');
-    if (user.is_blocked) throw new Error('User is blocked');
-    if (user.hwid !== hwid) throw new Error('HWID device mismatch');
 
-    // Check plan or wallet balance
+    if (user.is_blocked) throw new Error('User is blocked');
+    if (user.hwid && user.hwid !== hwid) {
+      throw new Error('HWID device mismatch. Account bound to another installation.');
+    }
+
     const { data: subs } = await supabase
       .from('subscriptions')
       .select('*')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .gt('expires_at', new Date().toISOString())
+      .order('expires_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', user.id).maybeSingle();
-    const balance = Number(wallet ? wallet.balance : 0);
+    const hasBalance = Number(wallet ? wallet.balance : 0) >= 1.00;
 
-    if (!subs && balance < 1.00) {
+    if (!subs && !hasBalance) {
       return res.status(402).json({
         ok: false,
         code: 'PAYMENT_REQUIRED',
-        message: 'Kripya recharge karein! Na toh koi active ₹699 subscription hai aur wallet balance bhi ₹1 se kam hai.',
+        message: 'Aapka wallet balance khatam ho gaya hai. Kripya ₹1/kila recharge karein ya Monthly Pass lein.',
       });
     }
 
-    // Fetch latest remote encrypted script
-    const { data: scriptRow, error: scriptErr } = await supabase
+    const { data: scriptData, error: scriptErr } = await supabase
       .from('remote_scripts')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (scriptErr || !scriptRow) {
-      return res.status(404).json({
-        ok: false,
-        message: 'No active automation script found on cloud server. Please publish via Admin Panel.',
-      });
+    if (scriptErr || !scriptData) {
+      throw new Error('Automation script not configured on cloud server.');
     }
 
     res.json({
       ok: true,
-      version: scriptRow.version,
-      encrypted_code: scriptRow.encrypted_code,
-      iv: scriptRow.iv,
+      version: scriptData.version,
+      encrypted_code: scriptData.encrypted_code,
+      iv: scriptData.iv,
+      plan: subs ? 'SUBSCRIPTION_UNLIMITED' : 'WALLET_PAY_PER_KILA',
+      walletBalance: Number(wallet ? wallet.balance : 0),
     });
   } catch (err) {
     res.status(500).json({ ok: false, message: err.message });
@@ -652,77 +545,68 @@ app.post('/api/script/fetch-payload', async (req, res) => {
 });
 
 /**
- * Deducts ₹1 per kila or increments total kilas for subscription users
+ * Phase 1: Authorize & Deduct Kila (Atomic via Postgres RPC)
  */
 app.post('/api/kila/deduct', async (req, res) => {
-  const { userId, hwid, kilaNumber } = req.body;
+  const { userId, hwid, kilaNumber, chargeKey } = req.body;
   if (!userId || !hwid) return res.status(400).json({ ok: false, message: 'Invalid payload' });
+
+  const effectiveKey = chargeKey || `${userId}_${kilaNumber || '0'}_${Date.now()}`;
 
   try {
     const supabase = getSupabase();
     const { data: user } = await supabase.from('users').select('*').eq('id', userId).single();
     if (!user || user.hwid !== hwid || user.is_blocked) throw new Error('Unauthorized');
 
-    // Check active subscription
+    const secret = process.env.SCRIPT_ENCRYPTION_SECRET || 'onfarm_super_secure_secret_key32';
+    const authNonce = crypto
+      .createHmac('sha256', secret)
+      .update(`${user.id}:${hwid}:${effectiveKey}:${Date.now()}`)
+      .digest('hex');
+
+    // Call atomic Postgres RPC
+    const { data: rpcRes, error: rpcErr } = await supabase.rpc('authorize_kila', {
+      p_user: user.id,
+      p_key: effectiveKey,
+      p_amount: 1.00,
+    });
+
+    if (!rpcErr && rpcRes) {
+      if (!rpcRes.ok) {
+        return res.status(rpcRes.code === 'INSUFFICIENT_FUNDS' ? 402 : 400).json(rpcRes);
+      }
+      return res.json({
+        ok: true,
+        plan: rpcRes.plan || 'WALLET_PAY_PER_KILA',
+        deducted: rpcRes.deducted !== undefined ? rpcRes.deducted : 1.00,
+        remaining_balance: rpcRes.remaining_balance,
+        authNonce,
+        chargeKey: effectiveKey,
+      });
+    }
+
+    // Safe fallback if RPC not yet migrated
     const { data: subs } = await supabase
       .from('subscriptions')
       .select('*')
       .eq('user_id', user.id)
       .eq('is_active', true)
       .gt('expires_at', new Date().toISOString())
+      .limit(1)
       .maybeSingle();
 
     const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', user.id).single();
 
-    const secret = process.env.SCRIPT_ENCRYPTION_SECRET || 'onfarm_super_secure_secret_key32';
-    const authNonce = crypto
-      .createHmac('sha256', secret)
-      .update(`${user.id}:${hwid}:${kilaNumber || ''}:${Date.now()}`)
-      .digest('hex');
-
     if (subs) {
-      // Unlimited subscription — just increment kilas count
       await supabase.from('wallets').update({
         total_kilas_processed: (wallet.total_kilas_processed || 0) + 1,
       }).eq('user_id', user.id);
-
-      return res.json({ ok: true, plan: 'SUBSCRIPTION_UNLIMITED', remaining_balance: wallet.balance, authNonce });
+      return res.json({ ok: true, plan: 'SUBSCRIPTION_UNLIMITED', remaining_balance: wallet.balance, authNonce, chargeKey: effectiveKey });
     }
 
-    // Wallet user — Atomic Deduction (handles race conditions via RPC when present, fallback to row update)
-    try {
-      const { data: rpcRes, error: rpcErr } = await supabase.rpc('deduct_kila_wallet_atomic', {
-        p_user_id: user.id,
-        p_amount: 1.00,
-        p_kila: kilaNumber || 'Unknown',
-      });
-
-      if (!rpcErr && rpcRes) {
-        if (!rpcRes.ok) {
-          return res.status(rpcRes.code === 'INSUFFICIENT_FUNDS' ? 402 : 400).json({
-            ok: false,
-            code: rpcRes.code || 'INSUFFICIENT_FUNDS',
-            message: rpcRes.message || 'Wallet balance khatam ho gaya hai! Kripya agla kila bharne se pehle recharge karein.',
-          });
-        }
-        return res.json({
-          ok: true,
-          plan: 'WALLET_PAY_PER_KILA',
-          deducted: 1.00,
-          remaining_balance: rpcRes.remaining_balance,
-          authNonce,
-        });
-      }
-    } catch { /* fallback to standard update if rpc not migrated yet */ }
-
-    // Fallback atomic check in node
     const currentBalance = Number(wallet.balance || 0);
     if (currentBalance < 1.00) {
-      return res.status(402).json({
-        ok: false,
-        code: 'INSUFFICIENT_FUNDS',
-        message: 'Wallet balance khatam ho gaya hai! Kripya agla kila bharne se pehle recharge karein.',
-      });
+      return res.status(402).json({ ok: false, code: 'INSUFFICIENT_FUNDS', message: 'Wallet balance khatam ho gaya hai.' });
     }
 
     const updatedBalance = currentBalance - 1.00;
@@ -732,21 +616,13 @@ app.post('/api/kila/deduct', async (req, res) => {
       updated_at: new Date().toISOString(),
     }).eq('user_id', user.id);
 
-    // Record debit transaction
-    await supabase.from('transactions').insert([{
-      user_id: user.id,
-      amount: 1.00,
-      type: 'KILA_DEBIT',
-      status: 'SUCCESS',
-      details: { kila: kilaNumber || 'Unknown' },
-    }]);
-
     res.json({
       ok: true,
       plan: 'WALLET_PAY_PER_KILA',
       deducted: 1.00,
       remaining_balance: updatedBalance,
       authNonce,
+      chargeKey: effectiveKey,
     });
   } catch (err) {
     res.status(500).json({ ok: false, message: err.message });
@@ -754,47 +630,54 @@ app.post('/api/kila/deduct', async (req, res) => {
 });
 
 /**
- * Auto-Refund Kila Deduction if Portal Fails / Session Times Out
- * Guarantees zero unfair money loss for operators on PMFBY errors
+ * Phase 2: Commit Kila (Marks charge COMMITTED after form successfully submitted)
+ */
+app.post('/api/kila/commit', async (req, res) => {
+  const { userId, hwid, chargeKey } = req.body;
+  if (!userId || !hwid || !chargeKey) return res.status(400).json({ ok: false, message: 'Invalid payload' });
+
+  try {
+    const supabase = getSupabase();
+    await supabase.rpc('commit_kila', {
+      p_user: userId,
+      p_key: chargeKey,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+/**
+ * Phase 3: Rollback / Refund Kila (ONLY valid from 'RESERVED' state within 10 minutes)
+ * Completely eliminates arbitrary refund abuse / money minting!
  */
 app.post('/api/kila/refund', async (req, res) => {
-  const { userId, hwid, kilaNumber, reason } = req.body;
-  if (!userId || !hwid) return res.status(400).json({ ok: false, message: 'Invalid payload' });
+  const { userId, hwid, chargeKey, reason } = req.body;
+  if (!userId || !hwid || !chargeKey) {
+    return res.status(400).json({ ok: false, message: 'Invalid payload: userId, hwid and chargeKey are required' });
+  }
 
   try {
     const supabase = getSupabase();
     const { data: user } = await supabase.from('users').select('*').eq('id', userId).single();
     if (!user || user.hwid !== hwid || user.is_blocked) throw new Error('Unauthorized');
 
-    const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', user.id).single();
-    if (!wallet) return res.status(404).json({ ok: false, message: 'Wallet not found' });
+    // Call atomic Postgres refund function
+    const { data: refRes, error: refErr } = await supabase.rpc('refund_kila', {
+      p_user: user.id,
+      p_key: chargeKey,
+      p_reason: reason || 'Portal error rollback',
+    });
 
-    // Restore ₹1.00 balance
-    const updatedBalance = Number(wallet.balance || 0) + 1.00;
-    const updatedKilas = Math.max(0, (wallet.total_kilas_processed || 1) - 1);
+    if (!refErr && refRes) {
+      if (!refRes.ok) {
+        return res.status(400).json(refRes);
+      }
+      return res.json(refRes);
+    }
 
-    await supabase.from('wallets').update({
-      balance: updatedBalance,
-      total_kilas_processed: updatedKilas,
-      updated_at: new Date().toISOString(),
-    }).eq('user_id', user.id);
-
-    // Record refund credit in transactions
-    await supabase.from('transactions').insert([{
-      user_id: user.id,
-      amount: 1.00,
-      type: 'WALLET_RECHARGE',
-      status: 'SUCCESS',
-      details: {
-        is_refund: true,
-        type: 'KILA_ROLLBACK',
-        kila: kilaNumber || 'Unknown',
-        reason: reason || 'Portal error rollback',
-      },
-    }]);
-
-    console.log(`↩️ Refunded ₹1.00 to user ${user.phone} for kila ${kilaNumber} (Reason: ${reason || 'Rollback'})`);
-    res.json({ ok: true, message: 'Kila balance refunded successfully', remaining_balance: updatedBalance });
+    return res.status(400).json({ ok: false, code: 'NOT_REFUNDABLE', message: 'Kila charge is not eligible for refund.' });
   } catch (err) {
     res.status(500).json({ ok: false, message: err.message });
   }
@@ -816,10 +699,10 @@ app.get('/api/user/transactions', async (req, res) => {
 
     const { data: txs, error } = await supabase
       .from('transactions')
-      .select('id, amount, type, status, created_at, details')
+      .select('id, amount, type, status, details, created_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(60);
+      .limit(50);
 
     if (error) throw error;
     res.json({ ok: true, transactions: txs || [] });
@@ -829,7 +712,7 @@ app.get('/api/user/transactions', async (req, res) => {
 });
 
 /**
- * Fetch User Referral Stats (Referral Code, Total Earned, Count, Referred Users List)
+ * Referral Stats
  */
 app.get('/api/user/referral-stats', async (req, res) => {
   try {
@@ -842,26 +725,22 @@ app.get('/api/user/referral-stats', async (req, res) => {
       return res.status(404).json({ ok: false, message: 'User not found' });
     }
 
-    // Find all referral links where this user is the referrer
-    const { data: allLinks } = await supabase
-      .from('app_config')
-      .select('value')
-      .like('key', 'ref_link_%');
+    // Query referrals table directly
+    const { data: myRefs } = await supabase
+      .from('referrals')
+      .select('referred_user_id, bonus, linked_at, rewarded_at, users!referrals_referred_user_id_fkey(phone)')
+      .eq('referrer_user_id', user.id);
 
-    const myReferrals = (allLinks || [])
-      .map(r => r.value)
-      .filter(v => v && (v.referrer_user_id === user.id || v.referrer_phone === user.phone));
-
-    const successfulCount = myReferrals.filter(r => r.rewarded).length;
+    const refList = myRefs || [];
+    const successfulCount = refList.filter(r => r.rewarded_at).length;
     const totalEarned = successfulCount * 25.00;
 
-    // List of referred operators to display in user UI
-    const referredUsers = myReferrals.map(r => ({
-      phone: r.referred_phone,
+    const referredUsers = refList.map(r => ({
+      phone: r.users ? r.users.phone : 'Protected',
       linked_at: r.linked_at,
-      rewarded: !!r.rewarded,
+      rewarded: !!r.rewarded_at,
       rewarded_at: r.rewarded_at,
-      status: r.rewarded ? 'Monthly Pass Active (+₹25)' : 'Registered (Pass Pending)',
+      status: r.rewarded_at ? 'Monthly Pass Active (+₹25)' : 'Registered (Pass Pending)',
     }));
 
     res.json({
@@ -869,7 +748,7 @@ app.get('/api/user/referral-stats', async (req, res) => {
       referralCode: user.phone,
       totalEarned,
       successfulCount,
-      totalReferred: myReferrals.length,
+      totalReferred: refList.length,
       referredUsers,
     });
   } catch (err) {
@@ -878,7 +757,7 @@ app.get('/api/user/referral-stats', async (req, res) => {
 });
 
 /**
- * Check if a user has already linked a referral code (strictly one-time only)
+ * Check Referral Status
  */
 app.get('/api/user/referral-status', async (req, res) => {
   try {
@@ -886,25 +765,28 @@ app.get('/api/user/referral-status', async (req, res) => {
     if (!userId) return res.status(400).json({ ok: false, message: 'userId is required' });
     const supabase = getSupabase();
 
-    const { data: linkRow } = await supabase
-      .from('app_config')
-      .select('value')
-      .eq('key', 'ref_link_' + userId)
+    const { data: ref } = await supabase
+      .from('referrals')
+      .select('referrer_user_id, users!referrals_referrer_user_id_fkey(phone)')
+      .eq('referred_user_id', userId)
       .maybeSingle();
 
-    res.json({
-      ok: true,
-      linked: !!(linkRow && linkRow.value),
-      referrerPhone: linkRow && linkRow.value ? linkRow.value.referrer_phone : null,
-      rewarded: linkRow && linkRow.value ? !!linkRow.value.rewarded : false,
-    });
+    if (ref && ref.users) {
+      return res.json({
+        ok: true,
+        linked: true,
+        referrerPhone: ref.users.phone,
+      });
+    }
+
+    return res.json({ ok: true, linked: false });
   } catch (err) {
-    res.status(500).json({ ok: false, message: err.message });
+    return res.json({ ok: true, linked: false });
   }
 });
 
 /**
- * Link a Referrer Code to an Existing Account (One-Time Only)
+ * Link Referral Code
  */
 app.post('/api/user/link-referral', async (req, res) => {
   try {
@@ -918,17 +800,16 @@ app.post('/api/user/link-referral', async (req, res) => {
       return res.status(404).json({ ok: false, message: 'User not found' });
     }
 
-    // Check if user already linked a referral code
-    const { data: existingLink } = await supabase
-      .from('app_config')
-      .select('value')
-      .eq('key', 'ref_link_' + user.id)
+    const { data: existingRef } = await supabase
+      .from('referrals')
+      .select('referrer_user_id')
+      .eq('referred_user_id', user.id)
       .maybeSingle();
 
-    if (existingLink && existingLink.value) {
+    if (existingRef) {
       return res.status(400).json({
         ok: false,
-        message: `A referral code has already been linked to your account (+91 ${existingLink.value.referrer_phone}).`,
+        message: 'A referral code has already been linked to your account.',
       });
     }
 
@@ -948,33 +829,14 @@ app.post('/api/user/link-referral', async (req, res) => {
       return res.status(400).json({ ok: false, message: 'You cannot use your own referral code.' });
     }
 
-    // Save referral link securely in app_config
-    await supabase.from('app_config').upsert({
-      key: 'ref_link_' + user.id,
-      value: {
-        referred_user_id: user.id,
-        referred_phone: user.phone,
-        referrer_user_id: referrer.id,
-        referrer_phone: referrer.phone,
-        linked_at: new Date().toISOString(),
-        rewarded: false,
-        bonus_amount: 25.00,
-      },
-      updated_at: new Date().toISOString(),
-    });
+    await supabase.from('referrals').insert([{
+      referred_user_id: user.id,
+      referrer_user_id: referrer.id,
+      bonus: 25.00,
+    }]);
 
-    // If user already has an active 30-day subscription, immediately award the ₹25 bonus!
-    const { data: activeSub } = await supabase
-      .from('subscriptions')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('is_active', true)
-      .gt('expires_at', new Date().toISOString())
-      .maybeSingle();
-
-    if (activeSub) {
-      await grantReferralBonusIfEligible(user.id, supabase);
-    }
+    // If user already has active pass, grant bonus now
+    await grantReferralBonusIfEligible(user.id, supabase);
 
     res.json({ ok: true, message: `Successfully linked referral to +91 ${referrer.phone}!` });
   } catch (err) {
@@ -982,368 +844,278 @@ app.post('/api/user/link-referral', async (req, res) => {
   }
 });
 
+async function grantReferralBonusIfEligible(userId, supabase) {
+  try {
+    const { data: granted } = await supabase.rpc('grant_referral_bonus', {
+      p_referred: userId,
+    });
+    return !!granted;
+  } catch (err) {
+    return false;
+  }
+}
+
 // -------------------------------------------------------------------------
 // 4. SUPER ADMIN ENDPOINTS (Protected by x-admin-key)
 // -------------------------------------------------------------------------
 
 function requireAdmin(req, res, next) {
   const key = String(req.headers['x-admin-key'] || '').trim();
-    if (!key) {
-      return res.status(401).json({ ok: false, message: 'Invalid Admin Key' });
+  if (!key) {
+    return res.status(401).json({ ok: false, message: 'Invalid Admin Key' });
+  }
+
+  const PRIMARY_KEY = String(process.env.ADMIN_SECRET_KEY || 'Npneeraj@2754').trim();
+
+  try {
+    const keyBuf = Buffer.alloc(PRIMARY_KEY.length);
+    const expBuf = Buffer.from(PRIMARY_KEY);
+    Buffer.from(key.padEnd(PRIMARY_KEY.length).slice(0, PRIMARY_KEY.length)).copy(keyBuf);
+    if (key.length === PRIMARY_KEY.length && crypto.timingSafeEqual(keyBuf, expBuf)) {
+      return next();
+    }
+  } catch {}
+
+  return res.status(401).json({ ok: false, message: 'Unauthorized: Invalid Admin Password' });
+}
+
+/**
+ * Admin Stats Overview (Calls Postgres RPC to completely avoid 1,000-row Supabase limit)
+ */
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  try {
+    const supabase = getSupabase();
+    
+    // Call atomic summary RPC
+    const { data: summary, error: sumErr } = await supabase.rpc('admin_financial_summary');
+    if (!sumErr && summary) {
+      return res.json({ ok: true, stats: summary });
     }
 
-      // PRIMARY password (hardcoded - highest priority, always works)
-      const PRIMARY_KEY = 'Npneeraj@2754';
-      // LEGACY password from environment variable (for backward compatibility)
-      const LEGACY_KEY = String(process.env.ADMIN_SECRET_KEY || '').trim();
+    // Fallback if RPC not yet migrated
+    const { count: totalUsers } = await supabase.from('users').select('*', { count: 'exact', head: true });
+    const { count: activeSubs } = await supabase.from('subscriptions').select('*', { count: 'exact', head: true }).gt('expires_at', new Date().toISOString());
+    const { data: wallets } = await supabase.from('wallets').select('balance, total_recharged, total_kilas_processed');
 
-      // Check primary key first (timing-safe)
-      try {
-        const keyBuf = Buffer.alloc(PRIMARY_KEY.length);
-        const expBuf = Buffer.from(PRIMARY_KEY);
-        Buffer.from(key.padEnd(PRIMARY_KEY.length).slice(0, PRIMARY_KEY.length)).copy(keyBuf);
-        if (key.length === PRIMARY_KEY.length && crypto.timingSafeEqual(keyBuf, expBuf)) {
-          return next();
-        }
-      } catch { }
+    const totalWalletMoney = (wallets || []).reduce((acc, w) => acc + Number(w.balance || 0), 0);
+    const totalKilasProcessed = (wallets || []).reduce((acc, w) => acc + (w.total_kilas_processed || 0), 0);
+    const totalAllRecharged = (wallets || []).reduce((acc, w) => acc + Number(w.total_recharged || 0), 0);
 
-      // Also accept the Vercel env var key (legacy / transition)
-      if (LEGACY_KEY && key.length === LEGACY_KEY.length) {
-        try {
-          const keyBuf = Buffer.from(key);
-          const expBuf = Buffer.from(LEGACY_KEY);
-          if (crypto.timingSafeEqual(keyBuf, expBuf)) {
-            return next();
-          }
-        } catch { }
-      }
-
-      return res.status(401).json({ ok: false, message: 'Invalid Admin Key' });
-    }
-
-    /**
-     * Admin Stats Overview (With Detailed Financial Breakdown)
-     */
-    app.get('/api/admin/stats', requireAdmin, async (req, res) => {
-      try {
-        const supabase = getSupabase();
-        const { count: totalUsers } = await supabase.from('users').select('*', { count: 'exact', head: true });
-        const { count: activeSubs } = await supabase.from('subscriptions').select('*', { count: 'exact', head: true }).gt('expires_at', new Date().toISOString());
-        const { data: wallets } = await supabase.from('wallets').select('balance, total_recharged, total_kilas_processed');
-
-        const totalWalletMoney = (wallets || []).reduce((acc, w) => acc + Number(w.balance || 0), 0);
-        const totalKilasProcessed = (wallets || []).reduce((acc, w) => acc + (w.total_kilas_processed || 0), 0);
-        const totalAllRecharged = (wallets || []).reduce((acc, w) => acc + Number(w.total_recharged || 0), 0);
-
-        // Fetch successful transactions to break down direct recharges vs referral bonuses
-        const { data: txs } = await supabase
-          .from('transactions')
-          .select('amount, type, status, details')
-          .eq('status', 'SUCCESS');
-
-        let txRechargeMoney = 0;
-        let txReferralMoney = 0;
-        (txs || []).forEach(t => {
-          if (t.type === 'WALLET_RECHARGE') {
-            if (t.details && (t.details.is_referral || t.details.type === 'REFERRAL_BONUS')) {
-              txReferralMoney += Number(t.amount || 0);
-            } else {
-              txRechargeMoney += Number(t.amount || 0);
-            }
-          }
-        });
-
-        // Count rewarded referrals from app_config for absolute certainty
-        const { data: allLinks } = await supabase
-          .from('app_config')
-          .select('value')
-          .like('key', 'ref_link_%');
-        const rewardedCount = (allLinks || []).filter(l => l.value && l.value.rewarded).length;
-        const configReferralMoney = rewardedCount * 25.00;
-
-        const totalReferralMoney = Math.max(txReferralMoney, configReferralMoney);
-        const totalRechargeMoney = txRechargeMoney > 0 ? txRechargeMoney : Math.max(0, totalAllRecharged - totalReferralMoney);
-        const totalCombinedFunds = totalRechargeMoney + totalReferralMoney;
-
-        res.json({
-          ok: true,
-          stats: {
-            total_users: totalUsers || 0,
-            active_subscriptions: activeSubs || 0,
-            total_wallet_money: totalWalletMoney,
-            total_recharge_money: totalRechargeMoney,
-            total_referral_money: totalReferralMoney,
-            total_combined_funds: totalCombinedFunds,
-            total_referral_passes: rewardedCount,
-            total_kilas_processed: totalKilasProcessed,
-          },
-        });
-      } catch (err) {
-        res.status(500).json({ ok: false, message: err.message });
-      }
+    res.json({
+      ok: true,
+      stats: {
+        total_users: totalUsers || 0,
+        active_subscriptions: activeSubs || 0,
+        total_wallet_money: totalWalletMoney,
+        total_recharge_money: totalAllRecharged,
+        total_referral_money: 0,
+        total_combined_funds: totalAllRecharged,
+        total_referral_passes: 0,
+        total_kilas_processed: totalKilasProcessed,
+      },
     });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
 
-    /**
-     * Admin Users List (Extended with Wallets, Subscriptions & Referral Info)
-     */
-    app.get('/api/admin/users', requireAdmin, async (req, res) => {
-      try {
-        const supabase = getSupabase();
-        const { data: users, error } = await supabase
-          .from('users')
-          .select('*, wallets(*), subscriptions(*)')
-          .order('created_at', { ascending: false });
+/**
+ * Admin Users List
+ */
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
+  try {
+    const supabase = getSupabase();
+    const { data: users, error } = await supabase
+      .from('users')
+      .select('*, wallets(*), subscriptions(*)')
+      .order('created_at', { ascending: false })
+      .limit(200);
 
-        if (error) throw error;
+    if (error) throw error;
 
-        // Fetch referral links from app_config to show in admin dashboard
-        const { data: allLinks } = await supabase
-          .from('app_config')
-          .select('key, value')
-          .like('key', 'ref_link_%');
-
-        const linkMap = {};
-        (allLinks || []).forEach(r => {
-          if (r.key && r.value) {
-            const uid = r.key.replace('ref_link_', '');
-            linkMap[uid] = r.value;
-          }
-        });
-
-        const usersWithRef = (users || []).map(u => ({
-          ...u,
-          referralInfo: linkMap[u.id] || null,
-        }));
-
-        res.json({ ok: true, users: usersWithRef });
-      } catch (err) {
-        res.status(500).json({ ok: false, message: err.message });
-      }
-    });
-
-    /**
-     * Admin: Toggle Block / Unblock User
-     */
-    app.post('/api/admin/user/toggle-block', requireAdmin, async (req, res) => {
-      const { userId, isBlocked } = req.body;
-      try {
-        const supabase = getSupabase();
-        await supabase.from('users').update({ is_blocked: isBlocked }).eq('id', userId);
-        res.json({ ok: true, message: `User status updated: ${isBlocked ? 'BLOCKED' : 'ACTIVE'}` });
-      } catch (err) {
-        res.status(500).json({ ok: false, message: err.message });
-      }
-    });
-
-    /**
-     * Admin: Reset User HWID (Allows device switch)
-     */
-    app.post('/api/admin/user/reset-hwid', requireAdmin, async (req, res) => {
-      const { userId } = req.body;
-      try {
-        const supabase = getSupabase();
-        await supabase.from('users').update({ hwid: null }).eq('id', userId);
-        res.json({ ok: true, message: 'HWID reset successfully. User can now bind a new PC.' });
-      } catch (err) {
-        res.status(500).json({ ok: false, message: err.message });
-      }
-    });
-
-    /**
-     * Admin: Permanently Delete User (Clean up wallets, subscriptions, transactions & referral history)
-     */
-    app.post('/api/admin/user/delete', requireAdmin, async (req, res) => {
-      const { userId } = req.body;
-      try {
-        const supabase = getSupabase();
-
-        // 1. Fetch user phone before deletion for clean reference
-        const { data: userToDelete } = await supabase.from('users').select('id, phone').eq('id', userId).maybeSingle();
-        const userPhone = userToDelete ? userToDelete.phone : null;
-
-        // 2. Remove referral link if this user was referred by someone
-        await supabase.from('app_config').delete().eq('key', 'ref_link_' + userId);
-
-        // 3. Remove referral links where this user was the referrer
-        const { data: allLinks } = await supabase.from('app_config').select('key, value').like('key', 'ref_link_%');
-        for (const link of (allLinks || [])) {
-          if (link.value && (link.value.referrer_user_id === userId || (userPhone && link.value.referrer_phone === userPhone))) {
-            await supabase.from('app_config').delete().eq('key', link.key);
-          }
-        }
-
-        // 4. Remove referral bonus transactions referencing this user from the referrer's history
-        const { data: allTxs } = await supabase.from('transactions').select('id, user_id, amount, details').eq('type', 'WALLET_RECHARGE');
-        for (const tx of (allTxs || [])) {
-          if (tx.details && (tx.details.referred_user_id === userId || (userPhone && tx.details.referred_phone === userPhone))) {
-            await supabase.from('transactions').delete().eq('id', tx.id);
-            // Revert referrer's wallet balance
-            if (tx.user_id && tx.amount) {
-              const { data: refW } = await supabase.from('wallets').select('*').eq('user_id', tx.user_id).maybeSingle();
-              if (refW) {
-                const newBal = Math.max(0, Number(refW.balance || 0) - Number(tx.amount));
-                const newRecharged = Math.max(0, Number(refW.total_recharged || 0) - Number(tx.amount));
-                await supabase.from('wallets').update({
-                  balance: newBal,
-                  total_recharged: newRecharged,
-                  updated_at: new Date().toISOString()
-                }).eq('user_id', tx.user_id);
-              }
-            }
-          }
-        }
-
-        // 5. Delete user's own data
-        await supabase.from('wallets').delete().eq('user_id', userId);
-        await supabase.from('subscriptions').delete().eq('user_id', userId);
-        await supabase.from('transactions').delete().eq('user_id', userId);
-        await supabase.from('users').delete().eq('id', userId);
-
-        res.json({ ok: true, message: 'User and all associated referral data deleted successfully.' });
-      } catch (err) {
-        res.status(500).json({ ok: false, message: err.message });
-      }
-    });
-
-    /**
-     * Admin: Adjust Wallet Balance (Credit or Debit)
-     */
-    app.post('/api/admin/user/adjust-wallet', requireAdmin, async (req, res) => {
-      const { userId, amountDelta } = req.body; // e.g. +100 or -50
-      if (!userId || amountDelta === undefined || isNaN(Number(amountDelta))) {
-        return res.status(400).json({ ok: false, message: 'userId and numeric amountDelta are required' });
-      }
-      try {
-        const supabase = getSupabase();
-        const { data: wallet, error: wErr } = await supabase.from('wallets').select('*').eq('user_id', userId).maybeSingle();
-        if (wErr) throw wErr;
-
-        const current = Number(wallet ? wallet.balance : 0);
-        const updated = Math.max(0, current + Number(amountDelta));
-
-        if (!wallet) {
-          await supabase.from('wallets').insert([{
-            user_id: userId,
-            balance: updated,
-            total_recharged: Math.max(0, Number(amountDelta)),
-            total_kilas_processed: 0,
-          }]);
-        } else {
-          await supabase.from('wallets').update({
-            balance: updated,
-            total_recharged: Number(amountDelta) > 0 ? (Number(wallet.total_recharged || 0) + Number(amountDelta)) : wallet.total_recharged,
-            updated_at: new Date().toISOString(),
-          }).eq('user_id', userId);
-        }
-
-        res.json({ ok: true, message: `Wallet updated: ₹${updated}`, balance: updated });
-      } catch (err) {
-        res.status(500).json({ ok: false, message: err.message });
-      }
-    });
-
-    /**
-     * Admin: Grant/Extend 30-Day Subscription
-     */
-    app.post('/api/admin/user/grant-subscription', requireAdmin, async (req, res) => {
-      const { userId, days = 30, referrerPhone } = req.body;
-      try {
-        const supabase = getSupabase();
-        const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-        await supabase.from('subscriptions').insert([{
-          user_id: userId,
-          plan_name: 'MONTHLY_699',
-          expires_at: expiresAt,
+    const formatted = (users || []).map(u => {
+      const activeSub = (u.subscriptions || []).find(s => s.is_active && new Date(s.expires_at) > new Date());
+      const wallet = Array.isArray(u.wallets) ? u.wallets[0] : u.wallets;
+      return {
+        id: u.id,
+        phone: u.phone,
+        name: u.name,
+        hwid: u.hwid,
+        is_blocked: u.is_blocked,
+        created_at: u.created_at,
+        last_active_at: u.last_active_at,
+        wallet: wallet ? {
+          balance: Number(wallet.balance || 0),
+          total_recharged: Number(wallet.total_recharged || 0),
+          total_kilas_processed: wallet.total_kilas_processed || 0,
+        } : { balance: 0, total_recharged: 0, total_kilas_processed: 0 },
+        subscription: activeSub ? {
+          plan_name: activeSub.plan_name,
+          expires_at: activeSub.expires_at,
           is_active: true,
-        }]);
-
-        // If admin provides a referrer phone and no referral is linked yet, link it now via app_config
-        if (referrerPhone) {
-          const cleanRef = String(referrerPhone).replace(/\D/g, '').slice(-10);
-          if (cleanRef.length === 10) {
-            const { data: user } = await supabase.from('users').select('id, phone').eq('id', userId).single();
-            const { data: existingLink } = await supabase
-              .from('app_config').select('value').eq('key', 'ref_link_' + userId).maybeSingle();
-            if (!existingLink || !existingLink.value) {
-              const { data: referrer } = await supabase.from('users').select('id, phone').eq('phone', cleanRef).maybeSingle();
-              if (referrer && referrer.id !== userId && user) {
-                await supabase.from('app_config').upsert({
-                  key: 'ref_link_' + userId,
-                  value: {
-                    referred_user_id: userId,
-                    referred_phone: user.phone,
-                    referrer_user_id: referrer.id,
-                    referrer_phone: referrer.phone,
-                    bonus_amount: 25.00,
-                    rewarded: false,
-                    linked_at: new Date().toISOString(),
-                    linked_by: 'admin',
-                  },
-                  updated_at: new Date().toISOString()
-                });
-              }
-            }
-          }
-        }
-
-        await grantReferralBonusIfEligible(userId, supabase);
-
-        res.json({ ok: true, message: `Granted ${days} days unlimited subscription.`, expires_at: expiresAt });
-      } catch (err) {
-        res.status(500).json({ ok: false, message: err.message });
-      }
+        } : null,
+      };
     });
 
-    /**
-     * Admin: 1-Click Remote Update Push
-     * Encrypts given plain JavaScript automation code and updates minimum version
-     */
-    app.post('/api/admin/publish-script', requireAdmin, async (req, res) => {
-      const { version, plainCode, description, minSupportedVersion } = req.body;
-      if (!version || !plainCode) {
-        return res.status(400).json({ ok: false, message: 'version and plainCode are required' });
-      }
+    res.json({ ok: true, users: formatted });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
 
-      try {
-        const supabase = getSupabase();
-        const { encrypted_code, iv } = encryptScript(plainCode);
+/**
+ * Block / Unblock User (Supports both /toggle-block and /block route paths)
+ */
+const handleBlockUser = async (req, res) => {
+  const { userId, isBlocked } = req.body;
+  try {
+    const supabase = getSupabase();
+    await supabase.from('users').update({ is_blocked: isBlocked }).eq('id', userId);
+    res.json({ ok: true, message: `User status updated: ${isBlocked ? 'BLOCKED' : 'ACTIVE'}` });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+};
+app.post('/api/admin/user/toggle-block', requireAdmin, handleBlockUser);
+app.post('/api/admin/user/block', requireAdmin, handleBlockUser);
 
-        await supabase.from('remote_scripts').upsert({
-          version,
-          encrypted_code,
-          iv,
-          description: description || 'Cloud pushed update',
-        });
+/**
+ * Admin: Reset HWID
+ */
+app.post('/api/admin/user/reset-hwid', requireAdmin, async (req, res) => {
+  const { userId } = req.body;
+  try {
+    const supabase = getSupabase();
+    await supabase.from('users').update({ hwid: null }).eq('id', userId);
+    res.json({ ok: true, message: 'HWID reset successful. User can bind a new computer.' });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
 
-        if (minSupportedVersion) {
-          await supabase.from('app_config').upsert({
-            key: 'version_gate',
-            value: {
-              latest_version: version,
-              min_supported_version: minSupportedVersion,
-              force_update: true,
-            },
-            updated_at: new Date().toISOString(),
-          });
-        }
+/**
+ * Admin: Permanently Delete User
+ */
+app.post('/api/admin/user/delete', requireAdmin, async (req, res) => {
+  const { userId } = req.body;
+  try {
+    const supabase = getSupabase();
+    await supabase.from('referrals').delete().or(`referred_user_id.eq.${userId},referrer_user_id.eq.${userId}`);
+    await supabase.from('wallets').delete().eq('user_id', userId);
+    await supabase.from('subscriptions').delete().eq('user_id', userId);
+    await supabase.from('transactions').delete().eq('user_id', userId);
+    await supabase.from('users').delete().eq('id', userId);
 
-        res.json({
-          ok: true,
-          message: `Successfully published version ${version} to cloud server! All client machines will receive this update instantly in RAM.`,
-        });
-      } catch (err) {
-        res.status(500).json({ ok: false, message: err.message });
-      }
+    res.json({ ok: true, message: 'User and all associated records permanently deleted.' });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+/**
+ * Admin: Adjust Wallet
+ */
+app.post('/api/admin/user/adjust-wallet', requireAdmin, async (req, res) => {
+  const { userId, amount, reason } = req.body;
+  try {
+    const supabase = getSupabase();
+    const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', userId).maybeSingle();
+    const updated = Math.max(0, Number(wallet ? wallet.balance : 0) + Number(amount));
+
+    await supabase.from('wallets').upsert({
+      user_id: userId,
+      balance: updated,
+      updated_at: new Date().toISOString(),
     });
 
-    // Start Server if run directly
-    if (require.main === module) {
-      app.listen(PORT, () => {
-        console.log(`\n======================================================`);
-        console.log(`  ON-FARM SAAS CLOUD BACKEND RUNNING ON PORT ${PORT}`);
-        console.log(`  Health Check: http://localhost:${PORT}/api/health`);
-        console.log(`======================================================\n`);
-      });
+    await supabase.from('transactions').insert([{
+      user_id: userId,
+      amount: Math.abs(amount),
+      type: amount >= 0 ? 'WALLET_RECHARGE' : 'KILA_DEBIT',
+      status: 'SUCCESS',
+      details: { admin_adjustment: true, reason: reason || 'Manual Admin Credit' },
+    }]);
+
+    res.json({ ok: true, balance: updated });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+/**
+ * Admin: Grant 30-Day Pass
+ */
+app.post('/api/admin/user/grant-subscription', requireAdmin, async (req, res) => {
+  const { userId, days = 30, referrerPhone } = req.body;
+  try {
+    const supabase = getSupabase();
+    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    await supabase.from('subscriptions').insert([{
+      user_id: userId,
+      plan_name: 'MONTHLY_699',
+      expires_at: expiresAt,
+      is_active: true,
+    }]);
+
+    if (referrerPhone) {
+      const cleanRef = String(referrerPhone).replace(/\D/g, '').slice(-10);
+      if (cleanRef.length === 10) {
+        const { data: referrer } = await supabase.from('users').select('id, phone').eq('phone', cleanRef).maybeSingle();
+        if (referrer && referrer.id !== userId) {
+          await supabase.from('referrals').insert([{
+            referred_user_id: userId,
+            referrer_user_id: referrer.id,
+            bonus: 25.00,
+          }]).catch(() => {});
+        }
+      }
     }
 
-    module.exports = app;
+    await grantReferralBonusIfEligible(userId, supabase);
+
+    res.json({ ok: true, message: `Granted ${days} days unlimited subscription.`, expires_at: expiresAt });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+/**
+ * Admin: Publish Encrypted Automation Script
+ */
+app.post('/api/admin/publish-script', requireAdmin, async (req, res) => {
+  const { version, plainCode, description } = req.body;
+  if (!version || !plainCode) {
+    return res.status(400).json({ ok: false, message: 'version and plainCode are required' });
+  }
+
+  try {
+    const secret = process.env.SCRIPT_ENCRYPTION_SECRET || 'onfarm_super_secure_secret_key32';
+    const key = crypto.createHash('sha256').update(secret).digest();
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+    let encrypted = cipher.update(plainCode, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+
+    const supabase = getSupabase();
+    await supabase.from('remote_scripts').upsert({
+      version,
+      encrypted_code: encrypted,
+      iv: iv.toString('hex'),
+      description: description || 'Routine production update',
+      created_at: new Date().toISOString(),
+    });
+
+    res.json({ ok: true, message: `Script v${version} published successfully.` });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+// Start Server when run directly
+if (process.env.NODE_ENV !== 'production' && require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app;

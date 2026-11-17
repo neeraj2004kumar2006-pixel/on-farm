@@ -1,19 +1,31 @@
 // client/electron-main.js
 // Native Desktop Application Window for On-Farm
+// Hardened with process isolation, token header injection & graceful CDP cleanup
 
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell, session } = require('electron');
 const path = require('path');
 const http = require('http');
+const crypto = require('crypto');
 const { fork } = require('child_process');
 
 let mainWindow = null;
 let runnerProcess = null;
+const RUNNER_PORT = 3789;
+const LOCAL_RUNNER_TOKEN = crypto.randomBytes(32).toString('hex');
+
+// Security: Prevent unauthorized debuggers or inspect flags
+app.commandLine.appendSwitch('js-flags', '--noexpose_wasm');
+if (process.execArgv.some(arg => arg.includes('--inspect') || arg.includes('--remote-debugging-port'))) {
+  app.quit();
+}
 
 function waitForServer(url, timeoutMs = 15000) {
   return new Promise((resolve) => {
     const startTime = Date.now();
     const interval = setInterval(() => {
-      const req = http.get(url, (res) => {
+      const req = http.get(url, {
+        headers: { 'X-OnFarm-Token': LOCAL_RUNNER_TOKEN }
+      }, (res) => {
         clearInterval(interval);
         resolve(true);
       });
@@ -33,13 +45,13 @@ function waitForServer(url, timeoutMs = 15000) {
 async function createWindow() {
   const iconPath = path.join(__dirname, 'public', process.platform === 'win32' ? 'icon.ico' : 'icon.png');
   mainWindow = new BrowserWindow({
-    width: 1040,
-    height: 780,
-    minWidth: 850,
-    minHeight: 600,
+    width: 1080,
+    height: 800,
+    minWidth: 880,
+    minHeight: 620,
     title: 'On-Farm',
     icon: iconPath,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#0f172a',
     show: false,
     autoHideMenuBar: true,
     webPreferences: {
@@ -58,22 +70,31 @@ async function createWindow() {
     mainWindow.show();
   });
 
+  // Automatically inject security token header into all local runner requests
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    { urls: ['http://127.0.0.1:3789/*', 'http://localhost:3789/*'] },
+    (details, callback) => {
+      details.requestHeaders['X-OnFarm-Token'] = LOCAL_RUNNER_TOKEN;
+      callback({ requestHeaders: details.requestHeaders });
+    }
+  );
+
   // Start internal background runner (uses hardened/obfuscated runner in dist-protected if built)
   const fs = require('fs');
   const protectedRunner = path.join(__dirname, 'dist-protected', 'runner.js');
   const runnerScript = fs.existsSync(protectedRunner) ? protectedRunner : path.join(__dirname, 'runner.js');
 
   runnerProcess = fork(runnerScript, [], {
-    stdio: 'inherit', // Show output in terminal if opened
+    stdio: 'inherit',
+    env: {
+      ...process.env,
+      ONFARM_PANEL_TOKEN: LOCAL_RUNNER_TOKEN,
+    },
   });
 
   // Wait until runner server is fully ready and accepting connections
-  const ready = await waitForServer('http://localhost:3789/status', 20000);
-  if (ready) {
-    mainWindow.loadURL('http://localhost:3789');
-  } else {
-    mainWindow.loadURL('http://localhost:3789');
-  }
+  const ready = await waitForServer(`http://127.0.0.1:${RUNNER_PORT}/status`, 20000);
+  mainWindow.loadURL(`http://127.0.0.1:${RUNNER_PORT}`);
 
   // Handle external links (like Cashfree payment) in system browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -83,25 +104,21 @@ async function createWindow() {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
-    if (runnerProcess) {
-      runnerProcess.kill();
-      runnerProcess = null;
-    }
+    cleanupProcesses();
   });
 }
 
 function cleanupProcesses() {
   if (runnerProcess) {
-    try { runnerProcess.kill(); } catch {}
-    runnerProcess = null;
-  }
-  // Force close any orphaned Chromium or remote debugging instances on exit
-  if (process.platform === 'win32') {
     try {
-      const { exec } = require('child_process');
-      // Gracefully kill Chrome processes opened specifically with CDP 9222 user-data-dir
-      exec('wmic process where "CommandLine like \'%browser-profile%\'" call terminate', () => {});
+      runnerProcess.send('shutdown');
     } catch {}
+    setTimeout(() => {
+      if (runnerProcess) {
+        try { runnerProcess.kill(); } catch {}
+        runnerProcess = null;
+      }
+    }, 1200);
   }
 }
 

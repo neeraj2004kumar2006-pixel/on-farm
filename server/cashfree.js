@@ -24,18 +24,23 @@ function getHeaders() {
  * Creates a Cashfree payment order
  */
 async function createOrder({ orderId, orderAmount, customerId, customerPhone, customerName, orderNote, returnUrl }) {
+  if (!orderId || !/^ONFARM_[A-Za-z0-9_-]+$/.test(orderId)) {
+    throw new Error('Invalid order ID format');
+  }
+
   const url = `${getBaseUrl()}/orders`;
+  const cleanPhone = String(customerPhone || '').replace(/\D/g, '').slice(-10);
   const payload = {
     order_id: orderId,
     order_amount: Number(orderAmount),
     order_currency: 'INR',
     customer_details: {
       customer_id: String(customerId).slice(0, 50),
-      customer_phone: String(customerPhone).replace(/\D/g, '').slice(-10),
+      customer_phone: cleanPhone.length === 10 ? cleanPhone : '9999999999',
       customer_name: customerName || 'Valued Farmer / Operator',
     },
     order_meta: {
-      return_url: returnUrl || `https://neeraj2004kumar2006-pixel.github.io/on-farm/pay.html?order_id=${orderId}`,
+      return_url: returnUrl || `https://on-farm.vercel.app/pay.html?order_id=${encodeURIComponent(orderId)}`,
     },
     order_note: orderNote || 'On-Farm Automation Plan',
   };
@@ -50,10 +55,14 @@ async function createOrder({ orderId, orderAmount, customerId, customerPhone, cu
 }
 
 /**
- * Fetches order status from Cashfree
+ * Fetches order status from Cashfree with safe URI encoding
  */
 async function getOrderStatus(orderId) {
-  const url = `${getBaseUrl()}/orders/${orderId}`;
+  if (!orderId || !/^ONFARM_[A-Za-z0-9_-]+$/.test(orderId)) {
+    throw new Error('Invalid order ID format');
+  }
+
+  const url = `${getBaseUrl()}/orders/${encodeURIComponent(orderId)}`;
   try {
     const response = await axios.get(url, { headers: getHeaders(), timeout: 15000 });
     return response.data; // Includes order_status: 'PAID' | 'ACTIVE' | 'EXPIRED'
@@ -67,7 +76,7 @@ async function getOrderStatus(orderId) {
  * Verifies webhook signature sent by Cashfree
  */
 function verifyWebhookSignature(rawBody, signature, timestamp) {
-  if (!process.env.CASHFREE_SECRET_KEY || !signature || !timestamp) return false;
+  if (!process.env.CASHFREE_SECRET_KEY || !signature || !timestamp || !rawBody) return false;
   const payload = `${timestamp}${rawBody}`;
   const expectedSignature = crypto
     .createHmac('sha256', process.env.CASHFREE_SECRET_KEY)

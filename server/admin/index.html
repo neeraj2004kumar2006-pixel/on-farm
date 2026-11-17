@@ -233,58 +233,77 @@ tr:hover td{background:rgba(255,255,255,.02)}
 </div>
 
 <script>
-const KEY='Npneeraj@2754', SESSION_MS=36e5;
-let users=[], refreshInterval=null;
+const SESSION_MS = 3600000; // 1-Hour Sliding Session
+let users = [], refreshInterval = null;
+
+function esc(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 // SESSION
-function getExpiry(){return parseInt(localStorage.getItem('of_exp')||'0',10)}
-function setSession(k){localStorage.setItem('of_key',k);localStorage.setItem('of_exp',Date.now()+SESSION_MS)}
-function getKey(){return localStorage.getItem('of_key')||KEY}
-function getUrl(){return localStorage.getItem('of_url')||'https://on-farm.vercel.app'}
+function getExpiry() { return parseInt(localStorage.getItem('of_exp') || '0', 10); }
+function setSession(k) {
+  localStorage.setItem('of_key', k);
+  localStorage.setItem('of_exp', (Date.now() + SESSION_MS).toString());
+}
+function getKey() { return localStorage.getItem('of_key') || ''; }
+function getUrl() { return localStorage.getItem('of_url') || 'https://on-farm.vercel.app'; }
 
-function boot(){
-  const exp=getExpiry();
-  if(localStorage.getItem('of_key')&&exp>Date.now()){
-    document.getElementById('gate').style.display='none';
-    startTimer();startDash();
-  }else{
-    document.getElementById('gate').style.display='flex';
-    setTimeout(()=>document.getElementById('gateInput').focus(),50);
+function boot() {
+  const exp = getExpiry();
+  const savedKey = getKey();
+  if (savedKey && exp > Date.now()) {
+    document.getElementById('gate').style.display = 'none';
+    startTimer();
+    startDash();
+  } else {
+    document.getElementById('gate').style.display = 'flex';
+    setTimeout(() => document.getElementById('gateInput').focus(), 50);
   }
 }
 
-async function doLogin(){
-  const inp=document.getElementById('gateInput');
-  const err=document.getElementById('gateErr');
-  const k=(inp.value||'').trim();
-  if(!k){err.textContent='Enter password';return}
-  err.textContent='Verifying...';
-  try{
-    const r=await fetch(getUrl()+'/api/admin/stats',{headers:{'x-admin-key':k}});
-    const d=await r.json();
-    if(r.ok&&d.ok){setSession(k);document.getElementById('gate').style.display='none';startTimer();startDash();}
-    else{err.textContent=d.message||'Wrong password';}
-  }catch{
-    if(k===KEY){setSession(k);document.getElementById('gate').style.display='none';startTimer();startDash();}
-    else{err.textContent='Connection failed. Check internet.';}
+async function doLogin() {
+  const inp = document.getElementById('gateInput');
+  const err = document.getElementById('gateErr');
+  const k = (inp.value || '').trim();
+  if (!k) { err.textContent = 'Enter password'; return; }
+  err.textContent = 'Verifying...';
+  try {
+    const r = await fetch(getUrl() + '/api/admin/stats', { headers: { 'x-admin-key': k } });
+    const d = await r.json();
+    if (r.ok && d.ok) {
+      setSession(k);
+      document.getElementById('gate').style.display = 'none';
+      startTimer();
+      startDash();
+    } else {
+      err.textContent = d.message || 'Wrong password';
+    }
+  } catch {
+    err.textContent = 'Connection failed. Check internet.';
   }
 }
 
-function doLogout(){
-  localStorage.removeItem('of_key');localStorage.removeItem('of_exp');
-  if(refreshInterval)clearInterval(refreshInterval);
-  document.getElementById('gate').style.display='flex';
-  document.getElementById('gateInput').value='';
-  document.getElementById('gateErr').textContent='Logged out.';
+function doLogout() {
+  localStorage.removeItem('of_key');
+  localStorage.removeItem('of_exp');
+  if (refreshInterval) clearInterval(refreshInterval);
+  document.getElementById('gate').style.display = 'flex';
+  document.getElementById('gateInput').value = '';
+  document.getElementById('gateErr').textContent = 'Logged out.';
 }
 
 // Extend session on activity
-let _t=null;
-document.addEventListener('click',()=>{if(getExpiry()>Date.now()){localStorage.setItem('of_exp',Date.now()+SESSION_MS)}});
-document.addEventListener('keydown',()=>{if(getExpiry()>Date.now()){localStorage.setItem('of_exp',Date.now()+SESSION_MS)}});
+document.addEventListener('click', () => { if (getExpiry() > Date.now()) setSession(getKey()); });
+document.addEventListener('keydown', () => { if (getExpiry() > Date.now()) setSession(getKey()); });
 
 // Enter key
-document.getElementById('gateInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()});
+document.getElementById('gateInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
 // TIMER
 let timerIv=null;
@@ -363,18 +382,21 @@ function renderUsers(list){
       :sub?'<span class="badge badge-pass">30-DAY PASS</span>'
           :'<span class="badge badge-payg">PAY AS YOU GO</span>';
     const blkTxt=u.is_blocked?'Unblock':'Block';
+    const safeName=esc(u.name||'—');
+    const safePhone=esc(u.phone||'');
+    const safeId=esc(u.id||'');
     return`<tr>
-      <td><div class="user-name">${u.name||'—'}</div><div class="user-phone">+91 ${u.phone}</div></td>
+      <td><div class="user-name">${safeName}</div><div class="user-phone">+91 ${safePhone}</div></td>
       <td><span class="hwid-code">${hw}</span></td>
       <td><span class="bal">₹${bal}</span></td>
       <td>${badge}</td>
       <td style="font-size:12px;color:#718096">${exp}</td>
       <td>
         <div class="actions">
-          <button class="btn btn-pass" onclick="grantPass('${u.id}','${u.phone}')">Pass</button>
-          <button class="btn btn-hwid" onclick="resetHwid('${u.id}','${u.phone}')">HWID</button>
-          <button class="btn btn-blk" onclick="toggleBlock('${u.id}',${!u.is_blocked})">${blkTxt}</button>
-          <button class="btn btn-del" onclick="delUser('${u.id}','${u.phone}')">Del</button>
+          <button class="btn btn-pass" onclick="grantPass('${safeId}','${safePhone}')">Pass</button>
+          <button class="btn btn-hwid" onclick="resetHwid('${safeId}','${safePhone}')">HWID</button>
+          <button class="btn btn-blk" onclick="toggleBlock('${safeId}',${!u.is_blocked})">${blkTxt}</button>
+          <button class="btn btn-del" onclick="delUser('${safeId}','${safePhone}')">Del</button>
         </div>
       </td>
     </tr>`;

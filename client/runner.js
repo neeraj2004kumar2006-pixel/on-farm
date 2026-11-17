@@ -141,8 +141,43 @@ function findChromeExecutable() {
   return null;
 }
 
-let browserInstance = null;
-let browserContext = null;
+async function saveWorkbookAtomic(wb, targetPath, maxTries = 5) {
+  const tmpPath = `${targetPath}.${Date.now()}.${process.pid}.tmp`;
+  await wb.xlsx.writeFile(tmpPath);
+  for (let i = 0; i < maxTries; i++) {
+    try {
+      if (fs.existsSync(targetPath)) {
+        try { fs.unlinkSync(targetPath); } catch {}
+      }
+      fs.renameSync(tmpPath, targetPath);
+      return;
+    } catch (err) {
+      if (['EBUSY', 'EPERM'].includes(err.code) && i < maxTries - 1) {
+        await new Promise(r => setTimeout(r, 400 * (i + 1)));
+      } else {
+        try { if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath); } catch {}
+        throw err;
+      }
+    }
+  }
+}
+
+async function closeBrowserGracefully() {
+  try {
+    if (browserInstance) {
+      await browserInstance.close();
+      browserInstance = null;
+      browserContext = null;
+    }
+  } catch {}
+}
+
+process.on('message', async (m) => {
+  if (m === 'shutdown') {
+    await closeBrowserGracefully();
+    process.exit(0);
+  }
+});
 
 async function connectBrowser() {
   if (browserInstance) {
@@ -252,6 +287,16 @@ async function executeAutomation() {
     const excelPath = path.join(CLIENT_BASE_DIR, '..', 'form automation', 'farmers.xlsx');
     if (!fs.existsSync(excelPath)) throw new Error('Application records file (farmers.xlsx) not found. Please save farmer entries first.');
 
+    // Pre-flight check: ensure farmers.xlsx is not locked exclusively by MS Excel
+    try {
+      const fd = fs.openSync(excelPath, 'r+');
+      fs.closeSync(fd);
+    } catch (lockErr) {
+      if (['EBUSY', 'EPERM'].includes(lockErr.code)) {
+        throw new Error('farmers.xlsx is open in Microsoft Excel. Please close Excel before starting automation.');
+      }
+    }
+
     const wb = new ExcelJS.Workbook();
     try {
       await wb.xlsx.readFile(excelPath);
@@ -295,11 +340,10 @@ async function executeAutomation() {
 
     const page = await getActivePage();
 
-    // 5. In-Memory Dynamic Execution Module
-    // Evaluates decrypted JS code into in-memory function
+    // 5. In-Memory Dynamic Execution Module (Sandboxed: no access to require or process)
     const inMemoryModule = { exports: {} };
-    const runnerFunc = new Function('module', 'exports', 'require', decryptedJsCode);
-    runnerFunc(inMemoryModule, inMemoryModule.exports, require);
+    const runnerFunc = new Function('module', 'exports', decryptedJsCode);
+    runnerFunc(inMemoryModule, inMemoryModule.exports);
     const formActions = inMemoryModule.exports;
 
     log(`Batch start: ${rows.length} pending rows.`);
@@ -308,15 +352,17 @@ async function executeAutomation() {
       if (state.stopRequested) { log('Operator ne automation pause kiya.'); break; }
       const r = rows[i];
       const isLastRow = (i === rows.length - 1);
+      const chargeKey = `KILA_${state.user.id}_${r.KhasraNo || i}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
       state.currentRow = r;
       log(`[${i + 1}/${rows.length}] Authorizing: ${r.Name} | Khasra: ${r.KhasraNo}`);
 
-      // 5. Authorize & Deduct ₹1 per kila (or verify subscription) BEFORE filling form with smart retry
+      // 5. Phase 1: Authorize & Reserve ₹1 per kila (or verify subscription) BEFORE filling form
       const deductRes = await callCloudWithRetry(() => axios.post(`${CLOUD_URL}/api/kila/deduct`, {
         userId: state.user.id,
         hwid: state.hwid,
         kilaNumber: r.KhasraNo,
+        chargeKey,
       }, { timeout: 9000 }), `Kila authorization (${r.KhasraNo})`);
 
       if (!deductRes.data || !deductRes.data.ok || !deductRes.data.authNonce) {
@@ -361,32 +407,42 @@ async function executeAutomation() {
             await formActions.clickAddCrop(page);
           }
         }
-      } catch (fillErr) {
-        // AUTO-ROLLBACK / REFUND: If portal failed mid-kila, refund ₹1.00 immediately so user never loses money!
+
+        // Phase 2: Commit charge on successful submission
         if (deductRes.data.plan === 'WALLET_PAY_PER_KILA') {
-          log(`⚠️ Portal error during ${r.KhasraNo}. Initiating auto-refund of ₹1.00...`);
+          axios.post(`${CLOUD_URL}/api/kila/commit`, {
+            userId: state.user.id,
+            hwid: state.hwid,
+            chargeKey,
+          }, { timeout: 5000 }).catch(() => {});
+        }
+      } catch (fillErr) {
+        // Phase 3: Rollback / Refund on portal error (Only valid from RESERVED state)
+        if (deductRes.data.plan === 'WALLET_PAY_PER_KILA') {
+          log(`⚠️ Portal error during ${r.KhasraNo}. Initiating atomic refund...`);
           try {
             const refRes = await axios.post(`${CLOUD_URL}/api/kila/refund`, {
               userId: state.user.id,
               hwid: state.hwid,
+              chargeKey,
               kilaNumber: r.KhasraNo,
               reason: fillErr.message || 'PMFBY Portal Form Error',
             }, { timeout: 6000 });
             if (refRes.data && refRes.data.ok) {
               state.walletBalance = refRes.data.remaining_balance;
-              log(`✅ Auto-refund successful. Wallet balance restored to ₹${state.walletBalance}`);
+              log(`✅ Auto-refund verified. Wallet balance restored to ₹${state.walletBalance}`);
             }
           } catch (rErr) {
-            log(`Warning: Auto-refund API call failed: ${rErr.message}`);
+            log(`Warning: Auto-refund API call: ${rErr.message}`);
           }
         }
         throw fillErr;
       }
 
-      // Mark row DONE in Excel
+      // Mark row DONE in Excel atomically
       ws.getRow(r.rowNumber).getCell(colIndex['Status'] || 8).value = 'DONE';
       ws.getRow(r.rowNumber).getCell(colIndex['Error'] || 9).value = '';
-      await wb.xlsx.writeFile(excelPath);
+      await saveWorkbookAtomic(wb, excelPath);
 
       state.processedCount++;
       log(`Done: ${r.Name} | Kila ${r.KhasraNo} recorded successfully.`);
@@ -458,6 +514,23 @@ function parseKilasInput(kilasStr, subKilasStr = '') {
 function startControlPanel() {
   const app = express();
   app.use(express.json());
+
+  // Security: Bind to loopback and validate internal runner token if set
+  const PANEL_TOKEN = process.env.ONFARM_PANEL_TOKEN;
+  const ALLOWED_HOSTS = new Set([`127.0.0.1:${PANEL_PORT}`, `localhost:${PANEL_PORT}`]);
+  app.use((req, res, next) => {
+    if (ALLOWED_HOSTS.size && req.headers.host && !ALLOWED_HOSTS.has(req.headers.host)) {
+      return res.status(403).json({ ok: false, message: 'Invalid host header' });
+    }
+    if (PANEL_TOKEN && (req.path.startsWith('/api') || req.path === '/start' || req.path === '/stop' || req.path.includes('excel') || req.path.includes('row'))) {
+      const token = req.headers['x-onfarm-token'] || req.query.token;
+      if (token !== PANEL_TOKEN) {
+        return res.status(403).json({ ok: false, message: 'Unauthorized local runner request' });
+      }
+    }
+    next();
+  });
+
   app.use(express.static(path.join(CLIENT_BASE_DIR, 'public')));
 
   // Save reviewed/edited rows directly to farmers.xlsx
@@ -1103,8 +1176,8 @@ function startControlPanel() {
     }
   });
 
-  app.listen(PANEL_PORT, () => {
-    log(`Service initialized on port ${PANEL_PORT}.`);
+  app.listen(PANEL_PORT, '127.0.0.1', () => {
+    log(`Service initialized on 127.0.0.1:${PANEL_PORT}.`);
   });
 }
 
@@ -1209,8 +1282,8 @@ async function main() {
     log(`Network check: ${err.response ? err.response.data.message : err.message}`);
   }
 
-  // Periodic background balance sync every 10 seconds
-  setInterval(syncUserBalance, 10000);
+  // Periodic background balance sync every 60 seconds with backoff
+  setInterval(syncUserBalance, 60000);
 }
 
 main().catch(err => {
