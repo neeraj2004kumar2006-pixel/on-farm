@@ -2630,10 +2630,9 @@
         const first = rows[0] || {};
         const farmerName = first.name || 'Farmer';
         const crop = first.crop || 'Crop';
-        const sowingDate = first.date || '—';
         const khata = first.khata || '—';
         const operatorUser = window.currentOperatorUser || {};
-        const operatorPhone = operatorUser.phone ? `+91 ${operatorUser.phone}` : 'Active CSC Operator';
+        const operatorPhone = operatorUser.phone ? ('+91 ' + operatorUser.phone) : 'Active CSC Operator';
         const operatorName = operatorUser.name || 'CSC Digital Seva Center';
         const printDate = new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -2643,101 +2642,58 @@
           return;
         }
 
-        const tableRowsHtml = rows.map((r, i) => `
-          <tr>
-            <td style="text-align: center; border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px;">${i + 1}</td>
-            <td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 12px; font-weight: 600;">${r.name || farmerName}</td>
-            <td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px;">${r.crop || crop}</td>
-            <td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px;">${r.khata || khata}</td>
-            <td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px; font-family: monospace; letter-spacing: 0.5px;">${r.khasra}</td>
-            <td style="text-align: center; border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px; font-weight: 700; color: ${r.status === 'DONE' ? '#15803d' : '#854d0e'};">${r.status || 'READY'}</td>
-          </tr>
-        `).join('');
+        const doneCount = rows.filter(r => (r.status || '').toUpperCase() === 'DONE').length;
+        const pendingCount = rows.length - doneCount;
 
-        printWin.document.write(\`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>PMFBY Application Receipt - \${farmerName}</title>
-            <style>
-              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 24px; color: #1e293b; max-width: 750px; margin: 0 auto; }
-              .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 18px; }
-              .header h2 { margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 0.5px; }
-              .header p { margin: 4px 0 0; font-size: 12px; color: #64748b; font-weight: 600; }
-              .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 18px; font-size: 12px; }
-              .meta-item { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed #e2e8f0; }
-              .meta-label { color: #64748b; font-weight: 600; }
-              .meta-val { font-weight: 700; color: #0f172a; }
-              table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-              th { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; text-align: left; }
-              .footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 30px; padding-top: 18px; border-top: 1px solid #e2e8f0; }
-              .stamp-box { border: 1.5px dashed #94a3b8; border-radius: 6px; padding: 18px 26px; text-align: center; font-size: 11px; color: #64748b; font-weight: 600; }
-              @media print {
-                body { padding: 0; }
-                .no-print { display: none; }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <h2>Pradhan Mantri Fasal Bima Yojana (PMFBY)</h2>
-              <p>Farmer Application Acknowledgement & Verification Slip</p>
-            </div>
+        let tableRowsHtml = '';
+        for (let i = 0; i < rows.length; i++) {
+          const r = rows[i];
+          const st = (r.status || 'READY').toUpperCase();
+          const color = st === 'DONE' ? '#15803d' : '#854d0e';
+          tableRowsHtml += '<tr>' +
+            '<td style="text-align: center; border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px;">' + (i + 1) + '</td>' +
+            '<td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 12px; font-weight: 600;">' + (r.name || farmerName) + '</td>' +
+            '<td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px;">' + (r.crop || crop) + '</td>' +
+            '<td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px;">' + (r.khata || khata) + '</td>' +
+            '<td style="border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px; font-family: monospace; letter-spacing: 0.5px;">' + (r.khasra || '—') + '</td>' +
+            '<td style="text-align: center; border: 1px solid #cbd5e1; padding: 6px 8px; font-size: 11px; font-weight: 700; color: ' + color + ';">' + st + '</td>' +
+          '</tr>';
+        }
 
-            <div class="meta-grid">
-              <div>
-                <div class="meta-item"><span class="meta-label">Farmer Name:</span><span class="meta-val">\${farmerName}</span></div>
-                <div class="meta-item"><span class="meta-label">Crop Name:</span><span class="meta-val">\${crop}</span></div>
-                <div class="meta-item"><span class="meta-label">Khata Number:</span><span class="meta-val">\${khata}</span></div>
-              </div>
-              <div>
-                <div class="meta-item"><span class="meta-label">CSC Center:</span><span class="meta-val">\${operatorName}</span></div>
-                <div class="meta-item"><span class="meta-label">Operator Contact:</span><span class="meta-val">\${operatorPhone}</span></div>
-                <div class="meta-item"><span class="meta-label">Print Date:</span><span class="meta-val">\${printDate}</span></div>
-              </div>
-            </div>
+        const slipHtml = '<!DOCTYPE html>' +
+          '<html><head><title>PMFBY Application Receipt - ' + farmerName + '</title>' +
+          '<style>' +
+          'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; padding: 24px; color: #1e293b; max-width: 750px; margin: 0 auto; }' +
+          '.header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 18px; }' +
+          '.header h2 { margin: 0; font-size: 18px; text-transform: uppercase; letter-spacing: 0.5px; }' +
+          '.header p { margin: 4px 0 0; font-size: 12px; color: #64748b; font-weight: 600; }' +
+          '.meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 18px; font-size: 12px; }' +
+          '.meta-item { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed #e2e8f0; }' +
+          '.meta-label { color: #64748b; font-weight: 600; }' +
+          '.meta-val { font-weight: 700; color: #0f172a; }' +
+          'table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }' +
+          'th { background: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; text-align: left; }' +
+          '.footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 30px; padding-top: 18px; border-top: 1px solid #e2e8f0; }' +
+          '.stamp-box { border: 1.5px dashed #94a3b8; border-radius: 6px; padding: 18px 26px; text-align: center; font-size: 11px; color: #64748b; font-weight: 600; }' +
+          '@media print { body { padding: 0; } }' +
+          '</style></head><body>' +
+          '<div class="header"><h2>Pradhan Mantri Fasal Bima Yojana (PMFBY)</h2><p>Farmer Application Acknowledgement & Verification Slip</p></div>' +
+          '<div class="meta-grid">' +
+            '<div><div class="meta-item"><span class="meta-label">Farmer Name:</span><span class="meta-val">' + farmerName + '</span></div><div class="meta-item"><span class="meta-label">Crop Name:</span><span class="meta-val">' + crop + '</span></div><div class="meta-item"><span class="meta-label">Khata Number:</span><span class="meta-val">' + khata + '</span></div></div>' +
+            '<div><div class="meta-item"><span class="meta-label">CSC Center:</span><span class="meta-val">' + operatorName + '</span></div><div class="meta-item"><span class="meta-label">Operator Contact:</span><span class="meta-val">' + operatorPhone + '</span></div><div class="meta-item"><span class="meta-label">Print Date:</span><span class="meta-val">' + printDate + '</span></div></div>' +
+          '</div>' +
+          '<table><thead><tr><th style="width: 35px; text-align: center;">#</th><th>Farmer Name</th><th>Crop</th><th>Khata</th><th>Khasra Number (18-Digit)</th><th style="width: 80px; text-align: center;">Status</th></tr></thead>' +
+          '<tbody>' + tableRowsHtml + '</tbody></table>' +
+          '<div style="font-size: 12px; margin-bottom: 20px;"><strong>Total Records:</strong> ' + rows.length + ' Kilas | <strong>Completed:</strong> ' + doneCount + ' | <strong>Ready/Pending:</strong> ' + pendingCount + '</div>' +
+          '<div class="footer"><div style="font-size: 11px; color: #64748b; line-height: 1.4;">• Auto-generated acknowledgement receipt via On-Farm.<br>• Keep this slip for your crop insurance records and verification.</div><div class="stamp-box">CSC Center Seal & Signature</div></div>' +
+          '</body></html>';
 
-            <table>
-              <thead>
-                <tr>
-                  <th style="width: 35px; text-align: center;">#</th>
-                  <th>Farmer Name</th>
-                  <th>Crop</th>
-                  <th>Khata</th>
-                  <th>Khasra Number (18-Digit)</th>
-                  <th style="width: 80px; text-align: center;">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                \${tableRowsHtml}
-              </tbody>
-            </table>
-
-            <div style="font-size: 12px; margin-bottom: 20px;">
-              <strong>Total Records:</strong> \${rows.length} Kilas | 
-              <strong>Completed:</strong> \${rows.filter(r => r.status === 'DONE').length} | 
-              <strong>Ready/Pending:</strong> \${rows.filter(r => r.status !== 'DONE').length}
-            </div>
-
-            <div class="footer">
-              <div style="font-size: 11px; color: #64748b; line-height: 1.4;">
-                • Auto-generated acknowledgement receipt via On-Farm.<br>
-                • Keep this slip for your crop insurance records and verification.
-              </div>
-              <div class="stamp-box">
-                CSC Center Seal & Signature
-              </div>
-            </div>
-
-            <script>
-              window.onload = function() {
-                window.print();
-              };
-            <\/script>
-          </body>
-          </html>
-        \`);
+        printWin.document.open();
+        printWin.document.write(slipHtml);
         printWin.document.close();
+        setTimeout(() => {
+          try { printWin.print(); } catch (e) {}
+        }, 500);
       } catch (err) {
         appAlert('Failed to generate slip: ' + err.message, 'Print Error', 'error');
       }
