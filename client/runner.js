@@ -340,25 +340,47 @@ async function executeAutomation() {
 
       log(`[${i + 1}/${rows.length}] Filling: ${r.Name} | Wallet Balance: ₹${state.walletBalance}`);
 
-      // Call in-memory action routine
-      if (formActions.processFarmerRow) {
-        await formActions.processFarmerRow(page, r, isLastRow, log, deductRes.data.authNonce);
-      } else {
-        // Fallback default actions
-        await formActions.selectCrop(page, r.Crop);
-        await formActions.selectSowingDate(page, r.SowingDateRaw);
-        await formActions.selectOwnership(page, r.Ownership);
-        await formActions.fillKhata(page, r.KhasraNo);
-        await formActions.fillKhasra(page, r.KhataNo);
-        await formActions.clickVerify(page);
-        await page.waitForTimeout(1500);
-        await formActions.selectRadio(page, r.FarmerName);
-        await formActions.clickPopupSubmit(page);
-        if (isLastRow) {
-          await formActions.clickSubmit(page);
+      try {
+        // Call in-memory action routine
+        if (formActions.processFarmerRow) {
+          await formActions.processFarmerRow(page, r, isLastRow, log, deductRes.data.authNonce);
         } else {
-          await formActions.clickAddCrop(page);
+          // Fallback default actions
+          await formActions.selectCrop(page, r.Crop);
+          await formActions.selectSowingDate(page, r.SowingDateRaw);
+          await formActions.selectOwnership(page, r.Ownership);
+          await formActions.fillKhata(page, r.KhasraNo);
+          await formActions.fillKhasra(page, r.KhataNo);
+          await formActions.clickVerify(page);
+          await page.waitForTimeout(1500);
+          await formActions.selectRadio(page, r.FarmerName);
+          await formActions.clickPopupSubmit(page);
+          if (isLastRow) {
+            await formActions.clickSubmit(page);
+          } else {
+            await formActions.clickAddCrop(page);
+          }
         }
+      } catch (fillErr) {
+        // AUTO-ROLLBACK / REFUND: If portal failed mid-kila, refund ₹1.00 immediately so user never loses money!
+        if (deductRes.data.plan === 'WALLET_PAY_PER_KILA') {
+          log(`⚠️ Portal error during ${r.KhasraNo}. Initiating auto-refund of ₹1.00...`);
+          try {
+            const refRes = await axios.post(`${CLOUD_URL}/api/kila/refund`, {
+              userId: state.user.id,
+              hwid: state.hwid,
+              kilaNumber: r.KhasraNo,
+              reason: fillErr.message || 'PMFBY Portal Form Error',
+            }, { timeout: 6000 });
+            if (refRes.data && refRes.data.ok) {
+              state.walletBalance = refRes.data.remaining_balance;
+              log(`✅ Auto-refund successful. Wallet balance restored to ₹${state.walletBalance}`);
+            }
+          } catch (rErr) {
+            log(`Warning: Auto-refund API call failed: ${rErr.message}`);
+          }
+        }
+        throw fillErr;
       }
 
       // Mark row DONE in Excel

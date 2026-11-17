@@ -90,9 +90,26 @@ async function createWindow() {
   });
 }
 
+function cleanupProcesses() {
+  if (runnerProcess) {
+    try { runnerProcess.kill(); } catch {}
+    runnerProcess = null;
+  }
+  // Force close any orphaned Chromium or remote debugging instances on exit
+  if (process.platform === 'win32') {
+    try {
+      const { exec } = require('child_process');
+      // Gracefully kill Chrome processes opened specifically with CDP 9222 user-data-dir
+      exec('wmic process where "CommandLine like \'%browser-profile%\'" call terminate', () => {});
+    } catch {}
+  }
+}
+
 app.whenReady().then(createWindow);
 
+app.on('before-quit', cleanupProcesses);
+
 app.on('window-all-closed', () => {
-  if (runnerProcess) runnerProcess.kill();
+  cleanupProcesses();
   if (process.platform !== 'darwin') app.quit();
 });

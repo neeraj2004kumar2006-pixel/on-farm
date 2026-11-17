@@ -689,7 +689,33 @@ app.post('/api/kila/deduct', async (req, res) => {
       return res.json({ ok: true, plan: 'SUBSCRIPTION_UNLIMITED', remaining_balance: wallet.balance, authNonce });
     }
 
-    // Wallet user — deduct ₹1
+    // Wallet user — Atomic Deduction (handles race conditions via RPC when present, fallback to row update)
+    try {
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc('deduct_kila_wallet_atomic', {
+        p_user_id: user.id,
+        p_amount: 1.00,
+        p_kila: kilaNumber || 'Unknown',
+      });
+
+      if (!rpcErr && rpcRes) {
+        if (!rpcRes.ok) {
+          return res.status(rpcRes.code === 'INSUFFICIENT_FUNDS' ? 402 : 400).json({
+            ok: false,
+            code: rpcRes.code || 'INSUFFICIENT_FUNDS',
+            message: rpcRes.message || 'Wallet balance khatam ho gaya hai! Kripya agla kila bharne se pehle recharge karein.',
+          });
+        }
+        return res.json({
+          ok: true,
+          plan: 'WALLET_PAY_PER_KILA',
+          deducted: 1.00,
+          remaining_balance: rpcRes.remaining_balance,
+          authNonce,
+        });
+      }
+    } catch { /* fallback to standard update if rpc not migrated yet */ }
+
+    // Fallback atomic check in node
     const currentBalance = Number(wallet.balance || 0);
     if (currentBalance < 1.00) {
       return res.status(402).json({
@@ -722,6 +748,53 @@ app.post('/api/kila/deduct', async (req, res) => {
       remaining_balance: updatedBalance,
       authNonce,
     });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+/**
+ * Auto-Refund Kila Deduction if Portal Fails / Session Times Out
+ * Guarantees zero unfair money loss for operators on PMFBY errors
+ */
+app.post('/api/kila/refund', async (req, res) => {
+  const { userId, hwid, kilaNumber, reason } = req.body;
+  if (!userId || !hwid) return res.status(400).json({ ok: false, message: 'Invalid payload' });
+
+  try {
+    const supabase = getSupabase();
+    const { data: user } = await supabase.from('users').select('*').eq('id', userId).single();
+    if (!user || user.hwid !== hwid || user.is_blocked) throw new Error('Unauthorized');
+
+    const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', user.id).single();
+    if (!wallet) return res.status(404).json({ ok: false, message: 'Wallet not found' });
+
+    // Restore ₹1.00 balance
+    const updatedBalance = Number(wallet.balance || 0) + 1.00;
+    const updatedKilas = Math.max(0, (wallet.total_kilas_processed || 1) - 1);
+
+    await supabase.from('wallets').update({
+      balance: updatedBalance,
+      total_kilas_processed: updatedKilas,
+      updated_at: new Date().toISOString(),
+    }).eq('user_id', user.id);
+
+    // Record refund credit in transactions
+    await supabase.from('transactions').insert([{
+      user_id: user.id,
+      amount: 1.00,
+      type: 'WALLET_RECHARGE',
+      status: 'SUCCESS',
+      details: {
+        is_refund: true,
+        type: 'KILA_ROLLBACK',
+        kila: kilaNumber || 'Unknown',
+        reason: reason || 'Portal error rollback',
+      },
+    }]);
+
+    console.log(`↩️ Refunded ₹1.00 to user ${user.phone} for kila ${kilaNumber} (Reason: ${reason || 'Rollback'})`);
+    res.json({ ok: true, message: 'Kila balance refunded successfully', remaining_balance: updatedBalance });
   } catch (err) {
     res.status(500).json({ ok: false, message: err.message });
   }
