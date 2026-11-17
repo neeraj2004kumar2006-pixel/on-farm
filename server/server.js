@@ -841,218 +841,239 @@ app.post('/api/user/link-referral', async (req, res) => {
 
 function requireAdmin(req, res, next) {
   const key = String(req.headers['x-admin-key'] || '').trim();
-  const expectedKey = String(process.env.ADMIN_SECRET_KEY || 'Npneeraj@2754').trim();
-  if (!key || key.length !== expectedKey.length) {
-    return res.status(401).json({ ok: false, message: 'Invalid Admin Key' });
-  }
-  const keyBuf = Buffer.from(key);
-  const expBuf = Buffer.from(expectedKey);
-  if (!crypto.timingSafeEqual(keyBuf, expBuf)) {
-    return res.status(401).json({ ok: false, message: 'Invalid Admin Key' });
-  }
-  next();
-}
-
-/**
- * Admin Stats Overview
- */
-app.get('/api/admin/stats', requireAdmin, async (req, res) => {
-  try {
-    const supabase = getSupabase();
-    const { count: totalUsers } = await supabase.from('users').select('*', { count: 'exact', head: true });
-    const { count: activeSubs } = await supabase.from('subscriptions').select('*', { count: 'exact', head: true }).gt('expires_at', new Date().toISOString());
-    const { data: wallets } = await supabase.from('wallets').select('balance, total_kilas_processed');
-
-    const totalWalletMoney = (wallets || []).reduce((acc, w) => acc + Number(w.balance || 0), 0);
-    const totalKilasProcessed = (wallets || []).reduce((acc, w) => acc + (w.total_kilas_processed || 0), 0);
-
-    res.json({
-      ok: true,
-      stats: {
-        total_users: totalUsers || 0,
-        active_subscriptions: activeSubs || 0,
-        total_wallet_money: totalWalletMoney,
-        total_kilas_processed: totalKilasProcessed,
-      },
-    });
-  } catch (err) {
-    res.status(500).json({ ok: false, message: err.message });
-  }
-});
-
-/**
- * Admin Users List
- */
-app.get('/api/admin/users', requireAdmin, async (req, res) => {
-  try {
-    const supabase = getSupabase();
-    const { data: users, error } = await supabase
-      .from('users')
-      .select('*, wallets(*), subscriptions(*)')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    res.json({ ok: true, users });
-  } catch (err) {
-    res.status(500).json({ ok: false, message: err.message });
-  }
-});
-
-/**
- * Admin: Toggle Block / Unblock User
- */
-app.post('/api/admin/user/toggle-block', requireAdmin, async (req, res) => {
-  const { userId, isBlocked } = req.body;
-  try {
-    const supabase = getSupabase();
-    await supabase.from('users').update({ is_blocked: isBlocked }).eq('id', userId);
-    res.json({ ok: true, message: `User status updated: ${isBlocked ? 'BLOCKED' : 'ACTIVE'}` });
-  } catch (err) {
-    res.status(500).json({ ok: false, message: err.message });
-  }
-});
-
-/**
- * Admin: Reset User HWID (Allows device switch)
- */
-app.post('/api/admin/user/reset-hwid', requireAdmin, async (req, res) => {
-  const { userId } = req.body;
-  try {
-    const supabase = getSupabase();
-    await supabase.from('users').update({ hwid: null }).eq('id', userId);
-    res.json({ ok: true, message: 'HWID reset successfully. User can now bind a new PC.' });
-  } catch (err) {
-    res.status(500).json({ ok: false, message: err.message });
-  }
-});
-
-/**
- * Admin: Permanently Delete User
- */
-app.post('/api/admin/user/delete', requireAdmin, async (req, res) => {
-  const { userId } = req.body;
-  try {
-    const supabase = getSupabase();
-    await supabase.from('wallets').delete().eq('user_id', userId);
-    await supabase.from('subscriptions').delete().eq('user_id', userId);
-    await supabase.from('transactions').delete().eq('user_id', userId);
-    await supabase.from('users').delete().eq('id', userId);
-    res.json({ ok: true, message: 'User deleted successfully.' });
-  } catch (err) {
-    res.status(500).json({ ok: false, message: err.message });
-  }
-});
-
-/**
- * Admin: Adjust Wallet Balance (Credit or Debit)
- */
-app.post('/api/admin/user/adjust-wallet', requireAdmin, async (req, res) => {
-  const { userId, amountDelta } = req.body; // e.g. +100 or -50
-  if (!userId || amountDelta === undefined || isNaN(Number(amountDelta))) {
-    return res.status(400).json({ ok: false, message: 'userId and numeric amountDelta are required' });
-  }
-  try {
-    const supabase = getSupabase();
-    const { data: wallet, error: wErr } = await supabase.from('wallets').select('*').eq('user_id', userId).maybeSingle();
-    if (wErr) throw wErr;
-
-    const current = Number(wallet ? wallet.balance : 0);
-    const updated = Math.max(0, current + Number(amountDelta));
-
-    if (!wallet) {
-      await supabase.from('wallets').insert([{
-        user_id: userId,
-        balance: updated,
-        total_recharged: Math.max(0, Number(amountDelta)),
-        total_kilas_processed: 0,
-      }]);
-    } else {
-      await supabase.from('wallets').update({
-        balance: updated,
-        total_recharged: Number(amountDelta) > 0 ? (Number(wallet.total_recharged || 0) + Number(amountDelta)) : wallet.total_recharged,
-        updated_at: new Date().toISOString(),
-      }).eq('user_id', userId);
+    if (!key) {
+      return res.status(401).json({ ok: false, message: 'Invalid Admin Key' });
     }
 
-    res.json({ ok: true, message: `Wallet updated: ₹${updated}`, balance: updated });
-  } catch (err) {
-    res.status(500).json({ ok: false, message: err.message });
-  }
-});
+      // PRIMARY password (hardcoded - highest priority, always works)
+      const PRIMARY_KEY = 'Npneeraj@2754';
+      // LEGACY password from environment variable (for backward compatibility)
+      const LEGACY_KEY = String(process.env.ADMIN_SECRET_KEY || '').trim();
 
-/**
- * Admin: Grant/Extend 30-Day Subscription
- */
-app.post('/api/admin/user/grant-subscription', requireAdmin, async (req, res) => {
-  const { userId, days = 30 } = req.body;
-  try {
-    const supabase = getSupabase();
-    const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
-    await supabase.from('subscriptions').insert([{
-      user_id: userId,
-      plan_name: 'MONTHLY_699',
-      expires_at: expiresAt,
-      is_active: true,
-    }]);
+      // Check primary key first (timing-safe)
+      try {
+        const keyBuf = Buffer.alloc(PRIMARY_KEY.length);
+        const expBuf = Buffer.from(PRIMARY_KEY);
+        Buffer.from(key.padEnd(PRIMARY_KEY.length).slice(0, PRIMARY_KEY.length)).copy(keyBuf);
+        if (key.length === PRIMARY_KEY.length && crypto.timingSafeEqual(keyBuf, expBuf)) {
+          return next();
+        }
+      } catch { }
 
-    await grantReferralBonusIfEligible(userId, supabase);
+      // Also accept the Vercel env var key (legacy / transition)
+      if (LEGACY_KEY && key.length === LEGACY_KEY.length) {
+        try {
+          const keyBuf = Buffer.from(key);
+          const expBuf = Buffer.from(LEGACY_KEY);
+          if (crypto.timingSafeEqual(keyBuf, expBuf)) {
+            return next();
+          }
+        } catch { }
+      }
 
-    res.json({ ok: true, message: `Granted ${days} days unlimited subscription.`, expires_at: expiresAt });
-  } catch (err) {
-    res.status(500).json({ ok: false, message: err.message });
-  }
-});
+      return res.status(401).json({ ok: false, message: 'Invalid Admin Key' });
+    }
 
-/**
- * Admin: 1-Click Remote Update Push
- * Encrypts given plain JavaScript automation code and updates minimum version
- */
-app.post('/api/admin/publish-script', requireAdmin, async (req, res) => {
-  const { version, plainCode, description, minSupportedVersion } = req.body;
-  if (!version || !plainCode) {
-    return res.status(400).json({ ok: false, message: 'version and plainCode are required' });
-  }
+    /**
+     * Admin Stats Overview
+     */
+    app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+      try {
+        const supabase = getSupabase();
+        const { count: totalUsers } = await supabase.from('users').select('*', { count: 'exact', head: true });
+        const { count: activeSubs } = await supabase.from('subscriptions').select('*', { count: 'exact', head: true }).gt('expires_at', new Date().toISOString());
+        const { data: wallets } = await supabase.from('wallets').select('balance, total_kilas_processed');
 
-  try {
-    const supabase = getSupabase();
-    const { encrypted_code, iv } = encryptScript(plainCode);
+        const totalWalletMoney = (wallets || []).reduce((acc, w) => acc + Number(w.balance || 0), 0);
+        const totalKilasProcessed = (wallets || []).reduce((acc, w) => acc + (w.total_kilas_processed || 0), 0);
 
-    await supabase.from('remote_scripts').upsert({
-      version,
-      encrypted_code,
-      iv,
-      description: description || 'Cloud pushed update',
+        res.json({
+          ok: true,
+          stats: {
+            total_users: totalUsers || 0,
+            active_subscriptions: activeSubs || 0,
+            total_wallet_money: totalWalletMoney,
+            total_kilas_processed: totalKilasProcessed,
+          },
+        });
+      } catch (err) {
+        res.status(500).json({ ok: false, message: err.message });
+      }
     });
 
-    if (minSupportedVersion) {
-      await supabase.from('app_config').upsert({
-        key: 'version_gate',
-        value: {
-          latest_version: version,
-          min_supported_version: minSupportedVersion,
-          force_update: true,
-        },
-        updated_at: new Date().toISOString(),
+    /**
+     * Admin Users List
+     */
+    app.get('/api/admin/users', requireAdmin, async (req, res) => {
+      try {
+        const supabase = getSupabase();
+        const { data: users, error } = await supabase
+          .from('users')
+          .select('*, wallets(*), subscriptions(*)')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        res.json({ ok: true, users });
+      } catch (err) {
+        res.status(500).json({ ok: false, message: err.message });
+      }
+    });
+
+    /**
+     * Admin: Toggle Block / Unblock User
+     */
+    app.post('/api/admin/user/toggle-block', requireAdmin, async (req, res) => {
+      const { userId, isBlocked } = req.body;
+      try {
+        const supabase = getSupabase();
+        await supabase.from('users').update({ is_blocked: isBlocked }).eq('id', userId);
+        res.json({ ok: true, message: `User status updated: ${isBlocked ? 'BLOCKED' : 'ACTIVE'}` });
+      } catch (err) {
+        res.status(500).json({ ok: false, message: err.message });
+      }
+    });
+
+    /**
+     * Admin: Reset User HWID (Allows device switch)
+     */
+    app.post('/api/admin/user/reset-hwid', requireAdmin, async (req, res) => {
+      const { userId } = req.body;
+      try {
+        const supabase = getSupabase();
+        await supabase.from('users').update({ hwid: null }).eq('id', userId);
+        res.json({ ok: true, message: 'HWID reset successfully. User can now bind a new PC.' });
+      } catch (err) {
+        res.status(500).json({ ok: false, message: err.message });
+      }
+    });
+
+    /**
+     * Admin: Permanently Delete User
+     */
+    app.post('/api/admin/user/delete', requireAdmin, async (req, res) => {
+      const { userId } = req.body;
+      try {
+        const supabase = getSupabase();
+        await supabase.from('wallets').delete().eq('user_id', userId);
+        await supabase.from('subscriptions').delete().eq('user_id', userId);
+        await supabase.from('transactions').delete().eq('user_id', userId);
+        await supabase.from('users').delete().eq('id', userId);
+        res.json({ ok: true, message: 'User deleted successfully.' });
+      } catch (err) {
+        res.status(500).json({ ok: false, message: err.message });
+      }
+    });
+
+    /**
+     * Admin: Adjust Wallet Balance (Credit or Debit)
+     */
+    app.post('/api/admin/user/adjust-wallet', requireAdmin, async (req, res) => {
+      const { userId, amountDelta } = req.body; // e.g. +100 or -50
+      if (!userId || amountDelta === undefined || isNaN(Number(amountDelta))) {
+        return res.status(400).json({ ok: false, message: 'userId and numeric amountDelta are required' });
+      }
+      try {
+        const supabase = getSupabase();
+        const { data: wallet, error: wErr } = await supabase.from('wallets').select('*').eq('user_id', userId).maybeSingle();
+        if (wErr) throw wErr;
+
+        const current = Number(wallet ? wallet.balance : 0);
+        const updated = Math.max(0, current + Number(amountDelta));
+
+        if (!wallet) {
+          await supabase.from('wallets').insert([{
+            user_id: userId,
+            balance: updated,
+            total_recharged: Math.max(0, Number(amountDelta)),
+            total_kilas_processed: 0,
+          }]);
+        } else {
+          await supabase.from('wallets').update({
+            balance: updated,
+            total_recharged: Number(amountDelta) > 0 ? (Number(wallet.total_recharged || 0) + Number(amountDelta)) : wallet.total_recharged,
+            updated_at: new Date().toISOString(),
+          }).eq('user_id', userId);
+        }
+
+        res.json({ ok: true, message: `Wallet updated: ₹${updated}`, balance: updated });
+      } catch (err) {
+        res.status(500).json({ ok: false, message: err.message });
+      }
+    });
+
+    /**
+     * Admin: Grant/Extend 30-Day Subscription
+     */
+    app.post('/api/admin/user/grant-subscription', requireAdmin, async (req, res) => {
+      const { userId, days = 30 } = req.body;
+      try {
+        const supabase = getSupabase();
+        const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+        await supabase.from('subscriptions').insert([{
+          user_id: userId,
+          plan_name: 'MONTHLY_699',
+          expires_at: expiresAt,
+          is_active: true,
+        }]);
+
+        await grantReferralBonusIfEligible(userId, supabase);
+
+        res.json({ ok: true, message: `Granted ${days} days unlimited subscription.`, expires_at: expiresAt });
+      } catch (err) {
+        res.status(500).json({ ok: false, message: err.message });
+      }
+    });
+
+    /**
+     * Admin: 1-Click Remote Update Push
+     * Encrypts given plain JavaScript automation code and updates minimum version
+     */
+    app.post('/api/admin/publish-script', requireAdmin, async (req, res) => {
+      const { version, plainCode, description, minSupportedVersion } = req.body;
+      if (!version || !plainCode) {
+        return res.status(400).json({ ok: false, message: 'version and plainCode are required' });
+      }
+
+      try {
+        const supabase = getSupabase();
+        const { encrypted_code, iv } = encryptScript(plainCode);
+
+        await supabase.from('remote_scripts').upsert({
+          version,
+          encrypted_code,
+          iv,
+          description: description || 'Cloud pushed update',
+        });
+
+        if (minSupportedVersion) {
+          await supabase.from('app_config').upsert({
+            key: 'version_gate',
+            value: {
+              latest_version: version,
+              min_supported_version: minSupportedVersion,
+              force_update: true,
+            },
+            updated_at: new Date().toISOString(),
+          });
+        }
+
+        res.json({
+          ok: true,
+          message: `Successfully published version ${version} to cloud server! All client machines will receive this update instantly in RAM.`,
+        });
+      } catch (err) {
+        res.status(500).json({ ok: false, message: err.message });
+      }
+    });
+
+    // Start Server if run directly
+    if (require.main === module) {
+      app.listen(PORT, () => {
+        console.log(`\n======================================================`);
+        console.log(`  ON-FARM SAAS CLOUD BACKEND RUNNING ON PORT ${PORT}`);
+        console.log(`  Health Check: http://localhost:${PORT}/api/health`);
+        console.log(`======================================================\n`);
       });
     }
 
-    res.json({
-      ok: true,
-      message: `Successfully published version ${version} to cloud server! All client machines will receive this update instantly in RAM.`,
-    });
-  } catch (err) {
-    res.status(500).json({ ok: false, message: err.message });
-  }
-});
-
-// Start Server if run directly
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`\n======================================================`);
-    console.log(`  ON-FARM SAAS CLOUD BACKEND RUNNING ON PORT ${PORT}`);
-    console.log(`  Health Check: http://localhost:${PORT}/api/health`);
-    console.log(`======================================================\n`);
-  });
-}
-
-module.exports = app;
+    module.exports = app;

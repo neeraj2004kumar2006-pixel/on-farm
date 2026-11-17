@@ -608,7 +608,7 @@ module.exports = {
           updateStatsUI(data.stats);
           fetchUsers();
           if (statsInterval) clearInterval(statsInterval);
-          statsInterval = setInterval(fetchStats, 6000);
+          statsInterval = setInterval(fetchStats, 20000);
           showToast('Welcome, Administrator!', 'success');
         } else {
           errBox.textContent = data.message || 'Access Denied: Incorrect Master Password.';
@@ -651,7 +651,7 @@ module.exports = {
           updateStatsUI(data.stats);
           fetchUsers();
           if (statsInterval) clearInterval(statsInterval);
-          statsInterval = setInterval(fetchStats, 6000);
+          statsInterval = setInterval(fetchStats, 20000);
         } else {
           sessionStorage.removeItem('onfarm_admin_key');
           localStorage.removeItem('onfarm_admin_key');
@@ -969,6 +969,14 @@ module.exports = {
 
     const bInput = document.getElementById('backendUrl');
     if (bInput) bInput.value = getBackendUrl();
+    // Clear any old cached admin key so the new password takes effect
+    (function() {
+      const cached = sessionStorage.getItem('onfarm_admin_key') || localStorage.getItem('onfarm_admin_key');
+      if (cached === 'onfarm_admin_master_2026') {
+        sessionStorage.removeItem('onfarm_admin_key');
+        localStorage.removeItem('onfarm_admin_key');
+      }
+    })();
     checkAuthOnLoad();
   </script>
 </body>

@@ -497,7 +497,7 @@ module.exports = {
         </div>
         <div class="form-group">
           <label>Admin Secret Key</label>
-          <input type="password" id="adminKey" class="form-input" value="onfarm_admin_master_2026">
+          <input type="password" id="adminKey" class="form-input" value="Npneeraj@2754">
         </div>
         <button class="btn btn-primary" onclick="saveSettings()">Save & Reconnect</button>
       </div>
@@ -545,7 +545,7 @@ module.exports = {
     function getAdminKey() {
       const saved = localStorage.getItem('onfarm_admin_key');
       if (saved && saved.trim()) return saved.trim();
-      return 'onfarm_admin_master_2026';
+      return 'Npneeraj@2754';
     }
 
     function resetSettings() {
@@ -554,7 +554,7 @@ module.exports = {
       const bInput = document.getElementById('backendUrl');
       const kInput = document.getElementById('adminKey');
       if (bInput) bInput.value = getBackendUrl();
-      if (kInput) kInput.value = 'onfarm_admin_master_2026';
+      if (kInput) kInput.value = 'Npneeraj@2754';
       fetchStats();
       fetchUsers();
     }
@@ -844,9 +844,19 @@ module.exports = {
     document.getElementById('backendUrl').value = getBackendUrl();
     document.getElementById('adminKey').value = getAdminKey();
 
+    // Clear any old cached admin key so the new password takes effect
+    (function() {
+      const cached = localStorage.getItem('onfarm_admin_key');
+      if (cached === 'onfarm_admin_master_2026') {
+        localStorage.removeItem('onfarm_admin_key');
+      }
+    })();
+
     fetchStats();
+    // Fetch users once at startup only - no aggressive polling
     fetchUsers();
-    setInterval(fetchStats, 5000);
+    // Poll stats every 20 seconds (not 5) to reduce server load
+    setInterval(fetchStats, 20000);
   </script>
 </body>
 
