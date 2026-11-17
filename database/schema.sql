@@ -43,10 +43,10 @@ CREATE TABLE IF NOT EXISTS public.transactions (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES public.users(id) ON DELETE SET NULL,
     amount NUMERIC(10, 2) NOT NULL,
-    type TEXT NOT NULL CHECK (type IN ('WALLET_RECHARGE', 'SUBSCRIPTION_699', 'KILA_DEBIT')),
+    type TEXT NOT NULL CHECK (type IN ('WALLET_RECHARGE', 'SUBSCRIPTION_699', 'KILA_DEBIT', 'REFERRAL_LINKED', 'REFERRAL_BONUS')),
     cashfree_order_id TEXT,
     payment_session_id TEXT,
-    status TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'SUCCESS', 'FAILED')),
+    status TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'SUCCESS', 'FAILED', 'COMPLETED')),
     details JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
