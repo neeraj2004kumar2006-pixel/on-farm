@@ -5,7 +5,6 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const cashfree = require('./cashfree');
@@ -15,10 +14,13 @@ const fs = require('fs');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// Security Middlewares
-app.use(helmet({
-  contentSecurityPolicy: false,
-}));
+// Security Headers Middleware (Zero external dependencies)
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
 app.use(cors());
 
 // Capture raw body for Cashfree webhook signature verification
