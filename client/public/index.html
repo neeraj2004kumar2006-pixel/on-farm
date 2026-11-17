@@ -830,11 +830,17 @@
     .review-table-wrap {
       max-height: 380px;
       overflow-y: auto;
+      overflow-x: auto;
       border: 1px solid var(--border);
       border-radius: var(--radius-md);
       margin-bottom: 14px;
       box-shadow: var(--shadow-xs);
       background: white;
+    }
+
+    #viewPreview th, #viewPreview td {
+      padding: 8px 8px;
+      font-size: 12px;
     }
 
     /* ── TABLES ── */
@@ -880,11 +886,12 @@
       background: #eff6ff;
       color: #1d4ed8;
       border: 1px solid #dbeafe;
-      padding: 3px 8px;
+      padding: 2px 6px;
       border-radius: var(--radius-sm);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 600;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
     }
 
     .table-input {
@@ -932,7 +939,7 @@
       font-weight: 800;
     }
 
-    /* ── STATUS PILLS FOR PREVIEW ── */
+    /* ── STATUS PILLS & INTERACTIVE SELECT FOR PREVIEW ── */
     .status-pill {
       font-size: 11px;
       font-weight: 700;
@@ -959,6 +966,91 @@
       background: #f1f5f9;
       color: var(--text-muted);
       border: 1px solid var(--border);
+    }
+
+    .status-select {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 20px 4px 9px;
+      border-radius: var(--radius-full);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      cursor: pointer;
+      outline: none;
+      border: 1px solid transparent;
+      appearance: none;
+      -webkit-appearance: none;
+      background-repeat: no-repeat;
+      background-position: right 6px center;
+      background-size: 10px 10px;
+      transition: all 0.15s ease;
+      display: inline-block;
+      line-height: 1.2;
+    }
+
+    .status-select-done {
+      background-color: var(--primary-subtle);
+      color: var(--primary-text);
+      border-color: var(--primary-border);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23059669' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    }
+
+    .status-select-error {
+      background-color: var(--danger-subtle);
+      color: var(--danger);
+      border-color: var(--danger-border);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    }
+
+    .status-select-pending, .status-select-ready {
+      background-color: #f1f5f9;
+      color: var(--text-muted);
+      border-color: var(--border);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    }
+
+    .status-select:hover {
+      filter: brightness(0.96);
+    }
+
+    .status-select:focus {
+      box-shadow: 0 0 0 2px rgba(0, 255, 153, 0.25);
+    }
+
+    .btn-row-action {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 4px 7px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      color: var(--text-muted);
+      line-height: 1;
+    }
+
+    .btn-row-delete:hover {
+      background: #fef2f2;
+      border-color: #fca5a5;
+      color: #dc2626;
+      box-shadow: 0 1px 3px rgba(220, 38, 38, 0.15);
+    }
+
+    .btn-reset-all {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #dc2626;
+      font-weight: 700;
+      transition: all 0.15s ease;
+    }
+
+    .btn-reset-all:hover {
+      background: #fee2e2;
+      border-color: #f87171;
+      color: #b91c1c;
+      box-shadow: 0 2px 6px rgba(220, 38, 38, 0.15);
     }
 
     /* ── MODAL ── */
@@ -1303,7 +1395,7 @@
               Start Processing
             </button>
             <button data-i18n="btnStop" id="stopBtn" class="btn btn-danger" onclick="stopAutomation()" disabled>Pause</button>
-            <button data-i18n="btnResetExcel" class="btn btn-light" onclick="resetExcelStatus()">Reset Status</button>
+            <button data-i18n="btnResetAll" id="btnResetAll" class="btn btn-reset-all" onclick="resetAllRecords()">Reset All</button>
           </div>
 
           <div id="errorAlert" class="error-banner-new" style="display:none;">
@@ -1451,29 +1543,42 @@
 
         <!-- ═══════════ TAB 3: SAVED RECORDS ═══════════ -->
         <div id="viewPreview" class="card" style="display: none;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
             <div>
-              <div class="form-section-title" data-i18n="previewHeading" style="margin-bottom:0;">Saved Records Summary
-              </div>
+              <div class="form-section-title" data-i18n="previewHeading" style="margin-bottom:0;">Saved Records Summary</div>
             </div>
-            <button data-i18n="btnRefresh" class="btn btn-light btn-sm" onclick="loadExcelRows()">Refresh</button>
+            <div style="display: flex; gap: 8px;">
+              <button data-i18n="btnResetExcel" class="btn btn-light btn-sm" style="display:inline-flex; align-items:center; gap:5px;" onclick="resetExcelStatus()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+                </svg>
+                Reset Status
+              </button>
+              <button data-i18n="btnRefresh" class="btn btn-light btn-sm" style="display:inline-flex; align-items:center; gap:5px;" onclick="loadExcelRows()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+                </svg>
+                Refresh
+              </button>
+            </div>
           </div>
 
           <div class="review-table-wrap" style="max-height: 420px; margin-bottom: 0;">
             <table>
               <thead>
                 <tr>
-                  <th style="width: 44px; text-align: center;">#</th>
+                  <th style="width: 32px; text-align: center;">#</th>
                   <th data-i18n="thPrevFarmer">Farmer Name</th>
                   <th data-i18n="thPrevCrop">Crop</th>
-                  <th data-i18n="thPrevKhata">Khata No.</th>
+                  <th data-i18n="thPrevKhata" style="width: 60px;">Khata</th>
                   <th data-i18n="thPrevKhasra">Khasra Number</th>
-                  <th style="width: 100px; text-align: center;" data-i18n="thPrevStatus">Status</th>
+                  <th style="width: 95px; text-align: center;" data-i18n="thPrevStatus">Status</th>
+                  <th style="width: 50px; text-align: center;" data-i18n="thPrevAction">Action</th>
                 </tr>
               </thead>
               <tbody id="previewTableBody">
                 <tr>
-                  <td colspan="6" style="text-align: center; color: var(--text-muted); padding:28px; font-size:13px;"
+                  <td colspan="7" style="text-align: center; color: var(--text-muted); padding:28px; font-size:13px;"
                     data-i18n="emptyPrevMsg">No saved records found.</td>
                 </tr>
               </tbody>
@@ -1693,6 +1798,7 @@
         btnStart: 'Start Processing',
         btnStop: 'Pause',
         btnResetExcel: 'Reset Status',
+        btnResetAll: 'Reset All',
         activityLogTitle: 'Activity Log',
         consoleWaiting: 'Ready to process applications.',
         genTitle: 'Land & Farmer Entry Form',
@@ -1737,6 +1843,7 @@
         thPrevKhata: 'Khata No.',
         thPrevKhasra: 'Khasra Number',
         thPrevStatus: 'Status',
+        thPrevAction: 'Action',
         emptyPrevMsg: 'No saved records found.',
         offlineTitle: 'Internet Connection Required',
         offlineDesc: 'On-Farm requires an active internet connection to operate.',
@@ -1767,6 +1874,7 @@
         btnStart: 'आवेदन शुरू करें',
         btnStop: 'रोकें',
         btnResetExcel: 'स्टेटस रीसेट करें',
+        btnResetAll: 'सब रीसेट करें',
         activityLogTitle: 'कार्यवाही विवरण',
         consoleWaiting: 'आवेदन प्रक्रिया शुरू करने के लिए तैयार।',
         genTitle: 'भूमि एवं किसान विवरण फॉर्म',
@@ -1811,6 +1919,7 @@
         thPrevKhata: 'खाता सं.',
         thPrevKhasra: 'खसरा नंबर',
         thPrevStatus: 'स्थिति',
+        thPrevAction: 'कार्रवाई',
         emptyPrevMsg: 'कोई सुरक्षित रिकॉर्ड नहीं मिला।',
         offlineTitle: 'इंटरनेट कनेक्शन आवश्यक है',
         offlineDesc: 'ऑन-फार्म चलाने के लिए इंटरनेट कनेक्शन होना अनिवार्य है।',
@@ -2428,23 +2537,52 @@
         const data = await res.json();
         const tbody = document.getElementById('previewTableBody');
         const t = I18N[currentLang] || I18N.en;
-        if (!data.rows || !data.rows.length) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:28px; font-size:13px;">${t.emptyPrevMsg}</td></tr>`; return; }
+        if (!data.rows || !data.rows.length) {
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:28px; font-size:13px;">${t.emptyPrevMsg}</td></tr>`;
+          return;
+        }
         tbody.innerHTML = data.rows.map(r => {
-          let pillClass = 'status-pill-pending';
-          if (r.status === 'DONE') pillClass = 'status-pill-done';
-          else if (r.status === 'ERROR') pillClass = 'status-pill-error';
+          const rowNum = r.rowNumber || (r.index + 1);
+          const st = (r.status || 'READY').toUpperCase();
+          let selectClass = 'status-select-ready';
+          if (st === 'DONE') selectClass = 'status-select-done';
+          else if (st === 'ERROR') selectClass = 'status-select-error';
+          else if (st === 'PENDING') selectClass = 'status-select-pending';
+
+          const khasraSafe = String(r.khasra || '').replace(/'/g, "\\'");
+          const nameSafe = String(r.name || '').replace(/'/g, "\\'");
+
           return `
             <tr>
               <td style="font-size:12px; color:var(--text-muted); text-align:center;">${r.index}</td>
-              <td style="font-weight:600;">${r.name}</td>
-              <td>${r.crop}</td>
-              <td>${r.khata}</td>
-              <td><span class="khasra-chip">${r.khasra}</span></td>
-              <td style="text-align:center;"><span class="status-pill ${pillClass}">${r.status || 'READY'}</span></td>
+              <td style="font-weight:600;">${r.name || '—'}</td>
+              <td>${r.crop || '—'}</td>
+              <td>${r.khata || '—'}</td>
+              <td><span class="khasra-chip">${r.khasra || '—'}</span></td>
+              <td style="text-align:center;">
+                <select class="status-select ${selectClass}" onchange="changeRowStatus(${rowNum}, this.value)" title="Change status">
+                  <option value="READY" ${st === 'READY' ? 'selected' : ''}>READY</option>
+                  <option value="DONE" ${st === 'DONE' ? 'selected' : ''}>DONE</option>
+                  <option value="PENDING" ${st === 'PENDING' ? 'selected' : ''}>PENDING</option>
+                  <option value="ERROR" ${st === 'ERROR' ? 'selected' : ''}>ERROR</option>
+                </select>
+              </td>
+              <td style="text-align:center;">
+                <button type="button" class="btn-row-action btn-row-delete" onclick="deleteExcelRow(${rowNum}, '${khasraSafe}', '${nameSafe}')" title="Delete record">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                  </svg>
+                </button>
+              </td>
             </tr>
           `;
         }).join('');
-      } catch (e) { console.error(e); }
+      } catch (e) {
+        console.error('Error loading excel rows:', e);
+      }
     }
 
     function startAutomation() {
@@ -2457,16 +2595,104 @@
       fetch('/start', { method: 'POST' }).then(checkStatus);
     }
     function stopAutomation() { fetch('/stop', { method: 'POST' }).then(checkStatus); }
+
+    async function resetAllRecords() {
+      const ok = await showAppDialog({
+        title: 'Reset All Records',
+        message: 'Are you sure you want to completely clear all saved records? All farmer and land entries will be permanently deleted from the Excel sheet.',
+        type: 'danger',
+        confirmText: 'Delete All Records',
+        cancelText: 'Cancel'
+      });
+      if (ok) {
+        try {
+          const res = await fetch('/clear-all-excel', { method: 'POST' });
+          const d = await res.json();
+          if (d.ok) {
+            appAlert('All saved records have been completely cleared.', 'Records Cleared', 'success');
+          } else {
+            appAlert(d.message || 'Could not clear records.', 'Error', 'error');
+          }
+          checkStatus();
+          loadExcelRows();
+        } catch (e) {
+          appAlert('Failed to clear records: ' + e.message, 'Network Error', 'error');
+        }
+      }
+    }
+
     async function resetExcelStatus() {
       const ok = await showAppDialog({
         title: 'Reset Processing Status',
-        message: 'Reset processing status of all saved records back to ready?',
+        message: 'Reset processing status of all saved records back to READY?',
         type: 'warning',
         confirmText: 'Reset Status',
         cancelText: 'Cancel'
       });
       if (ok) {
-        fetch('/reset-excel', { method: 'POST' }).then(() => { checkStatus(); loadExcelRows(); });
+        try {
+          const res = await fetch('/reset-excel', { method: 'POST' });
+          const d = await res.json();
+          if (d.ok) {
+            appAlert('All records status reset to READY.', 'Status Reset', 'success');
+          } else {
+            appAlert(d.message || 'Could not reset status.', 'Error', 'error');
+          }
+          checkStatus();
+          loadExcelRows();
+        } catch (e) {
+          appAlert('Failed to reset status: ' + e.message, 'Network Error', 'error');
+        }
+      }
+    }
+
+    async function deleteExcelRow(rowNumber, khasra, name) {
+      const label = name ? `${name} (Khasra: ${khasra})` : `Khasra: ${khasra}`;
+      const ok = await showAppDialog({
+        title: 'Delete Record',
+        message: `Are you sure you want to delete the record for ${label}?`,
+        type: 'danger',
+        confirmText: 'Delete',
+        cancelText: 'Cancel'
+      });
+      if (ok) {
+        try {
+          const res = await fetch('/delete-excel-row', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rowNumber })
+          });
+          const d = await res.json();
+          if (d.ok) {
+            checkStatus();
+            loadExcelRows();
+          } else {
+            appAlert(d.message || 'Could not delete row.', 'Delete Error', 'error');
+          }
+        } catch (e) {
+          appAlert(e.message, 'Network Error', 'error');
+        }
+      }
+    }
+
+    async function changeRowStatus(rowNumber, status) {
+      try {
+        const res = await fetch('/update-row-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rowNumber, status })
+        });
+        const d = await res.json();
+        if (d.ok) {
+          checkStatus();
+          loadExcelRows();
+        } else {
+          appAlert(d.message || 'Could not update status.', 'Status Error', 'error');
+          loadExcelRows();
+        }
+      } catch (e) {
+        appAlert(e.message, 'Network Error', 'error');
+        loadExcelRows();
       }
     }
 

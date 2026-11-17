@@ -549,19 +549,25 @@ function startControlPanel() {
       await wb.xlsx.readFile(excelPath);
       const ws = wb.worksheets[0];
       const rows = [];
+      let doneCount = 0;
       ws.eachRow((r, i) => {
         if (i === 1) return;
+        const st = String(r.getCell(8).value || '').trim().toUpperCase() || 'READY';
+        if (st === 'DONE') doneCount++;
         rows.push({
           index: i - 1,
+          rowNumber: i,
           name: String(r.getCell(1).value || '').trim(),
           crop: String(r.getCell(2).value || '').trim(),
           date: String(r.getCell(3).value || '').trim(),
           khasra: String(r.getCell(5).value || '').trim(),
           khata: String(r.getCell(6).value || '').trim(),
-          status: String(r.getCell(8).value || '').trim().toUpperCase() || 'PENDING',
+          status: st,
           error: String(r.getCell(9).value || '').trim(),
         });
       });
+      state.totalRows = rows.length;
+      state.processedCount = doneCount;
       res.json({ ok: true, rows });
     } catch (e) {
       res.status(500).json({ ok: false, message: e.message });
@@ -620,12 +626,20 @@ function startControlPanel() {
     res.json({ ok: true });
   });
 
+  // Reset status of all rows back to READY without deleting data
   app.post('/reset-excel', async (req, res) => {
     try {
       const ExcelJS = require('exceljs');
       const excelPath = path.join(CLIENT_BASE_DIR, '..', 'form automation', 'farmers.xlsx');
+      if (!fs.existsSync(excelPath)) return res.json({ ok: true, message: 'No records file found.' });
+
       const wb = new ExcelJS.Workbook();
-      await wb.xlsx.readFile(excelPath);
+      try {
+        await wb.xlsx.readFile(excelPath);
+      } catch (e) {
+        if (e.code === 'EBUSY') throw new Error('farmers.xlsx is open in Microsoft Excel. Please close Excel before resetting.');
+        throw e;
+      }
       const ws = wb.worksheets[0];
       ws.eachRow((r, i) => {
         if (i > 1) {
@@ -636,8 +650,154 @@ function startControlPanel() {
       await wb.xlsx.writeFile(excelPath);
       state.processedCount = 0;
       state.lastError = null;
-      log('Excel sheet Status & Error clear ho gaye.');
-      res.json({ ok: true });
+      log('All saved records status reset to READY.');
+      res.json({ ok: true, message: 'All saved records status reset to READY.' });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  // Clear all saved records from farmers.xlsx (Leave only row 1 headers)
+  app.post('/clear-all-excel', async (req, res) => {
+    try {
+      const ExcelJS = require('exceljs');
+      const excelPath = path.join(CLIENT_BASE_DIR, '..', 'form automation', 'farmers.xlsx');
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet('Farmers');
+      ws.addRow(['Name', 'Crop', 'SowingDate', 'Ownership', 'KhasraNo', 'KhataNo', 'FarmerName', 'Status', 'Error']);
+      ws.getColumn(1).width = 18;
+      ws.getColumn(2).width = 24;
+      ws.getColumn(3).width = 14;
+      ws.getColumn(4).width = 12;
+      ws.getColumn(5).width = 22;
+      ws.getColumn(6).width = 12;
+      ws.getColumn(7).width = 18;
+      ws.getColumn(8).width = 10;
+      ws.getColumn(9).width = 25;
+      ws.getColumn(5).numFmt = '@';
+      ws.getColumn(6).numFmt = '@';
+
+      try {
+        await wb.xlsx.writeFile(excelPath);
+      } catch (e) {
+        if (e.code === 'EBUSY') throw new Error('farmers.xlsx is open in Microsoft Excel. Please close Excel before resetting.');
+        throw e;
+      }
+      state.totalRows = 0;
+      state.processedCount = 0;
+      state.currentRow = null;
+      state.lastError = null;
+      log('All saved records have been completely cleared.');
+      res.json({ ok: true, message: 'All saved records have been completely cleared.' });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  // Delete individual row from farmers.xlsx
+  app.post('/delete-excel-row', async (req, res) => {
+    try {
+      const { rowNumber } = req.body;
+      const targetRow = parseInt(rowNumber, 10);
+      if (!targetRow || targetRow < 2) {
+        return res.status(400).json({ ok: false, message: 'Invalid row number to delete.' });
+      }
+
+      const ExcelJS = require('exceljs');
+      const excelPath = path.join(CLIENT_BASE_DIR, '..', 'form automation', 'farmers.xlsx');
+      if (!fs.existsSync(excelPath)) {
+        return res.status(404).json({ ok: false, message: 'farmers.xlsx not found.' });
+      }
+
+      const wb = new ExcelJS.Workbook();
+      try {
+        await wb.xlsx.readFile(excelPath);
+      } catch (e) {
+        if (e.code === 'EBUSY') throw new Error('farmers.xlsx is open in Microsoft Excel. Please close Excel before deleting.');
+        throw e;
+      }
+      const ws = wb.worksheets[0];
+      if (targetRow > ws.rowCount) {
+        return res.status(400).json({ ok: false, message: 'Row number out of range.' });
+      }
+
+      ws.spliceRows(targetRow, 1);
+      await wb.xlsx.writeFile(excelPath);
+
+      // Recount
+      let done = 0;
+      let total = 0;
+      ws.eachRow((r, i) => {
+        if (i === 1) return;
+        total++;
+        const st = String(r.getCell(8).value || '').trim().toUpperCase();
+        if (st === 'DONE') done++;
+      });
+      state.totalRows = total;
+      state.processedCount = done;
+
+      log(`Row ${targetRow} deleted from saved records.`);
+      res.json({ ok: true, message: 'Record deleted successfully.' });
+    } catch (e) {
+      res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  // Update status and error for a single row in farmers.xlsx
+  app.post('/update-row-status', async (req, res) => {
+    try {
+      const { rowNumber, status } = req.body;
+      const targetRow = parseInt(rowNumber, 10);
+      if (!targetRow || targetRow < 2) {
+        return res.status(400).json({ ok: false, message: 'Invalid row number.' });
+      }
+
+      const ExcelJS = require('exceljs');
+      const excelPath = path.join(CLIENT_BASE_DIR, '..', 'form automation', 'farmers.xlsx');
+      if (!fs.existsSync(excelPath)) {
+        return res.status(404).json({ ok: false, message: 'farmers.xlsx not found.' });
+      }
+
+      const wb = new ExcelJS.Workbook();
+      try {
+        await wb.xlsx.readFile(excelPath);
+      } catch (e) {
+        if (e.code === 'EBUSY') throw new Error('farmers.xlsx is open in Microsoft Excel. Please close Excel first.');
+        throw e;
+      }
+      const ws = wb.worksheets[0];
+      if (targetRow > ws.rowCount) {
+        return res.status(400).json({ ok: false, message: 'Row number out of range.' });
+      }
+
+      const row = ws.getRow(targetRow);
+      const cleanStatus = String(status || '').trim().toUpperCase();
+      if (cleanStatus === 'READY') {
+        row.getCell(8).value = '';
+        row.getCell(9).value = '';
+      } else {
+        row.getCell(8).value = cleanStatus;
+        if (cleanStatus !== 'ERROR') {
+          row.getCell(9).value = '';
+        }
+      }
+
+      await wb.xlsx.writeFile(excelPath);
+
+      // Recount
+      let done = 0;
+      let total = 0;
+      ws.eachRow((r, i) => {
+        if (i === 1) return;
+        total++;
+        const st = String(r.getCell(8).value || '').trim().toUpperCase();
+        if (st === 'DONE') done++;
+      });
+      state.totalRows = total;
+      state.processedCount = done;
+
+      log(`Row ${targetRow} status set to ${cleanStatus || 'READY'}`);
+      res.json({ ok: true, message: `Status updated to ${cleanStatus || 'READY'}` });
     } catch (e) {
       res.status(500).json({ ok: false, message: e.message });
     }
@@ -821,12 +981,43 @@ async function syncUserBalance() {
   return false;
 }
 
+async function refreshExcelCounts() {
+  try {
+    const ExcelJS = require('exceljs');
+    const excelPath = path.join(CLIENT_BASE_DIR, '..', 'form automation', 'farmers.xlsx');
+    if (!fs.existsSync(excelPath)) {
+      state.totalRows = 0;
+      state.processedCount = 0;
+      return;
+    }
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.readFile(excelPath);
+    const ws = wb.worksheets[0];
+    if (!ws || ws.rowCount <= 1) {
+      state.totalRows = 0;
+      state.processedCount = 0;
+      return;
+    }
+    let done = 0;
+    let total = 0;
+    ws.eachRow((r, i) => {
+      if (i === 1) return;
+      total++;
+      const st = String(r.getCell(8).value || '').trim().toUpperCase();
+      if (st === 'DONE') done++;
+    });
+    state.totalRows = total;
+    state.processedCount = done;
+  } catch {}
+}
+
 // -------------------------------------------------------------------------
 // 6. MAIN ENTRY POINT
 // -------------------------------------------------------------------------
 async function main() {
   // Step 1: Start local UI server immediately so Electron loads in milliseconds
   startControlPanel();
+  await refreshExcelCounts();
 
   // Step 2: Cloud Handshake in background
   try {
