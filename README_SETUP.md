@@ -21,7 +21,7 @@ Yeh guide On-Farm SaaS ecosystem ko setup karne ke 3 simple steps samjhati hai:
 
 ```env
 PORT=4000
-ADMIN_SECRET_KEY=onfarm_admin_master_2026
+ADMIN_SECRET_KEY=Npneeraj@2754
 
 # 1. Supabase (Supabase -> Project Settings (gear icon) -> API)
 SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co

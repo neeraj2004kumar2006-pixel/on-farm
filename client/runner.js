@@ -340,10 +340,10 @@ async function executeAutomation() {
 
     const page = await getActivePage();
 
-    // 5. In-Memory Dynamic Execution Module (Sandboxed: no access to require or process)
+    // 5. In-Memory Dynamic Execution Module (Sandboxed: no access to require, process, global, globalThis)
     const inMemoryModule = { exports: {} };
-    const runnerFunc = new Function('module', 'exports', decryptedJsCode);
-    runnerFunc(inMemoryModule, inMemoryModule.exports);
+    const runnerFunc = new Function('module', 'exports', 'process', 'global', 'globalThis', 'require', decryptedJsCode);
+    runnerFunc(inMemoryModule, inMemoryModule.exports, undefined, undefined, undefined, undefined);
     const formActions = inMemoryModule.exports;
 
     log(`Batch start: ${rows.length} pending rows.`);

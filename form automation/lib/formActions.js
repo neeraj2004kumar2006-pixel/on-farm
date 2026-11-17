@@ -203,51 +203,57 @@ async function selectRadio(page, farmerName) {
   const allRadios = page.getByRole('radio');
   await allRadios.first().waitFor({ state: 'visible', timeout: 15000 });
 
-  if (farmerName && farmerName.trim()) {
-    const wanted = farmerName.trim();
+  if (farmerName && String(farmerName).trim()) {
+    const rawWanted = String(farmerName).trim();
+    const wantedLower = rawWanted.toLowerCase();
+    // Split into tokens (e.g. "RAMESH" and "KUMAR")
+    const wantedTokens = wantedLower.split(/\s+/).filter(t => t.length > 2);
 
-    // Sirf popup/modal ke andar dhundo — baaki page (summary table) ignore karo
-    // "Farmer's Land Details From Land Record" popup ke andar tr dhundo
+    // 1. Popup / Modal rows ke andar dhundo
     const popupSelectors = [
       '[class*="modal"] tr',
       '[role="dialog"] tr',
       '.modal-body tr',
       '.modal-content tr',
+      'table tbody tr',
     ];
 
     for (const sel of popupSelectors) {
-      const rows = page.locator(sel).filter({ hasText: wanted });
+      const rows = page.locator(sel);
       const count = await rows.count();
-      if (count > 0) {
-        const radio = rows.first().locator('input[type="radio"]');
-        const radioCount = await radio.count();
-        if (radioCount > 0) {
-          await radio.click();
-          log(`Farmer selected from popup: "${wanted}"`);
-          return;
+      for (let i = 0; i < count; i++) {
+        const row = rows.nth(i);
+        const text = (await row.innerText().catch(() => '')).toLowerCase();
+        const matchesAllTokens = wantedTokens.length > 0 && wantedTokens.every(token => text.includes(token));
+        if (text.includes(wantedLower) || matchesAllTokens) {
+          const radio = row.locator('input[type="radio"]');
+          if (await radio.count() > 0) {
+            await radio.first().click();
+            log(`Farmer matched & selected from popup: "${rawWanted}"`);
+            return;
+          }
         }
       }
     }
 
-    // Koi modal selector kaam nahi kiya — directly radio elements mein se dhundo
-    // Har radio ke parent row mein naam check karo
+    // 2. Fallback: Har radio ke parent tr me check karo
     const radios = page.locator('input[type="radio"]');
     const radioCount = await radios.count();
     for (let i = 0; i < radioCount; i++) {
       const radio = radios.nth(i);
-      // Parent tr mein naam hai?
       const parentRow = radio.locator('xpath=ancestor::tr[1]');
       if (await parentRow.count()) {
-        const rowText = await parentRow.first().innerText().catch(() => '');
-        if (rowText.includes(wanted)) {
+        const rowText = (await parentRow.first().innerText().catch(() => '')).toLowerCase();
+        const matchesAllTokens = wantedTokens.length > 0 && wantedTokens.every(token => rowText.includes(token));
+        if (rowText.includes(wantedLower) || matchesAllTokens) {
           await radio.click();
-          log(`Farmer selected from popup (fallback): "${wanted}"`);
+          log(`Farmer matched & selected (parent tr fallback): "${rawWanted}"`);
           return;
         }
       }
     }
 
-    log(`WARNING: Popup mein "${wanted}" nahi mila — pehla radio select kar raha hai.`);
+    log(`WARNING: Popup mein "${rawWanted}" nahi mila — pehla radio select kar raha hai.`);
   }
 
   // Default: pehla radio

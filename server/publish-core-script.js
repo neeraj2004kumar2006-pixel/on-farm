@@ -109,7 +109,41 @@ async function clickVerify(page, log) {
 async function selectRadio(page, farmerName, log) {
   const allRadios = page.getByRole('radio');
   await allRadios.first().waitFor({ state: 'visible', timeout: 15000 });
+
+  if (farmerName && String(farmerName).trim()) {
+    const rawWanted = String(farmerName).trim();
+    const wantedLower = rawWanted.toLowerCase();
+    const wantedTokens = wantedLower.split(/\s+/).filter(t => t.length > 2);
+
+    const popupSelectors = [
+      '[class*="modal"] tr',
+      '[role="dialog"] tr',
+      '.modal-body tr',
+      '.modal-content tr',
+      'table tbody tr',
+    ];
+
+    for (const sel of popupSelectors) {
+      const rows = page.locator(sel);
+      const count = await rows.count();
+      for (let i = 0; i < count; i++) {
+        const row = rows.nth(i);
+        const text = (await row.innerText().catch(() => '')).toLowerCase();
+        const matchesAllTokens = wantedTokens.length > 0 && wantedTokens.every(token => text.includes(token));
+        if (text.includes(wantedLower) || matchesAllTokens) {
+          const radio = row.locator('input[type="radio"]');
+          if (await radio.count() > 0) {
+            await radio.first().click();
+            if (log) log(`Farmer matched & selected from popup: "${rawWanted}"`);
+            return;
+          }
+        }
+      }
+    }
+  }
+
   await allRadios.first().check();
+  if (log) log('Verification radio selected (first)');
 }
 
 async function clickPopupSubmit(page, log) {
@@ -154,8 +188,8 @@ async function processFarmerRow(page, row, isLastRow, log) {
   const cropSel = await selectCrop(page, row.Crop, log);
   await selectSowingDate(page, row.SowingDateRaw, log);
   await selectOwnership(page, row.Ownership, cropSel, log);
-  await fillKhata(page, row.KhasraNo, log);
-  await fillKhasra(page, row.KhataNo, log);
+  await fillKhata(page, row.KhataNo, log);
+  await fillKhasra(page, row.KhasraNo, log);
   await clickVerify(page, log);
   await page.waitForTimeout(1500);
   await selectRadio(page, row.FarmerName, log);
@@ -193,7 +227,8 @@ async function publish() {
       encrypted_code,
       iv,
       description: 'Initial production-ready cloud automation payload',
-    });
+      created_at: new Date().toISOString(),
+    }, { onConflict: 'version' });
 
     if (error) throw error;
     console.log('✅ Core script successfully published to Supabase remote_scripts!');

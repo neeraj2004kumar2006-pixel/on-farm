@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS public.kila_charges (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (user_id, charge_key)
 );
+CREATE INDEX IF NOT EXISTS idx_kila_charges_user_refund_window ON public.kila_charges (user_id, created_at DESC) WHERE status = 'REFUNDED';
 
 -- 7. Dedicated Referrals Table
 CREATE TABLE IF NOT EXISTS public.referrals (

@@ -60,6 +60,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_users_hwid_uq ON public.users(hwid) WHERE 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_cashfree_order_id ON public.transactions(cashfree_order_id) WHERE cashfree_order_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_subs_user_active_exp ON public.subscriptions(user_id, is_active, expires_at);
 CREATE INDEX IF NOT EXISTS idx_tx_user_created ON public.transactions(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_kila_charges_user_refund_window ON public.kila_charges (user_id, created_at DESC) WHERE status = 'REFUNDED';
 
 -- 4. AUTHORIZE KILA (Phase 1: Reserve & Deduct atomically)
 CREATE OR REPLACE FUNCTION public.authorize_kila(p_user UUID, p_key TEXT, p_amount NUMERIC)
