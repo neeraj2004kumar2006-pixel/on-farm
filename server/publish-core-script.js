@@ -134,7 +134,7 @@ async function selectRadio(page, farmerName, log) {
           const radio = row.locator('input[type="radio"]');
           if (await radio.count() > 0) {
             await radio.first().click();
-            if (log) log(`Farmer matched & selected from popup: "${rawWanted}"`);
+            if (log) log('Farmer matched & selected from popup: "' + rawWanted + '"');
             return;
           }
         }
