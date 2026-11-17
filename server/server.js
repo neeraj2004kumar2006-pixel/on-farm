@@ -949,17 +949,48 @@ function requireAdmin(req, res, next) {
     }
 
     /**
-     * Admin Stats Overview
+     * Admin Stats Overview (With Detailed Financial Breakdown)
      */
     app.get('/api/admin/stats', requireAdmin, async (req, res) => {
       try {
         const supabase = getSupabase();
         const { count: totalUsers } = await supabase.from('users').select('*', { count: 'exact', head: true });
         const { count: activeSubs } = await supabase.from('subscriptions').select('*', { count: 'exact', head: true }).gt('expires_at', new Date().toISOString());
-        const { data: wallets } = await supabase.from('wallets').select('balance, total_kilas_processed');
+        const { data: wallets } = await supabase.from('wallets').select('balance, total_recharged, total_kilas_processed');
 
         const totalWalletMoney = (wallets || []).reduce((acc, w) => acc + Number(w.balance || 0), 0);
         const totalKilasProcessed = (wallets || []).reduce((acc, w) => acc + (w.total_kilas_processed || 0), 0);
+        const totalAllRecharged = (wallets || []).reduce((acc, w) => acc + Number(w.total_recharged || 0), 0);
+
+        // Fetch successful transactions to break down direct recharges vs referral bonuses
+        const { data: txs } = await supabase
+          .from('transactions')
+          .select('amount, type, status, details')
+          .eq('status', 'SUCCESS');
+
+        let txRechargeMoney = 0;
+        let txReferralMoney = 0;
+        (txs || []).forEach(t => {
+          if (t.type === 'WALLET_RECHARGE') {
+            if (t.details && (t.details.is_referral || t.details.type === 'REFERRAL_BONUS')) {
+              txReferralMoney += Number(t.amount || 0);
+            } else {
+              txRechargeMoney += Number(t.amount || 0);
+            }
+          }
+        });
+
+        // Count rewarded referrals from app_config for absolute certainty
+        const { data: allLinks } = await supabase
+          .from('app_config')
+          .select('value')
+          .like('key', 'ref_link_%');
+        const rewardedCount = (allLinks || []).filter(l => l.value && l.value.rewarded).length;
+        const configReferralMoney = rewardedCount * 25.00;
+
+        const totalReferralMoney = Math.max(txReferralMoney, configReferralMoney);
+        const totalRechargeMoney = txRechargeMoney > 0 ? txRechargeMoney : Math.max(0, totalAllRecharged - totalReferralMoney);
+        const totalCombinedFunds = totalRechargeMoney + totalReferralMoney;
 
         res.json({
           ok: true,
@@ -967,6 +998,10 @@ function requireAdmin(req, res, next) {
             total_users: totalUsers || 0,
             active_subscriptions: activeSubs || 0,
             total_wallet_money: totalWalletMoney,
+            total_recharge_money: totalRechargeMoney,
+            total_referral_money: totalReferralMoney,
+            total_combined_funds: totalCombinedFunds,
+            total_referral_passes: rewardedCount,
             total_kilas_processed: totalKilasProcessed,
           },
         });

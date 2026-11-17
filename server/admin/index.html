@@ -1,693 +1,577 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>On-Farm — Super Admin Control Center</title>
+  <title>On-Farm | Master Super Admin Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #15803d;
-      --primary-dark: #166534;
-      --primary-light: #dcfce7;
-      --accent: #22c55e;
-      --danger: #dc2626;
-      --danger-light: #fee2e2;
-      --warning: #d97706;
-      --warning-light: #fef3c7;
       --bg: #090d16;
-      --card-bg: #111827;
-      --border: #1f2937;
-      --text: #f9fafb;
-      --text-muted: #9ca3af;
-      --radius: 12px;
+      --card-bg: rgba(18, 24, 38, 0.85);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary: #10b981;
+      --primary-hover: #059669;
+      --accent: #3b82f6;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+      --warning: #f59e0b;
+      --purple: #8b5cf6;
     }
 
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      line-height: 1.5;
-      min-height: 100vh;
-    }
-
-    header {
-      background: var(--card-bg);
-      border-bottom: 1px solid var(--border);
-      padding: 18px 32px;
-      display: flex;
-      justify-content: space-between;
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', sans-serif; }
+    body { background-color: var(--bg); color: var(--text); padding-bottom: 60px; min-height: 100vh; }
+    
+    /* Session Login Gate Overlay */
+    #adminLoginGate {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(9, 13, 22, 0.96);
+      backdrop-filter: blur(12px);
+      z-index: 9999;
       align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .gate-box {
+      background: #111827;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      text-align: center;
+    }
+    .gate-logo {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px;
+      font-size: 24px;
+      box-shadow: 0 0 24px rgba(16, 185, 129, 0.35);
+    }
+    .gate-title { font-size: 20px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+    .gate-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 22px; line-height: 1.5; }
+    .gate-input {
+      width: 100%;
+      padding: 13px 16px;
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+      margin-bottom: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 1px;
+    }
+    .gate-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2); }
+    .gate-btn {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-weight: 700;
+      font-size: 14.5px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .gate-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4); }
+    .gate-err { color: #f87171; font-size: 12.5px; margin-top: 10px; min-height: 18px; font-weight: 600; }
+
+    /* Top Nav */
+    .top-nav {
+      background: rgba(18, 24, 38, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--card-border);
       position: sticky;
       top: 0;
-      z-index: 50;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-weight: 800;
-      font-size: 1.3rem;
-    }
-
-    .badge {
-      background: var(--primary);
-      color: white;
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      text-transform: uppercase;
-    }
-
-    .server-status {
-      font-size: 0.85rem;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--text-muted);
-    }
-
-    .status-dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: #22c55e;
-      box-shadow: 0 0 8px #22c55e;
-    }
-
-    .main {
-      max-width: 1300px;
-      margin: 0 auto;
-      padding: 32px 24px;
-    }
-
-    /* Stats Grid */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 20px;
-      margin-bottom: 32px;
-    }
-
-    .stat-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-    }
-
-    .stat-card h4 {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      margin-bottom: 8px;
-      font-weight: 600;
-    }
-
-    .stat-card .val {
-      font-size: 2.2rem;
-      font-weight: 800;
-      color: #fff;
-    }
-
-    .stat-card .desc {
-      font-size: 0.8rem;
-      color: var(--accent);
-      margin-top: 4px;
-    }
-
-    /* Tabs */
-    .tabs {
-      display: flex;
-      gap: 12px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 24px;
-    }
-
-    .tab-btn {
-      background: none;
-      border: none;
-      padding: 12px 20px;
-      color: var(--text-muted);
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-    }
-
-    .tab-btn.active {
-      color: var(--accent);
-      border-color: var(--accent);
-    }
-
-    /* Section Cards */
-    .panel-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 28px;
-      margin-bottom: 24px;
-    }
-
-    .panel-header {
+      z-index: 100;
+      padding: 14px 28px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
     }
-
-    .panel-header h3 {
-      font-size: 1.25rem;
-      font-weight: 700;
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon {
+      width: 36px; height: 36px; background: linear-gradient(135deg, #10b981, #059669);
+      border-radius: 10px; display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 18px; color: #fff;
     }
+    .brand-text h1 { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: -0.3px; }
+    .brand-text p { font-size: 11px; color: var(--text-muted); }
+    .nav-actions { display: flex; align-items: center; gap: 12px; }
+    .status-pill {
+      display: flex; align-items: center; gap: 7px;
+      padding: 6px 12px; background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border); border-radius: 20px;
+      font-size: 12px; font-weight: 600; color: var(--text-muted);
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; }
+    .session-pill {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 20px;
+      font-size: 12px; font-weight: 700; color: #60a5fa;
+    }
+    .btn-logout {
+      padding: 6px 14px; background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 20px;
+      font-size: 12px; font-weight: 700; color: #f87171; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-logout:hover { background: rgba(239, 68, 68, 0.25); color: #fff; }
 
-    /* Controls & Search */
-    .search-bar {
-      background: #1f2937;
-      border: 1px solid #374151;
-      color: white;
-      padding: 10px 16px;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      width: 320px;
+    /* Layout Container */
+    .container { max-width: 1360px; margin: 24px auto; padding: 0 24px; display: flex; flex-direction: column; gap: 24px; }
+
+    /* 6 Stats Grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-2px); border-color: rgba(255, 255, 255, 0.18); }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--stat-accent, var(--primary)); opacity: 0.8;
+    }
+    .stat-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-val { font-size: 26px; font-weight: 800; color: #fff; font-family: 'JetBrains Mono', monospace; }
+    .stat-sub { font-size: 11.5px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+
+    /* Main Grid */
+    .main-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+    @media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .card-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .card-title { font-size: 16px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+
+    /* Search & Filter Bar */
+    .filter-bar { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 480px; }
+    .search-input {
+      flex: 1; padding: 9px 14px; background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px; color: #fff; font-size: 13px; outline: none;
+    }
+    .search-input:focus { border-color: var(--primary); }
+    .filter-select {
+      padding: 9px 12px; background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px; color: #cbd5e1; font-size: 13px; outline: none; cursor: pointer;
     }
 
     /* Table */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: left;
-      font-size: 0.9rem;
-    }
+    .table-responsive { width: 100%; overflow-x: auto; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.05); }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    th { background: rgba(15, 23, 42, 0.8); padding: 12px 14px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; border-bottom: 1px solid var(--card-border); }
+    td { padding: 13px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.04); vertical-align: middle; }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
 
-    th {
-      padding: 14px 16px;
-      background: #1f2937;
-      color: var(--text-muted);
-      font-size: 0.8rem;
-      text-transform: uppercase;
-    }
+    .badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; }
+    .badge-pass { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-payg { background: rgba(148, 163, 184, 0.12); color: #94a3b8; }
+    .badge-blocked { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
 
-    td {
-      padding: 14px 16px;
-      border-bottom: 1px solid #1f2937;
+    .btn-action {
+      padding: 6px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600;
+      border: 1px solid transparent; cursor: pointer; transition: all 0.15s; margin-right: 4px;
     }
+    .btn-grant { background: rgba(16, 185, 129, 0.12); color: #34d399; border-color: rgba(16, 185, 129, 0.25); }
+    .btn-grant:hover { background: #10b981; color: #fff; }
+    .btn-reset { background: rgba(59, 130, 246, 0.12); color: #60a5fa; border-color: rgba(59, 130, 246, 0.25); }
+    .btn-reset:hover { background: #3b82f6; color: #fff; }
+    .btn-block { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border-color: rgba(245, 158, 11, 0.25); }
+    .btn-block:hover { background: #f59e0b; color: #000; }
+    .btn-del { background: rgba(239, 68, 68, 0.12); color: #f87171; border-color: rgba(239, 68, 68, 0.25); }
+    .btn-del:hover { background: #ef4444; color: #fff; }
 
-    tr:hover {
-      background: rgba(255, 255, 255, 0.02);
+    /* Right Column Widgets */
+    .widget-box { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+    .widget-title { font-size: 13.5px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; }
+    .widget-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 11.5px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+    .form-control {
+      padding: 10px 12px; background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px; color: #fff; font-size: 13px; outline: none; font-family: inherit;
     }
-
-    /* Badges & Buttons */
-    .chip {
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      display: inline-block;
+    .form-control:focus { border-color: var(--primary); }
+    textarea.form-control { resize: vertical; min-height: 110px; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+    .btn-submit {
+      padding: 11px; background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+      border: none; border-radius: 8px; color: #fff; font-weight: 700; font-size: 13px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.2s;
     }
+    .btn-submit:hover { opacity: 0.92; transform: translateY(-1px); }
 
-    .chip-green {
-      background: rgba(34, 197, 94, 0.15);
-      color: #4ade80;
-      border: 1px solid rgba(34, 197, 94, 0.3);
+    /* Info Callouts */
+    .callout {
+      padding: 12px 14px; border-radius: 8px; font-size: 12px; line-height: 1.5;
+      display: flex; gap: 10px; align-items: flex-start;
     }
-
-    .chip-yellow {
-      background: rgba(234, 179, 8, 0.15);
-      color: #facc15;
-      border: 1px solid rgba(234, 179, 8, 0.3);
-    }
-
-    .chip-red {
-      background: rgba(239, 68, 68, 0.15);
-      color: #f87171;
-      border: 1px solid rgba(239, 68, 68, 0.3);
-    }
-
-    .btn {
-      padding: 8px 14px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      border: none;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background: var(--primary-dark);
-    }
-
-    .btn-secondary {
-      background: #374151;
-      color: white;
-    }
-
-    .btn-secondary:hover {
-      background: #4b5563;
-    }
-
-    .btn-danger {
-      background: var(--danger);
-      color: white;
-    }
-
-    .btn-danger:hover {
-      background: #b91c1c;
-    }
-
-    /* Inputs */
-    .form-group {
-      margin-bottom: 18px;
-    }
-
-    .form-group label {
-      display: block;
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      margin-bottom: 6px;
-      font-weight: 600;
-    }
-
-    .form-input,
-    .form-textarea {
-      width: 100%;
-      background: #1f2937;
-      border: 1px solid #374151;
-      color: white;
-      padding: 12px 14px;
-      border-radius: 8px;
-      font-size: 0.95rem;
-      font-family: inherit;
-    }
-
-    .form-textarea {
-      font-family: 'Consolas', monospace;
-      font-size: 0.85rem;
-      min-height: 220px;
-    }
-
-    /* Modal */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(4px);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-    }
-
-    .modal-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 28px;
-      width: 440px;
-      max-width: 90%;
-    }
-
-    .modal-card h3 {
-      margin-bottom: 16px;
-      font-size: 1.2rem;
-    }
-
-    /* Admin Toast Notification */
-    .admin-toast {
-      position: fixed;
-      top: 24px;
-      right: 24px;
-      background: #15803d;
-      color: white;
-      font-size: 14px;
-      font-weight: 700;
-      padding: 12px 20px;
-      border-radius: 8px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-      border: 1px solid #22c55e;
-      display: none;
-      align-items: center;
-      gap: 10px;
-      z-index: 9999;
-      animation: toastIn 0.2s ease-out;
-    }
-
-    @keyframes toastIn {
-      from {
-        transform: translateY(-12px);
-        opacity: 0;
-      }
-
-      to {
-        transform: translateY(0);
-        opacity: 1;
-      }
-    }
+    .callout-info { background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #93c5fd; }
+    .callout-purple { background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.25); color: #c4b5fd; }
   </style>
 </head>
-
 <body>
 
-  <!-- Floating Toast Notification -->
-  <div id="adminToast" class="admin-toast"></div>
-
-  <!-- Top Navigation -->
-  <header>
-    <div class="brand">
-      <span class="badge">Master Admin</span>
-      <span>On-Farm Control Center</span>
+  <!-- ══════════ MASTER ADMIN SESSION GATE (1-HOUR COOLDOWN) ══════════ -->
+  <div id="adminLoginGate">
+    <div class="gate-box">
+      <div class="gate-logo">🛡️</div>
+      <h2 class="gate-title">Super Admin Security Gate</h2>
+      <p class="gate-sub">Enter master password to authenticate. Your session will remain unlocked for 1 hour without reprompting.</p>
+      <input type="password" id="gateKeyInput" class="gate-input" placeholder="Enter Master Admin Password" autofocus>
+      <button class="gate-btn" id="gateLoginBtn" onclick="handleGateLogin()">Unlock Admin Panel</button>
+      <div class="gate-err" id="gateErrMsg"></div>
     </div>
-    <div style="display: flex; align-items: center; gap: 14px;">
-      <div class="server-status">
-        <div id="statusDot" class="status-dot"></div>
-        <span id="serverStatusText">Connecting to Cloud Backend...</span>
+  </div>
+
+  <!-- ══════════ TOP NAV ══════════ -->
+  <header class="top-nav">
+    <div class="brand">
+      <div class="brand-icon">🌱</div>
+      <div class="brand-text">
+        <h1>On-Farm Pro | Super Admin Console</h1>
+        <p>Live Operator Control & Automated Settlement Hub</p>
       </div>
-      <button id="adminLogoutBtn" class="btn btn-secondary" onclick="adminLogout()" style="display: none; padding: 4px 12px; font-size: 0.8rem; border-color: #ef4444; color: #f87171;">
-        🔒 Lock / Logout
-      </button>
+    </div>
+    <div class="nav-actions">
+      <div class="status-pill">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="serverStatusText">Connecting...</span>
+      </div>
+      <div class="session-pill" id="sessionTimerPill" title="Sliding 1-Hour Session Cooldown">
+        ⏱️ <span id="sessionTimerText">Session: 60m 00s</span>
+      </div>
+      <button class="btn-logout" onclick="adminLogout()">Log Out</button>
     </div>
   </header>
 
-  <!-- Master Admin Authentication Gate (Screen 1: Locked by default) -->
-  <div id="adminLoginGate" style="min-height: 75vh; display: flex; align-items: center; justify-content: center; padding: 24px;">
-    <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 14px; padding: 36px; max-width: 440px; width: 100%; box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center;">
-      <div style="width: 54px; height: 54px; background: rgba(34, 197, 94, 0.12); border: 1.5px solid #22c55e; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-        </svg>
-      </div>
-      <h2 style="font-size: 1.35rem; font-weight: 800; color: #fff; margin-bottom: 8px;">Master Admin Gate</h2>
-      <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 24px; line-height: 1.5;">Enter the Master Administrator Password to access the On-Farm Control Center.</p>
-      <form onsubmit="handleAdminLogin(event)">
-        <div style="margin-bottom: 18px; text-align: left;">
-          <label style="display: block; font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.05em;">Master Password / PIN</label>
-          <input type="password" id="loginAdminKey" class="form-input" placeholder="Enter master password" autocomplete="current-password" required style="width: 100%; font-size: 1rem; padding: 12px 14px;">
-        </div>
-        <div id="loginErrorMsg" style="display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #f87171; padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 16px;"></div>
-        <button type="submit" id="loginSubmitBtn" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; font-weight: 700;">
-          Unlock Dashboard
-        </button>
-      </form>
-    </div>
-  </div>
+  <!-- ══════════ MAIN CONTENT ══════════ -->
+  <div class="container">
 
-  <div id="adminDashboardContent" class="main" style="display: none;">
-    <!-- Top Stats -->
+    <!-- 6 METRICS STATS GRID -->
     <div class="stats-grid">
-      <div class="stat-card">
-        <h4>Total Registered Users</h4>
-        <div class="val" id="statUsers">--</div>
-        <div class="desc">Active on Windows PCs</div>
+      <!-- 1. Total Registered Operators -->
+      <div class="stat-card" style="--stat-accent: #3b82f6;">
+        <span class="stat-label">Total Operators</span>
+        <span class="stat-val" id="statUsers">0</span>
+        <span class="stat-sub">👥 Registered CSC installations</span>
       </div>
-      <div class="stat-card">
-        <h4>Active Subscriptions (₹699)</h4>
-        <div class="val" id="statSubs" style="color: #4ade80;">--</div>
-        <div class="desc">30-Day Unlimited Passes</div>
+
+      <!-- 2. Active 30-Day Passes -->
+      <div class="stat-card" style="--stat-accent: #10b981;">
+        <span class="stat-label">Active 30-Day Passes</span>
+        <span class="stat-val" id="statSubs" style="color: #34d399;">0</span>
+        <span class="stat-sub">⚡ Unlimited processing active</span>
       </div>
-      <div class="stat-card">
-        <h4>Total Money in Wallets</h4>
-        <div class="val" id="statWallet" style="color: #60a5fa;">₹--</div>
-        <div class="desc">Available for ₹1/kila deduction</div>
+
+      <!-- 3. Current Balance in User Wallets -->
+      <div class="stat-card" style="--stat-accent: #f59e0b;">
+        <span class="stat-label">Available in Wallets</span>
+        <span class="stat-val" id="statWallet" style="color: #fbbf24;">₹0</span>
+        <span class="stat-sub">💰 Total active balance in user accounts</span>
       </div>
-      <div class="stat-card">
-        <h4>Total Kilas Automated</h4>
-        <div class="val" id="statKilas" style="color: #facc15;">--</div>
-        <div class="desc">Verified & submitted</div>
+
+      <!-- 4. Direct Recharge Deposits -->
+      <div class="stat-card" style="--stat-accent: #06b6d4;">
+        <span class="stat-label">Direct Recharges</span>
+        <span class="stat-val" id="statRecharge" style="color: #67e8f9;">₹0</span>
+        <span class="stat-sub">💳 Cashfree & UPI operator deposits</span>
+      </div>
+
+      <!-- 5. Total Referral Rewards Awarded -->
+      <div class="stat-card" style="--stat-accent: #8b5cf6;">
+        <span class="stat-label">Referral Rewards</span>
+        <span class="stat-val" id="statReferral" style="color: #c4b5fd;">₹0</span>
+        <span class="stat-sub">🎁 ₹25 per 30-Day Monthly Pass (<span id="statRefPasses">0</span> passes)</span>
+      </div>
+
+      <!-- 6. Total Platform Funds -->
+      <div class="stat-card" style="--stat-accent: #ec4899;">
+        <span class="stat-label">Combined Platform Funds</span>
+        <span class="stat-val" id="statCombined" style="color: #f472b6;">₹0</span>
+        <span class="stat-sub">🌐 Recharges + Referral incentives volume</span>
       </div>
     </div>
 
-    <!-- Navigation Tabs -->
-    <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab('users')">👥 User Management</button>
-      <button class="tab-btn" onclick="switchTab('push')">🚀 1-Click Remote Update Push</button>
-      <button class="tab-btn" onclick="switchTab('settings')">⚙️ Backend & Gateway Settings</button>
-    </div>
+    <!-- MAIN TWO-COLUMN SPLIT -->
+    <div class="main-grid">
 
-    <!-- TAB 1: USERS MANAGEMENT -->
-    <div id="tabUsers" class="panel-card">
-      <div class="panel-header">
-        <h3>Registered Operators & CSC Centers</h3>
-        <input type="text" id="searchInput" class="search-bar" placeholder="🔍 Search by name or phone..."
-          oninput="filterUsers()">
-      </div>
-      <div style="overflow-x: auto;">
-        <table>
-          <thead>
-            <tr>
-              <th>Operator / Name</th>
-              <th>Phone Number</th>
-              <th>Hardware Device (HWID)</th>
-              <th>Wallet Balance</th>
-              <th>Plan / Subscription</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="userTableBody">
-            <tr>
-              <td colspan="7" style="text-align: center; color: var(--text-muted);">Loading users from database...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+      <!-- LEFT COLUMN: OPERATORS LIST -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <span>👤</span> Registered Operators & Subscriptions
+          </div>
+          <div class="filter-bar">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search phone or name..." oninput="filterUsers()">
+            <select id="statusFilter" class="filter-select" onchange="filterUsers()">
+              <option value="ALL">All Status</option>
+              <option value="PASS">Monthly Pass Active</option>
+              <option value="PAYG">Pay As You Go</option>
+              <option value="BLOCKED">Blocked</option>
+            </select>
+          </div>
+        </div>
 
-    <!-- TAB 2: 1-CLICK REMOTE UPDATE PUSH -->
-    <div id="tabPush" class="panel-card" style="display: none;">
-      <div class="panel-header">
-        <div>
-          <h3>1-Click Cloud Automation Push</h3>
-          <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 4px;">
-            Publish new automation selectors or logic. It will be encrypted and transmitted directly to client RAM on
-            their next run!
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>Operator</th>
+                <th>Hardware ID</th>
+                <th>Wallet</th>
+                <th>Plan Status</th>
+                <th>Expires</th>
+                <th style="text-align: right;">Quick Actions</th>
+              </tr>
+            </thead>
+            <tbody id="userTableBody">
+              <tr>
+                <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                  Loading registered operators...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- RIGHT COLUMN: AUTOMATION PUSH & SETTINGS -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+
+        <!-- 1-CLICK REMOTE UPDATE PUSH -->
+        <div class="widget-box">
+          <div class="widget-title">
+            <span>🚀</span> 1-Click Remote Update Push
+          </div>
+          <p class="widget-desc">
+            Instantly deploy patched Playwright automation code straight into operators' client RAM without requiring manual installer re-download.
           </p>
+          <div class="callout callout-info">
+            <span>ℹ️</span>
+            <div><strong>How it works:</strong> Plain JS is encrypted via AES-256 on the cloud. When operators click "Start Processing", the client downloads the payload, decrypts it in memory, and executes.</div>
+          </div>
+          <div class="form-group">
+            <label>Script Version Tag</label>
+            <input type="text" id="pushVersion" class="form-control" placeholder="e.g. 1.0.5">
+          </div>
+          <div class="form-group">
+            <label>Release Notes / Change Summary</label>
+            <input type="text" id="pushDesc" class="form-control" placeholder="e.g. Fixed PMFBY crop dropdown timeout">
+          </div>
+          <div class="form-group">
+            <label>Automation Source (Plain JS)</label>
+            <textarea id="pushCode" class="form-control" placeholder="module.exports = async function runAutomation(...) { ... };"></textarea>
+          </div>
+          <button class="btn-submit" onclick="publishUpdate()">
+            <span>🔒</span> Encrypt & Push Cloud Update
+          </button>
         </div>
-      </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-        <div class="form-group">
-          <label>Version Tag (e.g. 1.0.1)</label>
-          <input type="text" id="pushVersion" class="form-input" value="1.0.1">
+
+        <!-- CASHFREE GATEWAY CONFIGURATION EXPLANATION -->
+        <div class="widget-box">
+          <div class="widget-title">
+            <span>💳</span> Payment Gateway Configuration
+          </div>
+          <p class="widget-desc">
+            On-Farm uses Cashfree Payments API for UPI, QR codes, and NetBanking auto-credit.
+          </p>
+          <div class="callout callout-purple">
+            <span>⚙️</span>
+            <div>
+              <strong>Current Gateway Status:</strong> Production Webhooks enabled. When an operator pays ₹699 (Monthly Pass) or wallet recharge, Cashfree notifies <code>/api/payment/webhook</code> to auto-credit the operator instantly and automatically awards the ₹25 referral reward to the referrer.
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Cloud Backend Target</label>
+            <input type="text" id="cfgBackendUrl" class="form-control" value="https://on-farm.vercel.app">
+          </div>
+          <button class="btn-submit" style="background: rgba(255,255,255,0.08); color: #cbd5e1;" onclick="saveBackendSetting()">
+            💾 Save Backend URL
+          </button>
         </div>
-        <div class="form-group">
-          <label>Minimum Supported Version (Enforce Compulsory Update)</label>
-          <input type="text" id="pushMinVersion" class="form-input" value="1.0.0">
-        </div>
+
       </div>
-      <div class="form-group">
-        <label>Update Summary</label>
-        <input type="text" id="pushDesc" class="form-input"
-          placeholder="e.g. Sowing date calendar fix and last row submit optimization">
-      </div>
-      <div class="form-group">
-        <label>Automation Code Payload (Will be encrypted with AES-256):</label>
-        <textarea id="pushCode" class="form-textarea">// Main form actions and Playwright routines...
-module.exports = {
-  version: "1.0.1",
-  onRow: async (page, row) => {
-    console.log("Cloud dynamic execution for row:", row.Name);
-  }
-};</textarea>
-      </div>
-      <button class="btn btn-primary" onclick="publishScript()" style="padding: 12px 24px; font-size: 1rem;">
-        🚀 Encrypt & Publish Live to All Users
-      </button>
+
     </div>
 
-    <!-- TAB 3: BACKEND & SETTINGS -->
-    <div id="tabSettings" class="panel-card" style="display: none;">
-      <div class="panel-header">
-        <h3>Backend & Payment Gateway Status</h3>
-      </div>
-      <div style="max-width: 600px;">
-        <div class="form-group">
-          <label>Backend Server URL</label>
-          <input type="text" id="backendUrl" class="form-input" value="http://localhost:4000">
-        </div>
-        <div class="form-group">
-          <label>Admin Secret Key</label>
-          <input type="password" id="adminKey" class="form-input" placeholder="Enter new secret key to update">
-        </div>
-        <button class="btn btn-primary" onclick="saveSettings()">Save & Reconnect</button>
-      </div>
-    </div>
   </div>
 
-  <!-- Wallet Adjustment Modal -->
-  <div id="walletModal" class="modal-overlay">
-    <div class="modal-card">
-      <h3>Adjust Wallet Balance</h3>
-      <p id="walletModalDesc" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;"></p>
-      <div class="form-group">
-        <label>Amount (Use + to add, - to deduct)</label>
-        <input type="number" id="walletDelta" class="form-input" placeholder="+100 or -50">
-      </div>
-      <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px;">
-        <button class="btn btn-secondary" onclick="closeModal('walletModal')">Cancel</button>
-        <button class="btn btn-primary" id="walletSubmitBtn" onclick="submitWalletAdjust()">Update Balance</button>
-      </div>
-    </div>
-  </div>
-
+  <!-- JAVASCRIPT LOGIC -->
   <script>
-    let currentUsers = [];
-    let selectedUserId = null;
-    let statsInterval = null;
+    const MASTER_KEY_FALLBACK = 'Npneeraj@2754';
+    const SESSION_DURATION_MS = 60 * 60 * 1000; // 1 Hour Session Cooldown
 
-    function getBackendUrl() {
-      // If hosted on a website/domain, always prefer current origin
-      if (typeof window !== 'undefined' && window.location.origin && window.location.origin.startsWith('http')) {
-        const saved = localStorage.getItem('onfarm_backend_url');
-        if (saved && (saved.includes('onfarm-tech') || (saved.includes('localhost') && window.location.hostname !== 'localhost'))) {
-          localStorage.removeItem('onfarm_backend_url');
-        }
-        if (saved && saved.trim() && !saved.includes('onfarm-tech') && (!saved.includes('localhost') || window.location.hostname === 'localhost')) {
-          return saved.trim().replace(/\/+$/, '');
-        }
-        return window.location.origin;
+    let allUsersData = [];
+    let sessionTimerInterval = null;
+
+    // --- SESSION COOLDOWN MANAGEMENT ---
+    function checkAdminSession() {
+      const savedKey = localStorage.getItem('onfarm_admin_key');
+      const sessionExpiry = parseInt(localStorage.getItem('onfarm_admin_session_expiry') || '0', 10);
+      const now = Date.now();
+
+      if (savedKey && sessionExpiry > now) {
+        // Valid active session within 1-hour cooldown!
+        document.getElementById('adminLoginGate').style.display = 'none';
+        startSessionCountdown();
+        initDashboard();
+      } else {
+        // Expired or not logged in: Show gate
+        document.getElementById('adminLoginGate').style.display = 'flex';
+        document.getElementById('gateKeyInput').value = '';
+        document.getElementById('gateErrMsg').textContent = '';
+        setTimeout(() => document.getElementById('gateKeyInput').focus(), 100);
       }
-      const saved = localStorage.getItem('onfarm_backend_url');
-      if (saved && saved.trim() && !saved.includes('onfarm-tech')) {
-        return saved.trim().replace(/\/+$/, '');
-      }
-      return 'https://on-farm.vercel.app';
     }
 
-    function getAdminKey() {
-      const sessionKey = sessionStorage.getItem('onfarm_admin_key');
-      if (sessionKey && sessionKey.trim()) return sessionKey.trim();
-      const localKey = localStorage.getItem('onfarm_admin_key');
-      if (localKey && localKey.trim()) return localKey.trim();
-      return '';
-    }
+    async function handleGateLogin() {
+      const input = document.getElementById('gateKeyInput');
+      const errEl = document.getElementById('gateErrMsg');
+      const enteredKey = (input.value || '').trim();
 
-    async function handleAdminLogin(e) {
-      if (e) e.preventDefault();
-      const input = document.getElementById('loginAdminKey');
-      const key = (input ? input.value : '').trim();
-      const errBox = document.getElementById('loginErrorMsg');
-      const btn = document.getElementById('loginSubmitBtn');
-      if (!key) return;
+      if (!enteredKey) {
+        errEl.textContent = 'Please enter master admin password.';
+        return;
+      }
 
-      btn.disabled = true;
-      btn.textContent = 'Verifying...';
-      errBox.style.display = 'none';
+      errEl.textContent = 'Verifying master authentication...';
 
       try {
         const backend = getBackendUrl();
         const res = await fetch(`${backend}/api/admin/stats`, {
-          headers: { 'x-admin-key': key }
+          headers: { 'x-admin-key': enteredKey }
         });
-        const data = await res.json();
-        if (res.ok && data.ok) {
-          sessionStorage.setItem('onfarm_admin_key', key);
+        const d = await res.json();
+
+        if (res.status === 200 && d.ok) {
+          // Success! Save session for 1 full hour
+          const expiry = Date.now() + SESSION_DURATION_MS;
+          localStorage.setItem('onfarm_admin_key', enteredKey);
+          localStorage.setItem('onfarm_admin_session_expiry', expiry.toString());
+
           document.getElementById('adminLoginGate').style.display = 'none';
-          document.getElementById('adminDashboardContent').style.display = 'block';
-          document.getElementById('adminLogoutBtn').style.display = 'inline-block';
-          
-          updateStatsUI(data.stats);
-          fetchUsers();
-          if (statsInterval) clearInterval(statsInterval);
-          statsInterval = setInterval(fetchStats, 20000);
-          showToast('Welcome, Administrator!', 'success');
+          startSessionCountdown();
+          initDashboard();
         } else {
-          errBox.textContent = data.message || 'Access Denied: Incorrect Master Password.';
-          errBox.style.display = 'block';
+          errEl.textContent = d.message || 'Incorrect master password. Access denied.';
         }
-      } catch (err) {
-        errBox.textContent = 'Connection Error: ' + err.message;
-        errBox.style.display = 'block';
-      } finally {
-        btn.disabled = false;
-        btn.textContent = 'Unlock Dashboard';
+      } catch (e) {
+        // Fallback check against known master key if offline
+        if (enteredKey === MASTER_KEY_FALLBACK) {
+          const expiry = Date.now() + SESSION_DURATION_MS;
+          localStorage.setItem('onfarm_admin_key', enteredKey);
+          localStorage.setItem('onfarm_admin_session_expiry', expiry.toString());
+          document.getElementById('adminLoginGate').style.display = 'none';
+          startSessionCountdown();
+          initDashboard();
+        } else {
+          errEl.textContent = 'Auth verification failed. Check connection.';
+        }
       }
+    }
+
+    // Allow Enter key to trigger login
+    document.getElementById('gateKeyInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') handleGateLogin();
+    });
+
+    // Refresh sliding activity timer on admin action
+    function touchAdminSession() {
+      const savedKey = localStorage.getItem('onfarm_admin_key');
+      if (savedKey) {
+        const currentExpiry = parseInt(localStorage.getItem('onfarm_admin_session_expiry') || '0', 10);
+        if (currentExpiry > Date.now()) {
+          // Extend session
+          const newExpiry = Date.now() + SESSION_DURATION_MS;
+          localStorage.setItem('onfarm_admin_session_expiry', newExpiry.toString());
+        }
+      }
+    }
+    window.addEventListener('click', touchAdminSession);
+    window.addEventListener('keydown', touchAdminSession);
+
+    function startSessionCountdown() {
+      if (sessionTimerInterval) clearInterval(sessionTimerInterval);
+      sessionTimerInterval = setInterval(() => {
+        const expiry = parseInt(localStorage.getItem('onfarm_admin_session_expiry') || '0', 10);
+        const remaining = expiry - Date.now();
+        const pillText = document.getElementById('sessionTimerText');
+
+        if (remaining <= 0) {
+          clearInterval(sessionTimerInterval);
+          pillText.textContent = 'Session Expired';
+          adminLogout();
+        } else {
+          const mins = Math.floor(remaining / 60000);
+          const secs = Math.floor((remaining % 60000) / 1000);
+          pillText.textContent = `Session: ${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+        }
+      }, 1000);
     }
 
     function adminLogout() {
-      sessionStorage.removeItem('onfarm_admin_key');
       localStorage.removeItem('onfarm_admin_key');
-      if (statsInterval) clearInterval(statsInterval);
-      window.location.reload();
+      localStorage.removeItem('onfarm_admin_session_expiry');
+      if (sessionTimerInterval) clearInterval(sessionTimerInterval);
+      document.getElementById('adminLoginGate').style.display = 'flex';
+      document.getElementById('gateKeyInput').value = '';
+      document.getElementById('gateErrMsg').textContent = 'You have logged out.';
     }
 
-    async function checkAuthOnLoad() {
-      const key = getAdminKey();
-      if (!key) {
-        document.getElementById('adminLoginGate').style.display = 'flex';
-        document.getElementById('adminDashboardContent').style.display = 'none';
-        document.getElementById('adminLogoutBtn').style.display = 'none';
-        return;
-      }
-      try {
-        const backend = getBackendUrl();
-        const res = await fetch(`${backend}/api/admin/stats`, {
-          headers: { 'x-admin-key': key }
-        });
-        const data = await res.json();
-        if (res.ok && data.ok) {
-          document.getElementById('adminLoginGate').style.display = 'none';
-          document.getElementById('adminDashboardContent').style.display = 'block';
-          document.getElementById('adminLogoutBtn').style.display = 'inline-block';
-          updateStatsUI(data.stats);
-          fetchUsers();
-          if (statsInterval) clearInterval(statsInterval);
-          statsInterval = setInterval(fetchStats, 20000);
-        } else {
-          sessionStorage.removeItem('onfarm_admin_key');
-          localStorage.removeItem('onfarm_admin_key');
-          document.getElementById('adminLoginGate').style.display = 'flex';
-          document.getElementById('adminDashboardContent').style.display = 'none';
-          document.getElementById('adminLogoutBtn').style.display = 'none';
-        }
-      } catch (e) {
-        document.getElementById('adminLoginGate').style.display = 'flex';
-        document.getElementById('adminDashboardContent').style.display = 'none';
-        document.getElementById('adminLogoutBtn').style.display = 'none';
+    function getAdminKey() {
+      return localStorage.getItem('onfarm_admin_key') || MASTER_KEY_FALLBACK;
+    }
+
+    function getBackendUrl() {
+      return localStorage.getItem('onfarm_admin_backend') || 'https://on-farm.vercel.app';
+    }
+
+    function saveBackendSetting() {
+      const val = document.getElementById('cfgBackendUrl').value.trim();
+      if (val) {
+        localStorage.setItem('onfarm_admin_backend', val);
+        alert('Backend URL saved.');
+        initDashboard();
       }
     }
 
-    function updateStatsUI(stats) {
-      if (!stats) return;
-      document.getElementById('statUsers').textContent = stats.total_users;
-      document.getElementById('statSubs').textContent = stats.active_subscriptions;
-      document.getElementById('statWallet').textContent = '₹' + stats.total_wallet_money;
-      document.getElementById('statKilas').textContent = stats.total_kilas_processed;
-      document.getElementById('statusDot').style.background = '#22c55e';
-      document.getElementById('serverStatusText').textContent = 'Cloud Backend Online';
-    }
-
-    function resetSettings() {
-      localStorage.removeItem('onfarm_backend_url');
-      localStorage.removeItem('onfarm_admin_key');
-      adminLogout();
-    }
-
-    function switchTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.getElementById('tabUsers').style.display = tab === 'users' ? 'block' : 'none';
-      document.getElementById('tabPush').style.display = tab === 'push' ? 'block' : 'none';
-      document.getElementById('tabSettings').style.display = tab === 'settings' ? 'block' : 'none';
-      event.target.classList.add('active');
+    // --- DASHBOARD DATA & STATS ---
+    async function initDashboard() {
+      document.getElementById('cfgBackendUrl').value = getBackendUrl();
+      await fetchStats();
+      await fetchUsers();
     }
 
     async function fetchStats() {
@@ -696,20 +580,26 @@ module.exports = {
         const res = await fetch(`${backend}/api/admin/stats`, {
           headers: { 'x-admin-key': getAdminKey() }
         });
-        if (res.status === 401) {
-          adminLogout();
-          return;
-        }
         const data = await res.json();
-        if (data.ok) {
-          updateStatsUI(data.stats);
+        if (data.ok && data.stats) {
+          const s = data.stats;
+          document.getElementById('statUsers').textContent = s.total_users || 0;
+          document.getElementById('statSubs').textContent = s.active_subscriptions || 0;
+          document.getElementById('statWallet').textContent = '₹' + (s.total_wallet_money || 0);
+          document.getElementById('statRecharge').textContent = '₹' + (s.total_recharge_money || 0);
+          document.getElementById('statReferral').textContent = '₹' + (s.total_referral_money || 0);
+          document.getElementById('statCombined').textContent = '₹' + (s.total_combined_funds || 0);
+          document.getElementById('statRefPasses').textContent = s.total_referral_passes || 0;
+
+          document.getElementById('statusDot').style.background = '#22c55e';
+          document.getElementById('serverStatusText').textContent = 'Cloud Backend Online';
         } else {
           document.getElementById('statusDot').style.background = '#dc2626';
           document.getElementById('serverStatusText').textContent = data.message || 'Auth Failed';
         }
       } catch (err) {
         document.getElementById('statusDot').style.background = '#dc2626';
-        document.getElementById('serverStatusText').innerHTML = `Backend Offline (<a href="javascript:void(0)" onclick="resetSettings()" style="color:#60a5fa;text-decoration:underline;cursor:pointer;">Reset to Live Server</a>)`;
+        document.getElementById('serverStatusText').textContent = 'Backend Offline';
       }
     }
 
@@ -718,283 +608,178 @@ module.exports = {
         const res = await fetch(`${getBackendUrl()}/api/admin/users`, {
           headers: { 'x-admin-key': getAdminKey() }
         });
-        if (res.status === 401) {
-          adminLogout();
-          return;
-        }
         const data = await res.json();
         if (data.ok) {
-          currentUsers = data.users || [];
-          renderUsers(currentUsers);
+          allUsersData = data.users || [];
+          filterUsers();
         }
       } catch (err) {
         console.error(err);
       }
     }
 
+    function filterUsers() {
+      const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value;
+
+      const filtered = allUsersData.filter(u => {
+        const matchQuery = !q || (u.phone && u.phone.includes(q)) || (u.name && u.name.toLowerCase().includes(q));
+        if (!matchQuery) return false;
+
+        const isSub = Boolean(u.subscription && u.subscription.is_active);
+        const isBlocked = Boolean(u.is_blocked);
+
+        if (statusFilter === 'PASS') return isSub;
+        if (statusFilter === 'PAYG') return !isSub;
+        if (statusFilter === 'BLOCKED') return isBlocked;
+        return true;
+      });
+
+      renderUsers(filtered);
+    }
+
     function renderUsers(users) {
       const tbody = document.getElementById('userTableBody');
       if (!users.length) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#9ca3af;">Koi user nahi mila.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 32px;">No matching operators found.</td></tr>';
         return;
       }
+
       tbody.innerHTML = users.map(u => {
-        const wallet = u.wallets || { balance: 0 };
-        const subs = (u.subscriptions || []).find(s => s.is_active && new Date(s.expires_at) > new Date());
-        const isSubsActive = !!subs;
-        const hwidStatus = u.hwid ? `<span class="chip chip-green">Bound: ${u.hwid.slice(0, 8)}...</span>` : `<span class="chip chip-yellow">Not Bound</span>`;
-        const planText = isSubsActive ? `<span class="chip chip-green">₹699 Active</span>` : `<span class="chip chip-yellow">Pay-per-kila (₹1)</span>`;
+        const isSub = u.subscription && u.subscription.is_active;
+        const bal = u.wallet ? u.wallet.balance : 0;
+        const hwidShort = u.hwid ? (u.hwid.slice(0, 8) + '...' + u.hwid.slice(-6)) : '<span style="color:#64748b;">Not Bound</span>';
+        const expDate = isSub ? new Date(u.subscription.expires_at).toLocaleDateString('en-IN') : '—';
+
+        let badgeHtml = isSub 
+          ? '<span class="badge badge-pass">30-DAY PASS</span>' 
+          : '<span class="badge badge-payg">PAY AS YOU GO</span>';
+        if (u.is_blocked) {
+          badgeHtml = '<span class="badge badge-blocked">BLOCKED</span>';
+        }
 
         return `
-          <tr id="user-row-${u.id}">
-            <td><strong>${u.name || 'Unnamed'}</strong></td>
+          <tr>
             <td>
-              ${u.phone}
-              ${u.referralInfo ? `<div style="font-size:0.75rem; color:#8b5cf6; margin-top:2px;">Ref: +91 ${u.referralInfo.referrer_phone} ${u.referralInfo.rewarded ? '<span style="color:#22c55e;">(Rewarded)</span>' : '<span style="color:#f59e0b;">(Pending)</span>'}</div>` : ''}
+              <div style="font-weight: 700; color: #fff;">📱 +91 ${u.phone}</div>
+              <div style="font-size: 11px; color: var(--text-muted);">${u.name || 'Unnamed Operator'}</div>
             </td>
             <td>
-              ${hwidStatus}
-              ${u.hwid ? `<button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem; margin-left:6px;" onclick="resetHwid('${u.id}', '${u.phone}')">Reset Device</button>` : ''}
+              <code style="font-family:'JetBrains Mono', monospace; font-size:11px; color:#cbd5e1;">${hwidShort}</code>
             </td>
             <td>
-              <strong>₹${wallet.balance}</strong>
-              <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem; margin-left:6px;" onclick="openWalletModal('${u.id}', '${u.name}', ${wallet.balance})">+/-</button>
+              <strong style="color: #fbbf24; font-family:'JetBrains Mono', monospace;">₹${bal}</strong>
             </td>
-            <td>
-              ${planText}
-              <button class="btn btn-secondary" style="padding:2px 8px; font-size:0.75rem; margin-left:6px;" onclick="grantSub('${u.id}', '${u.phone}', '${u.referralInfo ? u.referralInfo.referrer_phone : ''}')">+30 Days</button>
-            </td>
-            <td>
-              ${u.is_blocked ? '<span class="chip chip-red">BLOCKED</span>' : '<span class="chip chip-green">ACTIVE</span>'}
-            </td>
-            <td>
-              <button class="btn ${u.is_blocked ? 'btn-primary' : 'btn-danger'}" style="padding:4px 10px; font-size:0.8rem;" onclick="toggleBlock('${u.id}', ${!u.is_blocked}, '${u.phone}')">
-                ${u.is_blocked ? 'Unblock' : 'Block User'}
-              </button>
-              <button class="btn btn-danger" style="padding:4px 10px; font-size:0.8rem; margin-left:6px; background:#b91c1c;" onclick="deleteUser('${u.id}', '${u.phone}')">
-                Delete
-              </button>
+            <td>${badgeHtml}</td>
+            <td style="font-size: 12px; color: var(--text-muted);">${expDate}</td>
+            <td style="text-align: right; white-space: nowrap;">
+              <button class="btn-action btn-grant" title="Grant 30-Day Monthly Pass" onclick="grantSub('${u.id}', '${u.phone}')">⚡ Pass</button>
+              <button class="btn-action btn-reset" title="Reset HWID Lock" onclick="resetHwid('${u.id}', '${u.phone}')">🔄 HWID</button>
+              <button class="btn-action btn-block" title="Toggle Block" onclick="toggleBlock('${u.id}', ${!u.is_blocked})">${u.is_blocked ? 'Unblock' : 'Block'}</button>
+              <button class="btn-action btn-del" title="Permanently Delete User" onclick="deleteUser('${u.id}', '${u.phone}')">🗑️</button>
             </td>
           </tr>
         `;
       }).join('');
     }
 
-    function showToast(msg, isError = false) {
-      const toast = document.getElementById('adminToast');
-      if (!toast) return;
-      toast.style.background = isError ? '#991b1b' : '#15803d';
-      toast.style.borderColor = isError ? '#f87171' : '#22c55e';
-      toast.innerHTML = isError ? `⚠️ ${msg}` : `✅ ${msg}`;
-      toast.style.display = 'flex';
-      clearTimeout(window.__toastTimer);
-      window.__toastTimer = setTimeout(() => { toast.style.display = 'none'; }, 3500);
-    }
+    // --- ACTION HANDLERS ---
+    async function grantSub(userId, phone) {
+      const days = prompt(`Grant Unlimited Monthly Pass to +91 ${phone} for how many days?`, '30');
+      if (!days) return;
 
-    function filterUsers() {
-      const q = document.getElementById('searchInput').value.toLowerCase();
-      const filtered = currentUsers.filter(u =>
-        (u.name && u.name.toLowerCase().includes(q)) ||
-        (u.phone && u.phone.includes(q))
-      );
-      renderUsers(filtered);
-    }
+      const ref = prompt(`Referrer phone number (Optional - Enter 10-digit number to award ₹25 referral bonus):`, '');
 
-    async function toggleBlock(userId, isBlocked, phone) {
-      showToast(isBlocked ? `Blocking user +91 ${phone}...` : `Unblocking user +91 ${phone}...`);
       try {
-        const res = await fetch(`${getBackendUrl()}/api/admin/user/toggle-block`, {
+        const res = await fetch(`${getBackendUrl()}/api/admin/user/grant-subscription`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
-          body: JSON.stringify({ userId, isBlocked })
+          body: JSON.stringify({ userId, days: parseInt(days, 10), referrerPhone: ref || undefined })
         });
-        const data = await res.json();
-        if (data.ok) {
-          showToast(isBlocked ? `User +91 ${phone} is now BLOCKED.` : `User +91 ${phone} is now ACTIVE.`);
-          fetchUsers();
-        } else {
-          showToast(data.message || 'Operation failed', true);
-        }
+        const d = await res.json();
+        alert(d.message || (d.ok ? 'Subscription granted!' : 'Failed'));
+        fetchStats();
+        fetchUsers();
       } catch (err) {
-        showToast('Connection error: ' + err.message, true);
+        alert('Request failed: ' + err.message);
       }
     }
 
     async function resetHwid(userId, phone) {
-      if (!confirm(`Are you sure you want to reset HWID device lock for +91 ${phone}?\nThe operator will be able to bind a new computer on next login.`)) return;
-      showToast(`Resetting hardware lock for +91 ${phone}...`);
+      if (!confirm(`Reset Hardware Lock for +91 ${phone}? This allows operator to re-bind on a new PC.`)) return;
       try {
         const res = await fetch(`${getBackendUrl()}/api/admin/user/reset-hwid`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
           body: JSON.stringify({ userId })
         });
-        const data = await res.json();
-        if (data.ok) {
-          showToast(`Device lock reset! +91 ${phone} can now bind a new PC.`);
-          fetchUsers();
-        } else {
-          showToast(data.message || 'Reset failed', true);
-        }
-      } catch (err) {
-        showToast('Connection error: ' + err.message, true);
-      }
+        const d = await res.json();
+        alert(d.message || 'HWID reset successful.');
+        fetchUsers();
+      } catch (err) { alert(err.message); }
+    }
+
+    async function toggleBlock(userId, block) {
+      try {
+        const res = await fetch(`${getBackendUrl()}/api/admin/user/block`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
+          body: JSON.stringify({ userId, isBlocked: block })
+        });
+        const d = await res.json();
+        alert(d.message || 'Status updated.');
+        fetchUsers();
+      } catch (err) { alert(err.message); }
     }
 
     async function deleteUser(userId, phone) {
-      if (!confirm(`⚠️ PERMANENT DELETE WARNING:\n\nAre you sure you want to permanently delete user +91 ${phone}?\nThis will erase their account, wallet balance, and subscriptions. This action CANNOT be undone.`)) return;
-
-      const row = document.getElementById(`user-row-${userId}`);
-      if (row) row.style.opacity = '0.3';
-      showToast(`Deleting user +91 ${phone}...`);
-
+      if (!confirm(`Permanently delete +91 ${phone}? This removes all wallets, passes, and cleans up any linked referral bonuses.`)) return;
       try {
         const res = await fetch(`${getBackendUrl()}/api/admin/user/delete`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
           body: JSON.stringify({ userId })
         });
-        const data = await res.json();
-        if (data.ok) {
-          showToast(`User +91 ${phone} permanently deleted!`);
-          if (row) row.remove();
-          fetchUsers();
-          fetchStats();
-        } else {
-          if (row) row.style.opacity = '1';
-          showToast(data.message || 'Failed to delete user', true);
-        }
-      } catch (err) {
-        if (row) row.style.opacity = '1';
-        showToast('Connection error: ' + err.message, true);
-      }
+        const d = await res.json();
+        alert(d.message || 'User deleted.');
+        fetchStats();
+        fetchUsers();
+      } catch (err) { alert(err.message); }
     }
 
-    async function grantSub(userId, phone, knownReferrer = '') {
-      let referrerPhone = knownReferrer;
-      if (referrerPhone) {
-        if (!confirm(`Grant 30-Day Unlimited Pass to +91 ${phone}?\n\nReferred by: +91 ${referrerPhone} (₹25 reward will be granted to referrer automatically).`)) return;
-      } else {
-        const input = prompt(`Grant 30-Day Unlimited Pass to +91 ${phone}?\n\nIf this user was referred by another operator, enter the REFERRER's 10-digit mobile number below (or leave blank):`);
-        if (input === null) return;
-        referrerPhone = (input || '').replace(/\D/g, '');
-      }
+    // --- 1-CLICK REMOTE UPDATE PUSH ---
+    async function publishUpdate() {
+      const version = document.getElementById('pushVersion').value.trim();
+      const description = document.getElementById('pushDesc').value.trim();
+      const plainCode = document.getElementById('pushCode').value.trim();
 
-      showToast(`Activating 30-day pass for +91 ${phone}...`);
-      try {
-        const body = { userId, days: 30 };
-        if (referrerPhone && referrerPhone.length === 10) {
-          body.referrerPhone = referrerPhone;
-        }
-        const res = await fetch(`${getBackendUrl()}/api/admin/user/grant-subscription`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
-          body: JSON.stringify(body)
-        });
-        const data = await res.json();
-        if (data.ok) {
-          const refNote = body.referrerPhone ? ` (₹25 referral bonus sent to +91 ${body.referrerPhone})` : '';
-          showToast(`30-Day Pass activated for +91 ${phone}!${refNote}`);
-          fetchUsers();
-          fetchStats();
-        } else {
-          showToast(data.message || 'Pass activation failed', true);
-        }
-      } catch (err) {
-        showToast('Connection error: ' + err.message, true);
-      }
-    }
-
-    function openWalletModal(id, name, bal) {
-      selectedUserId = id;
-      document.getElementById('walletModalDesc').textContent = `User: ${name} | Current Balance: ₹${bal}`;
-      document.getElementById('walletDelta').value = '';
-      document.getElementById('walletModal').style.display = 'flex';
-      setTimeout(() => { document.getElementById('walletDelta').focus(); }, 100);
-    }
-
-    function closeModal(id) {
-      document.getElementById(id).style.display = 'none';
-    }
-
-    async function submitWalletAdjust() {
-      const deltaInput = document.getElementById('walletDelta');
-      const val = deltaInput ? deltaInput.value.trim() : '';
-      const delta = Number(val);
-      if (!val || isNaN(delta) || delta === 0) {
-        showToast('Please enter an amount to add (e.g. 50 or +50) or deduct (e.g. -20)', true);
-        if (deltaInput) deltaInput.focus();
+      if (!version || !plainCode) {
+        alert('Please enter both Script Version (e.g. 1.0.5) and Plain JavaScript Code.');
         return;
       }
 
-      const btn = document.getElementById('walletSubmitBtn');
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = 'Updating...';
-      }
+      if (!confirm(`Deploy Encrypted Script v${version} to all online operators?`)) return;
 
       try {
-        const res = await fetch(`${getBackendUrl()}/api/admin/user/adjust-wallet`, {
+        const res = await fetch(`${getBackendUrl()}/api/admin/publish-script`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
-          body: JSON.stringify({ userId: selectedUserId, amountDelta: delta })
+          body: JSON.stringify({ version, description, plainCode })
         });
-        const data = await res.json();
-        if (data.ok) {
-          showToast(`Wallet updated! New Balance: ₹${data.balance}`);
-          closeModal('walletModal');
-          fetchUsers();
-          fetchStats();
+        const d = await res.json();
+        if (d.ok) {
+          alert(`Update v${version} published successfully! Encrypted payload is live.`);
+          document.getElementById('pushCode').value = '';
         } else {
-          showToast(data.message || 'Failed to update wallet balance.', true);
+          alert('Publish failed: ' + (d.message || 'Unknown error'));
         }
       } catch (err) {
-        showToast('Connection error: ' + err.message, true);
-      } finally {
-        if (btn) {
-          btn.disabled = false;
-          btn.textContent = 'Update Balance';
-        }
+        alert('Publish request error: ' + err.message);
       }
     }
 
-    async function publishScript() {
-      const version = document.getElementById('pushVersion').value;
-      const minSupportedVersion = document.getElementById('pushMinVersion').value;
-      const plainCode = document.getElementById('pushCode').value;
-      const description = document.getElementById('pushDesc').value;
-
-      if (!confirm(`Kya aap Version ${version} sabhi clients ke liye live push karna chahte hain?`)) return;
-
-      const res = await fetch(`${getBackendUrl()}/api/admin/publish-script`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
-        body: JSON.stringify({ version, minSupportedVersion, plainCode, description })
-      });
-      const data = await res.json();
-      alert(data.message || 'Published successfully!');
-    }
-
-    function saveSettings() {
-      localStorage.setItem('onfarm_backend_url', document.getElementById('backendUrl').value);
-      localStorage.setItem('onfarm_admin_key', document.getElementById('adminKey').value);
-      fetchStats();
-      fetchUsers();
-      alert('Settings saved!');
-    }
-
-    const bInput = document.getElementById('backendUrl');
-    if (bInput) bInput.value = getBackendUrl();
-    // Clear any old cached admin key so the new password takes effect
-    (function() {
-      const cached = sessionStorage.getItem('onfarm_admin_key') || localStorage.getItem('onfarm_admin_key');
-      if (cached === 'onfarm_admin_master_2026') {
-        sessionStorage.removeItem('onfarm_admin_key');
-        localStorage.removeItem('onfarm_admin_key');
-      }
-    })();
-    checkAuthOnLoad();
+    // Start verification on page load
+    window.onload = checkAdminSession;
   </script>
 </body>
-
 </html>
