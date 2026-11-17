@@ -20,6 +20,30 @@ const CLIENT_BASE_DIR = fs.existsSync(path.join(__dirname, 'public')) ? __dirnam
 // Cloud backend URL (Points to 24/7 Vercel Cloud Server)
 const CLOUD_URL = process.env.ONFARM_CLOUD_URL || 'https://on-farm.vercel.app';
 const SESSION_CACHE_FILE = path.join(CLIENT_BASE_DIR, 'user-session.json');
+const TX_HISTORY_FILE = path.join(CLIENT_BASE_DIR, 'transaction_history.json');
+
+// Helper to record transaction / deduction locally on operator PC
+function appendLocalTransaction(tx) {
+  try {
+    let list = [];
+    if (fs.existsSync(TX_HISTORY_FILE)) {
+      list = JSON.parse(fs.readFileSync(TX_HISTORY_FILE, 'utf8') || '[]');
+    }
+    list.unshift({
+      id: tx.id || ('local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4)),
+      created_at: tx.created_at || new Date().toISOString(),
+      type: tx.type, // 'KILA_DEBIT', 'WALLET_RECHARGE', 'REFERRAL_BONUS', 'MONTHLY_PASS'
+      amount: tx.amount !== undefined ? tx.amount : 0,
+      status: tx.status || 'SUCCESS',
+      details: tx.details || {},
+      balance: tx.balance !== undefined ? tx.balance : (state ? state.walletBalance : 0),
+    });
+    if (list.length > 500) list = list.slice(0, 500);
+    fs.writeFileSync(TX_HISTORY_FILE, JSON.stringify(list, null, 2));
+  } catch (err) {
+    console.error('appendLocalTransaction error:', err);
+  }
+}
 
 // Restore cached session if available so UI never flashes ₹0
 let initialBalance = 1;
@@ -299,6 +323,20 @@ async function executeAutomation() {
         throw new Error((deductRes.data && deductRes.data.message) || 'Balance insufficient to continue. Please recharge your wallet.');
       }
       state.walletBalance = deductRes.data.remaining_balance;
+
+      // Save deduction history locally on operator PC
+      appendLocalTransaction({
+        type: 'KILA_DEBIT',
+        amount: deductRes.data.deducted !== undefined ? deductRes.data.deducted : (deductRes.data.plan === 'SUBSCRIPTION_UNLIMITED' ? 0 : 1.00),
+        status: 'SUCCESS',
+        balance: state.walletBalance,
+        details: {
+          khasra: r.KhasraNo,
+          farmer: r.FarmerName || r.Name,
+          crop: r.Crop,
+          plan: deductRes.data.plan,
+        }
+      });
 
       log(`[${i + 1}/${rows.length}] Filling: ${r.Name} | Wallet Balance: ₹${state.walletBalance}`);
 
@@ -821,7 +859,7 @@ function startControlPanel() {
 
   app.post('/set-operator', async (req, res) => {
     try {
-      const { phone, name } = req.body;
+      const { phone, name, referralCode } = req.body;
       const cleanPhone = String(phone || '').replace(/\D/g, '').slice(-10);
       if (!cleanPhone || cleanPhone.length !== 10) {
         return res.status(400).json({ ok: false, message: 'Please enter a valid 10-digit mobile number' });
@@ -841,6 +879,7 @@ function startControlPanel() {
         phone: cleanPhone,
         hwid: state.hwid,
         name: cleanName,
+        referralCode: referralCode || undefined,
       }, { timeout: 8000 });
 
       if (loginRes.data && loginRes.data.ok) {
@@ -938,9 +977,89 @@ function startControlPanel() {
           } catch {}
         }
       }
+      if (verifyRes.data.ok) {
+        appendLocalTransaction({
+          type: verifyRes.data.plan === 'MONTHLY_PASS' ? 'MONTHLY_PASS' : 'WALLET_RECHARGE',
+          amount: verifyRes.data.amount || (verifyRes.data.plan === 'MONTHLY_PASS' ? 699 : 1.00),
+          status: 'SUCCESS',
+          balance: state.walletBalance,
+          details: { orderId, plan: verifyRes.data.plan }
+        });
+      }
       res.json(verifyRes.data);
     } catch (e) {
       res.status(500).json({ ok: false, message: e.message });
+    }
+  });
+
+  app.get('/get-transactions', async (req, res) => {
+    let localList = [];
+    try {
+      if (fs.existsSync(TX_HISTORY_FILE)) {
+        localList = JSON.parse(fs.readFileSync(TX_HISTORY_FILE, 'utf8') || '[]');
+      }
+    } catch {}
+
+    if (state.user && state.user.id && state.isOnline) {
+      try {
+        const cloudRes = await axios.get(`${CLOUD_URL}/api/user/transactions`, {
+          params: { userId: state.user.id, hwid: state.hwid },
+          timeout: 6000,
+        });
+        if (cloudRes.data && cloudRes.data.ok && Array.isArray(cloudRes.data.transactions)) {
+          return res.json({ ok: true, source: 'cloud', transactions: cloudRes.data.transactions });
+        }
+      } catch (err) {}
+    }
+
+    return res.json({ ok: true, source: 'local', transactions: localList });
+  });
+
+  app.get('/get-referral-stats', async (req, res) => {
+    if (!state.user || !state.user.id) {
+      return res.json({
+        ok: true,
+        referralCode: '',
+        totalEarned: 0,
+        successfulCount: 0,
+      });
+    }
+
+    try {
+      const refRes = await axios.get(`${CLOUD_URL}/api/user/referral-stats`, {
+        params: { userId: state.user.id, hwid: state.hwid },
+        timeout: 6000,
+      });
+      if (refRes.data && refRes.data.ok) {
+        return res.json(refRes.data);
+      }
+    } catch (err) {}
+
+    return res.json({
+      ok: true,
+      referralCode: state.user.phone || '',
+      totalEarned: 0,
+      successfulCount: 0,
+    });
+  });
+
+  app.post('/link-referral', async (req, res) => {
+    try {
+      const { referralCode } = req.body;
+      if (!state.user || !state.user.id) {
+        return res.status(400).json({ ok: false, message: 'Please link your operator mobile number first.' });
+      }
+      const linkRes = await axios.post(`${CLOUD_URL}/api/user/link-referral`, {
+        userId: state.user.id,
+        hwid: state.hwid,
+        referralCode,
+      }, { timeout: 8000 });
+      return res.json(linkRes.data);
+    } catch (err) {
+      return res.status(err.response && err.response.status ? err.response.status : 500).json({
+        ok: false,
+        message: err.response && err.response.data ? err.response.data.message : err.message,
+      });
     }
   });
 
