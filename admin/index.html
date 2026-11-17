@@ -742,17 +742,23 @@ module.exports = {
     }
 
     async function grantSub(userId, phone) {
-      if (!confirm(`Grant 30-Day Unlimited Subscription Pass to +91 ${phone}?`)) return;
+      const referrerInput = prompt(`Grant 30-Day Unlimited Pass to +91 ${phone}?\n\nIf this user was referred by someone, enter the REFERRER's 10-digit mobile number below (or leave blank to skip):`);
+      if (referrerInput === null) return; // user pressed Cancel
       showToast(`Activating 30-day pass for +91 ${phone}...`);
       try {
+        const body = { userId, days: 30 };
+        if (referrerInput && referrerInput.replace(/\D/g, '').length === 10) {
+          body.referrerPhone = referrerInput.replace(/\D/g, '');
+        }
         const res = await fetch(`${getBackendUrl()}/api/admin/user/grant-subscription`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-admin-key': getAdminKey() },
-          body: JSON.stringify({ userId, days: 30 })
+          body: JSON.stringify(body)
         });
         const data = await res.json();
         if (data.ok) {
-          showToast(`30-Day Unlimited Pass activated for +91 ${phone}!`);
+          const refNote = body.referrerPhone ? ` (₹25 referral bonus sent to +91 ${body.referrerPhone})` : '';
+          showToast(`30-Day Pass activated for +91 ${phone}!${refNote}`);
           fetchUsers();
           fetchStats();
         } else {

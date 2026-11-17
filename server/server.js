@@ -773,6 +773,30 @@ app.get('/api/user/referral-stats', async (req, res) => {
 });
 
 /**
+ * Check if a user has already linked a referral code (one-time only)
+ */
+app.get('/api/user/referral-status', async (req, res) => {
+  try {
+    const { userId, hwid } = req.query;
+    if (!userId) return res.status(400).json({ ok: false, message: 'userId is required' });
+    const supabase = getSupabase();
+    const { data: user } = await supabase.from('users').select('id, hwid').eq('id', userId).single();
+    if (!user || (hwid && user.hwid && user.hwid !== hwid)) {
+      return res.status(403).json({ ok: false, message: 'Invalid credentials' });
+    }
+    const { data: existing } = await supabase
+      .from('transactions').select('id, details, created_at').eq('user_id', userId).eq('type', 'REFERRAL_LINKED').maybeSingle();
+    res.json({
+      ok: true,
+      linked: !!existing,
+      referrerPhone: existing && existing.details ? existing.details.referrer_phone : null,
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, message: err.message });
+  }
+});
+
+/**
  * Link a Referrer Code to an Existing Account
  */
 app.post('/api/user/link-referral', async (req, res) => {
@@ -1005,7 +1029,7 @@ function requireAdmin(req, res, next) {
      * Admin: Grant/Extend 30-Day Subscription
      */
     app.post('/api/admin/user/grant-subscription', requireAdmin, async (req, res) => {
-      const { userId, days = 30 } = req.body;
+      const { userId, days = 30, referrerPhone } = req.body;
       try {
         const supabase = getSupabase();
         const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
@@ -1015,6 +1039,34 @@ function requireAdmin(req, res, next) {
           expires_at: expiresAt,
           is_active: true,
         }]);
+
+        // If admin provides a referrer phone and no referral is linked yet, link it now
+        if (referrerPhone) {
+          const cleanRef = String(referrerPhone).replace(/\D/g, '').slice(-10);
+          if (cleanRef.length === 10) {
+            const { data: existingRef } = await supabase
+              .from('transactions').select('id').eq('user_id', userId).eq('type', 'REFERRAL_LINKED').maybeSingle();
+            if (!existingRef) {
+              const { data: referrer } = await supabase.from('users').select('id, phone').eq('phone', cleanRef).maybeSingle();
+              if (referrer && referrer.id !== userId) {
+                await supabase.from('transactions').insert([{
+                  user_id: userId,
+                  amount: 0,
+                  type: 'REFERRAL_LINKED',
+                  status: 'PENDING',
+                  details: {
+                    referrer_user_id: referrer.id,
+                    referrer_phone: referrer.phone,
+                    bonus_amount: 25,
+                    rewarded: false,
+                    linked_at: new Date().toISOString(),
+                    linked_by: 'admin',
+                  },
+                }]);
+              }
+            }
+          }
+        }
 
         await grantReferralBonusIfEligible(userId, supabase);
 

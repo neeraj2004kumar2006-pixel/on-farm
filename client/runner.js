@@ -1063,6 +1063,21 @@ function startControlPanel() {
     }
   });
 
+  app.get('/referral-status', async (req, res) => {
+    try {
+      if (!state.user || !state.user.id) {
+        return res.json({ ok: true, linked: false });
+      }
+      const statusRes = await axios.get(`${CLOUD_URL}/api/user/referral-status`, {
+        params: { userId: state.user.id, hwid: state.hwid },
+        timeout: 6000,
+      });
+      return res.json(statusRes.data);
+    } catch (err) {
+      return res.json({ ok: true, linked: false }); // fail-open: don't block UI
+    }
+  });
+
   app.listen(PANEL_PORT, () => {
     log(`Service initialized on port ${PANEL_PORT}.`);
   });

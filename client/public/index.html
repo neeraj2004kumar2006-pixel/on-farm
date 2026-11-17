@@ -2915,6 +2915,7 @@
         closeModal('referralEnterModal');
         if (data.ok) {
           appAlert(data.message || 'Referral successfully linked!', 'Referral Linked ✓', 'success');
+          markReferralLinked(); // permanently disable button
           loadReferralStats();
         } else {
           appAlert(data.message || 'Could not link referral.', 'Referral Error', 'danger');
@@ -2922,6 +2923,29 @@
       } catch (err) {
         appAlert('Connection error: ' + err.message, 'Network Error', 'danger');
       }
+    }
+
+    // Mark "Enter Code" button as permanently used (one-time only)
+    function markReferralLinked() {
+      const btn = document.getElementById('btnEnterReferral');
+      if (btn) {
+        btn.textContent = '✓ Code Linked';
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+        btn.onclick = null;
+      }
+    }
+
+    // Check on startup whether referral is already linked and disable button
+    async function checkReferralStatus() {
+      try {
+        const res = await fetch('/referral-status');
+        const data = await res.json();
+        if (data.linked) {
+          markReferralLinked();
+        }
+      } catch { /* silent – don't block UI */ }
     }
 
     async function loadReferralStats() {
@@ -3440,6 +3464,7 @@
     setLanguage(currentLang);
     checkStatus();
     loadReferralStats();
+    checkReferralStatus(); // disable "Enter Code" if already linked
     setInterval(checkStatus, 1500);
     setInterval(loadReferralStats, 30000);
   </script>
