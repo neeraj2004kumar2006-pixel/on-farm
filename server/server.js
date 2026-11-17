@@ -1042,17 +1042,56 @@ function requireAdmin(req, res, next) {
     });
 
     /**
-     * Admin: Permanently Delete User
+     * Admin: Permanently Delete User (Clean up wallets, subscriptions, transactions & referral history)
      */
     app.post('/api/admin/user/delete', requireAdmin, async (req, res) => {
       const { userId } = req.body;
       try {
         const supabase = getSupabase();
+
+        // 1. Fetch user phone before deletion for clean reference
+        const { data: userToDelete } = await supabase.from('users').select('id, phone').eq('id', userId).maybeSingle();
+        const userPhone = userToDelete ? userToDelete.phone : null;
+
+        // 2. Remove referral link if this user was referred by someone
+        await supabase.from('app_config').delete().eq('key', 'ref_link_' + userId);
+
+        // 3. Remove referral links where this user was the referrer
+        const { data: allLinks } = await supabase.from('app_config').select('key, value').like('key', 'ref_link_%');
+        for (const link of (allLinks || [])) {
+          if (link.value && (link.value.referrer_user_id === userId || (userPhone && link.value.referrer_phone === userPhone))) {
+            await supabase.from('app_config').delete().eq('key', link.key);
+          }
+        }
+
+        // 4. Remove referral bonus transactions referencing this user from the referrer's history
+        const { data: allTxs } = await supabase.from('transactions').select('id, user_id, amount, details').eq('type', 'WALLET_RECHARGE');
+        for (const tx of (allTxs || [])) {
+          if (tx.details && (tx.details.referred_user_id === userId || (userPhone && tx.details.referred_phone === userPhone))) {
+            await supabase.from('transactions').delete().eq('id', tx.id);
+            // Revert referrer's wallet balance
+            if (tx.user_id && tx.amount) {
+              const { data: refW } = await supabase.from('wallets').select('*').eq('user_id', tx.user_id).maybeSingle();
+              if (refW) {
+                const newBal = Math.max(0, Number(refW.balance || 0) - Number(tx.amount));
+                const newRecharged = Math.max(0, Number(refW.total_recharged || 0) - Number(tx.amount));
+                await supabase.from('wallets').update({
+                  balance: newBal,
+                  total_recharged: newRecharged,
+                  updated_at: new Date().toISOString()
+                }).eq('user_id', tx.user_id);
+              }
+            }
+          }
+        }
+
+        // 5. Delete user's own data
         await supabase.from('wallets').delete().eq('user_id', userId);
         await supabase.from('subscriptions').delete().eq('user_id', userId);
         await supabase.from('transactions').delete().eq('user_id', userId);
         await supabase.from('users').delete().eq('id', userId);
-        res.json({ ok: true, message: 'User deleted successfully.' });
+
+        res.json({ ok: true, message: 'User and all associated referral data deleted successfully.' });
       } catch (err) {
         res.status(500).json({ ok: false, message: err.message });
       }

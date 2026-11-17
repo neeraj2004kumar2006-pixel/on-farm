@@ -377,72 +377,423 @@
       box-shadow: 0 4px 10px rgba(22, 163, 74, 0.3);
     }
 
-    /* ── REFER & EARN PROMO BOX ── */
-    .referral-card {
-      background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
-      border: 1px solid #e9d5ff;
-      border-radius: var(--radius-md);
-      padding: 14px;
-      margin-top: 14px;
+    /* ── FULL-WIDTH GLOWING GAMING REFERRAL BANNER ── */
+    .gaming-referral-banner {
+      position: relative;
+      margin-top: 24px;
+      margin-bottom: 25px;
+      background: linear-gradient(135deg, #090d16 0%, #150f28 45%, #0d1527 100%);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      border-radius: 14px;
+      padding: 16px 20px;
+      overflow: hidden;
+      box-shadow: 0 14px 40px -10px rgba(147, 51, 234, 0.3), 0 0 25px rgba(59, 130, 246, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.15);
+      color: #f8fafc;
+      transition: all 0.3s ease;
     }
 
-    .referral-header {
+    .gaming-referral-banner::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #ec4899, #8b5cf6, #3b82f6, #10b981, #f59e0b, #ec4899);
+      background-size: 200% 100%;
+      animation: neonGlowFlow 4s linear infinite;
+    }
+
+    @keyframes neonGlowFlow {
+      0% { background-position: 0% 0%; }
+      100% { background-position: 200% 0%; }
+    }
+
+    .gaming-glow-orb-1 {
+      position: absolute;
+      width: 250px;
+      height: 250px;
+      top: -80px;
+      left: -60px;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.22) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .gaming-glow-orb-2 {
+      position: absolute;
+      width: 280px;
+      height: 280px;
+      bottom: -90px;
+      right: -50px;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.22) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .gaming-banner-inner {
+      position: relative;
+      z-index: 1;
       display: flex;
-      justify-content: space-between;
       align-items: center;
+      gap: 20px;
     }
 
-    .referral-badge {
+    .gaming-banner-art {
+      position: relative;
+      flex-shrink: 0;
+      width: 140px;
+      height: 96px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(236, 72, 153, 0.45);
+      box-shadow: 0 0 18px rgba(236, 72, 153, 0.3);
+      background: #0f172a;
+    }
+
+    .gaming-banner-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.4s ease;
+    }
+
+    .gaming-banner-art:hover .gaming-banner-img {
+      transform: scale(1.06);
+    }
+
+    .gaming-badge-live {
+      position: absolute;
+      bottom: 4px;
+      left: 4px;
+      right: 4px;
+      text-align: center;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(4px);
+      border: 1px solid rgba(250, 204, 21, 0.6);
+      color: #fde047;
+      font-size: 8.5px;
+      font-weight: 800;
+      padding: 2px 4px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+      box-shadow: 0 0 10px rgba(250, 204, 21, 0.3);
+    }
+
+    .gaming-banner-info {
+      flex: 1;
+      min-width: 260px;
+    }
+
+    .gaming-banner-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 5px;
+    }
+
+    .gaming-neon-pill {
       font-size: 10px;
       font-weight: 800;
-      color: #6b21a8;
-      background: #f3e8ff;
-      border: 1px solid #d8b4fe;
-      padding: 2px 7px;
-      border-radius: var(--radius-sm);
-      letter-spacing: 0.05em;
-    }
-
-    .referral-reward-tag {
-      font-size: 11px;
-      font-weight: 800;
-      color: #7e22ce;
-      background: #ffffff;
-      border: 1px solid #d8b4fe;
+      letter-spacing: 1px;
+      color: #f472b6;
+      background: rgba(236, 72, 153, 0.15);
+      border: 1px solid rgba(236, 72, 153, 0.4);
       padding: 2px 8px;
-      border-radius: 12px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
     }
 
-    .referral-desc {
+    .gaming-reward-pill {
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 2px 9px;
+      border-radius: 20px;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+    }
+
+    .gaming-banner-heading {
+      margin: 0 0 4px;
+      font-size: 15.5px;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+      background: linear-gradient(90deg, #ffffff 0%, #e0e7ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .gaming-banner-sub {
+      margin: 0 0 10px;
       font-size: 11.5px;
-      color: #581c87;
+      color: #cbd5e1;
       line-height: 1.45;
-      margin: 8px 0 10px;
     }
 
-    .referral-code-box {
+    .gaming-banner-sub strong {
+      color: #4ade80;
+    }
+
+    .gaming-stats-strip {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(2, 6, 23, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 4px 12px;
+    }
+
+    .gaming-stat-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .gaming-stat-label {
+      color: #94a3b8;
+      font-weight: 600;
+    }
+
+    .gaming-stat-val {
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .gaming-stat-gold {
+      color: #fbbf24;
+      text-shadow: 0 0 8px rgba(251, 191, 36, 0.4);
+    }
+
+    .gaming-stat-cyan {
+      color: #38bdf8;
+    }
+
+    .gaming-stat-sep {
+      width: 1px;
+      height: 14px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .gaming-btn-toggle-list {
+      background: transparent;
+      border: 1px solid rgba(168, 85, 247, 0.4);
+      color: #c084fc;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .gaming-btn-toggle-list:hover {
+      background: rgba(168, 85, 247, 0.25);
+      color: #ffffff;
+    }
+
+    .gaming-banner-actions {
+      flex-shrink: 0;
+      width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .gaming-code-box {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: #ffffff;
-      border: 1px dashed #c084fc;
-      border-radius: var(--radius-sm);
-      padding: 6px 10px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px dashed rgba(192, 132, 252, 0.6);
+      border-radius: 8px;
+      padding: 5px 12px;
+      box-shadow: inset 0 0 12px rgba(147, 51, 234, 0.15);
     }
 
-    .referral-code-label {
-      font-size: 9px;
+    .gaming-code-meta {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .gaming-code-label {
+      font-size: 8.5px;
       font-weight: 700;
-      color: #9333ea;
-      display: block;
-      letter-spacing: 0.05em;
+      color: #c084fc;
+      letter-spacing: 0.8px;
     }
 
-    .referral-code-value {
-      font-size: 13px;
+    .gaming-code-val {
+      font-size: 13.5px;
       font-weight: 800;
-      color: #1e1b4b;
-      letter-spacing: 1px;
+      color: #f8fafc;
+      letter-spacing: 1.5px;
+      font-family: monospace;
+    }
+
+    .gaming-btn-copy {
+      background: linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
+      color: #ffffff;
+      border: none;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(124, 58, 237, 0.4);
+      transition: all 0.2s;
+    }
+
+    .gaming-btn-copy:hover {
+      filter: brightness(1.15);
+      transform: translateY(-1px);
+    }
+
+    .gaming-action-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .gaming-btn-wa {
+      flex: 1;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 11px;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      cursor: pointer;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.3);
+      transition: all 0.2s;
+    }
+
+    .gaming-btn-wa:hover {
+      filter: brightness(1.1);
+    }
+
+    .gaming-btn-enter {
+      background: rgba(30, 41, 59, 0.85);
+      color: #cbd5e1;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      font-weight: 700;
+      font-size: 11px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .gaming-btn-enter:hover {
+      background: rgba(51, 65, 85, 0.95);
+      color: #ffffff;
+    }
+
+    .gaming-inline-input-wrap {
+      display: flex;
+      gap: 5px;
+      background: rgba(2, 6, 23, 0.75);
+      border: 1px solid rgba(168, 85, 247, 0.35);
+      border-radius: 6px;
+      padding: 3px;
+    }
+
+    .gaming-inline-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 3px 8px;
+      outline: none;
+    }
+
+    .gaming-inline-input::placeholder {
+      color: #64748b;
+      font-size: 10.5px;
+    }
+
+    .gaming-btn-link {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: #ffffff;
+      border: none;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .gaming-btn-link:hover {
+      filter: brightness(1.15);
+    }
+
+    .gaming-inline-status {
+      font-size: 10px;
+      min-height: 14px;
+      line-height: 14px;
+    }
+
+    .gaming-referred-drawer {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .gaming-drawer-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #c084fc;
+      margin-bottom: 8px;
+    }
+
+    .gaming-drawer-list {
+      max-height: 110px;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 6px;
+    }
+
+    .gaming-drawer-card {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 6px 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    @media (max-width: 900px) {
+      .gaming-banner-inner {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .gaming-banner-actions {
+        width: 100%;
+      }
     }
 
     .btn-whatsapp {
@@ -1493,58 +1844,6 @@
             <button data-i18n="btnBuyPass" class="btn-upgrade" id="btnBuyPass" onclick="buySubscription()">Monthly Pass (₹699)</button>
           </div>
         </div>
-
-        <!-- Refer & Earn Promo Card -->
-        <div class="referral-card" id="referralCard">
-          <div class="referral-header">
-            <div style="display: flex; align-items: center; gap: 6px;">
-              <span class="referral-badge">REFER & EARN</span>
-            </div>
-            <span class="referral-reward-tag">₹25 / PASS</span>
-          </div>
-          <div class="referral-desc">
-            Refer CSC friends. When they buy a 30-Day Monthly Pass, you get <strong>₹25</strong> in your wallet!
-          </div>
-
-          <!-- Referral Code Box -->
-          <div class="referral-code-box">
-            <div>
-              <span class="referral-code-label">YOUR REFERRAL CODE</span>
-              <span class="referral-code-value" id="sidebarReferralCode">—</span>
-            </div>
-            <button class="btn btn-sm btn-light" id="btnCopyReferral" onclick="copyReferralCode()" title="Copy Code" style="padding: 3px 8px; font-size: 11px;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-              Copy
-            </button>
-          </div>
-
-          <!-- Share Buttons & Actions -->
-          <div style="display:flex; gap:6px; margin-top:8px;">
-            <button class="btn btn-sm btn-whatsapp" onclick="shareReferralWhatsApp()" style="flex:1; justify-content:center;" title="Share with CSC operators on WhatsApp">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
-              Share
-            </button>
-            <button class="btn btn-sm btn-light" id="btnEnterReferral" onclick="promptEnterReferral()" style="font-size:11px;" title="Have a referral code?">
-              Enter Code
-            </button>
-          </div>
-
-          <!-- Referral Stats Bar -->
-          <div class="referral-stats-bar">
-            <span>Passes Sold: <strong id="referralPassCount">0</strong></span>
-            <span>Earned: <strong id="referralEarned">₹0</strong></span>
-          </div>
-
-          <!-- Referred Operators List -->
-          <div id="referredUsersContainer" style="margin-top: 8px; display: none; background: #fdf4ff; border: 1px solid #f0abfc; border-radius: 6px; padding: 6px 8px; font-size: 11px;">
-            <div style="font-weight: 700; color: #86198f; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
-              <span>Referred Friends</span>
-              <span id="referredTotalCount" style="background:#fae8ff; color:#a21caf; padding:1px 6px; border-radius:10px; font-size:10px; font-weight:800;">0</span>
-            </div>
-            <div id="referredUsersList" style="max-height: 85px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
-            </div>
-          </div>
-        </div>
       </div>
 
       <!-- RIGHT COLUMN: The 3 Tabs & Active Content -->
@@ -1799,6 +2098,95 @@
 
       </div><!-- /.main-col -->
     </div><!-- /.dashboard-grid -->
+
+    <!-- ═══════════ FULL-WIDTH HORIZONTAL GAMING REFERRAL BANNER ═══════════ -->
+    <div class="gaming-referral-banner" id="referralCard">
+      <div class="gaming-glow-orb-1"></div>
+      <div class="gaming-glow-orb-2"></div>
+
+      <div class="gaming-banner-inner">
+        <!-- Left Artwork / Badge -->
+        <div class="gaming-banner-art">
+          <img src="assets/referral-banner.jpg" alt="Refer & Earn Rewards" class="gaming-banner-img" onerror="this.style.display='none'">
+          <div class="gaming-badge-live">₹25 INSTANT CASH</div>
+        </div>
+
+        <!-- Center: Program Info & Counters -->
+        <div class="gaming-banner-info">
+          <div class="gaming-banner-title-row">
+            <span class="gaming-neon-pill">REFER & EARN</span>
+            <span class="gaming-reward-pill">🔥 ₹25 / PASS</span>
+          </div>
+          <h3 class="gaming-banner-heading">Refer Friends & Earn ₹25 Instant Wallet Cash!</h3>
+          <p class="gaming-banner-sub">
+            Share your 10-digit mobile number with CSC friends. When they buy a <strong>30-Day Monthly Pass</strong>, you get ₹25 credited to your wallet!
+          </p>
+
+          <!-- Stats Strip -->
+          <div class="gaming-stats-strip">
+            <div class="gaming-stat-item">
+              <span class="gaming-stat-label">Passes Sold:</span>
+              <strong class="gaming-stat-val" id="referralPassCount">0</strong>
+            </div>
+            <div class="gaming-stat-sep"></div>
+            <div class="gaming-stat-item">
+              <span class="gaming-stat-label">Earned:</span>
+              <strong class="gaming-stat-val gaming-stat-gold" id="referralEarned">₹0</strong>
+            </div>
+            <div class="gaming-stat-sep"></div>
+            <div class="gaming-stat-item">
+              <span class="gaming-stat-label">Referred Friends:</span>
+              <strong class="gaming-stat-val gaming-stat-cyan" id="referredTotalCount">0</strong>
+            </div>
+            <button class="gaming-btn-toggle-list" id="btnToggleRefList" onclick="toggleReferredList()" title="Show/Hide referred operators">
+              View List ▾
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Code Box, Share & Inline Code Apply -->
+        <div class="gaming-banner-actions">
+          <!-- Code Card -->
+          <div class="gaming-code-box">
+            <div class="gaming-code-meta">
+              <span class="gaming-code-label">YOUR REFERRAL CODE</span>
+              <span class="gaming-code-val" id="sidebarReferralCode">—</span>
+            </div>
+            <button class="gaming-btn-copy" id="btnCopyReferral" onclick="copyReferralCode()" title="Copy Code">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Copy
+            </button>
+          </div>
+
+          <!-- Share Button & Dialog Button -->
+          <div class="gaming-action-row">
+            <button class="gaming-btn-wa" onclick="shareReferralWhatsApp()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
+              Share WhatsApp
+            </button>
+            <button class="gaming-btn-enter" id="btnEnterReferral" onclick="promptEnterReferral()">
+              Enter Code
+            </button>
+          </div>
+
+          <!-- Inline Enter Referral Input Box ("sath m banner and uske niche fill karne ka") -->
+          <div class="gaming-inline-input-wrap" id="gamingInlineInputBox">
+            <input type="tel" id="inlineReferralInput" class="gaming-inline-input" placeholder="Friend's 10-digit mobile" maxlength="10" onkeydown="if(event.key==='Enter') submitInlineReferral()">
+            <button class="gaming-btn-link" onclick="submitInlineReferral()">Apply</button>
+          </div>
+          <div id="gamingInlineStatus" class="gaming-inline-status"></div>
+        </div>
+      </div>
+
+      <!-- Expandable Referred Users List -->
+      <div id="referredUsersContainer" class="gaming-referred-drawer" style="display:none;">
+        <div class="gaming-drawer-header">
+          <span>👥 Operators You Referred</span>
+          <span style="font-size:11px; opacity:0.8;">₹25 bonus automatically credited upon 30-Day Monthly Pass purchase</span>
+        </div>
+        <div id="referredUsersList" class="gaming-drawer-list"></div>
+      </div>
+    </div>
 
   </div>
 
@@ -2946,6 +3334,65 @@
         btn.onclick = null;
         btn.title = 'A referral code has already been linked to this account.';
       }
+      const inlineBox = document.getElementById('gamingInlineInputBox');
+      const inlineStatus = document.getElementById('gamingInlineStatus');
+      if (inlineBox) inlineBox.style.display = 'none';
+      if (inlineStatus) {
+        inlineStatus.style.color = '#4ade80';
+        inlineStatus.style.fontWeight = '700';
+        inlineStatus.textContent = referrerPhone ? ('✓ Linked to referrer +91 ' + referrerPhone) : '✓ Referral Code Linked';
+      }
+    }
+
+    // Inline referral code submit from the horizontal banner
+    async function submitInlineReferral() {
+      const inp = document.getElementById('inlineReferralInput');
+      const statusEl = document.getElementById('gamingInlineStatus');
+      const clean = (inp ? inp.value : '').replace(/\D/g, '').slice(-10);
+      if (clean.length !== 10) {
+        if (statusEl) {
+          statusEl.style.color = '#f87171';
+          statusEl.textContent = 'Please enter a valid 10-digit mobile number.';
+        }
+        return;
+      }
+      if (statusEl) {
+        statusEl.style.color = '#94a3b8';
+        statusEl.textContent = 'Linking referral code...';
+      }
+      try {
+        const res = await fetch('/link-referral', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ referralCode: clean })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          markReferralLinked(clean);
+          appAlert(data.message || 'Referral successfully linked!', 'Referral Linked ✓', 'success');
+          loadReferralStats();
+        } else {
+          if (statusEl) {
+            statusEl.style.color = '#f87171';
+            statusEl.textContent = data.message || 'Could not link referral.';
+          }
+        }
+      } catch (err) {
+        if (statusEl) {
+          statusEl.style.color = '#f87171';
+          statusEl.textContent = 'Error: ' + err.message;
+        }
+      }
+    }
+
+    // Toggle referred operators drawer
+    function toggleReferredList() {
+      const drawer = document.getElementById('referredUsersContainer');
+      const btn = document.getElementById('btnToggleRefList');
+      if (!drawer) return;
+      const isHidden = drawer.style.display === 'none' || !drawer.style.display;
+      drawer.style.display = isHidden ? 'block' : 'none';
+      if (btn) btn.textContent = isHidden ? 'Hide List ▴' : 'View List ▾';
     }
 
     // Check on startup whether referral is already linked and disable button
@@ -2966,26 +3413,24 @@
         if (data.ok) {
           const passCountEl = document.getElementById('referralPassCount');
           const earnedEl = document.getElementById('referralEarned');
+          const refTotal = document.getElementById('referredTotalCount');
           if (passCountEl) passCountEl.textContent = data.successfulCount || 0;
           if (earnedEl) earnedEl.textContent = '₹' + (data.totalEarned || 0);
+          if (refTotal) refTotal.textContent = data.totalReferred !== undefined ? data.totalReferred : ((data.referredUsers || []).length);
 
-          // Render list of referred operators
-          const refBox = document.getElementById('referredUsersContainer');
+          // Render list of referred operators in gaming drawer
           const refList = document.getElementById('referredUsersList');
-          const refTotal = document.getElementById('referredTotalCount');
-          if (refBox && refList) {
+          if (refList) {
             const list = data.referredUsers || [];
             if (list.length > 0) {
-              refBox.style.display = 'block';
-              if (refTotal) refTotal.textContent = list.length;
               refList.innerHTML = list.map(u => 
-                '<div style="display:flex; justify-content:space-between; align-items:center; padding:3px 0; border-bottom:1px dashed #f5d0fe;">' +
-                  '<span style="font-weight:700; color:#475569;">📱 +91 ' + u.phone + '</span>' +
-                  '<span style="font-weight:700; color:' + (u.rewarded ? '#15803d' : '#b45309') + '; font-size:10px;">' + u.status + '</span>' +
+                '<div class="gaming-drawer-card">' +
+                  '<span style="font-weight:700; color:#e2e8f0;">📱 +91 ' + u.phone + '</span>' +
+                  '<span style="font-weight:700; font-size:10.5px; color:' + (u.rewarded ? '#4ade80' : '#fbbf24') + ';">' + u.status + '</span>' +
                 '</div>'
               ).join('');
             } else {
-              refBox.style.display = 'none';
+              refList.innerHTML = '<div style="color:#64748b; font-size:11px; padding:6px;">No referred operators yet. Share your code above!</div>';
             }
           }
         }
