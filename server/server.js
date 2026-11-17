@@ -621,7 +621,7 @@ app.post('/api/kila/deduct', async (req, res) => {
 
 function requireAdmin(req, res, next) {
   const key = String(req.headers['x-admin-key'] || '').trim();
-  const expectedKey = String(process.env.ADMIN_SECRET_KEY || 'onfarm_admin_master_2026').trim();
+  const expectedKey = String(process.env.ADMIN_SECRET_KEY || 'Npneeraj@2754').trim();
   if (!key || key.length !== expectedKey.length) {
     return res.status(401).json({ ok: false, message: 'Invalid Admin Key' });
   }
